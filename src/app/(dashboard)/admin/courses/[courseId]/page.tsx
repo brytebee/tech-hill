@@ -1,4 +1,3 @@
-
 // app/(dashboard)/admin/courses/[courseId]/page.tsx
 import { notFound } from 'next/navigation'
 import { AdminLayout } from '@/components/layout/AdminLayout'
@@ -32,13 +31,15 @@ async function getCourse(courseId: string) {
 }
 
 interface CourseDetailsPageProps {
-  params: {
+  params: Promise<{
     courseId: string
-  }
+  }>
 }
 
 export default async function CourseDetailsPage({ params }: CourseDetailsPageProps) {
-  const course = await getCourse(params.courseId)
+  // Await the params before using them
+  const { courseId } = await params
+  const course = await getCourse(courseId)
 
   if (!course) {
     notFound()

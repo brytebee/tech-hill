@@ -21,7 +21,9 @@ interface EditCoursePageProps {
 }
 
 export default async function EditCoursePage({ params }: EditCoursePageProps) {
-  const course = await getCourse(params.courseId)
+  const { courseId } = await params
+  const course = await getCourse(courseId)
+
 
   if (!course) {
     notFound()

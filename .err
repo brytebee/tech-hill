@@ -12,30 +12,3 @@ Only plain objects can be passed to Client Components from Server Components. De
                                                                                                                                      ^^^^^^^
  GET /admin/courses/cmdvwpzlo0001ppukb27orgw5/edit 200 in 1472ms
 
-
-
-
-Error: Route "/admin/courses/[courseId]" used `params.courseId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
-    at CourseDetailsPage (src/app/(dashboard)/admin/courses/[courseId]/page.tsx:41:40)
-  39 |
-  40 | export default async function CourseDetailsPage({ params }: CourseDetailsPageProps) {
-> 41 |   const course = await getCourse(params.courseId)
-     |                                        ^
-  42 |
-  43 |   if (!course) {
-  44 |     notFound()
- GET /admin/courses/cmdvwpzlo0001ppukb27orgw5 200 in 1299ms
-
-
-// Get user stats
-  static async getUserStats() {
-    const [total, active, admins, managers, students] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { status: "ACTIVE" } }),
-      prisma.user.count({ where: { role: "ADMIN" } }),
-      prisma.user.count({ where: { role: "MANAGER" } }),
-      prisma.user.count({ where: { role: "STUDENT" } }),
-    ]);
-
-    return { total, active, admins, managers, students };
-  }
