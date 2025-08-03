@@ -1,4 +1,3 @@
-
 // app/api/courses/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -20,13 +19,14 @@ const createCourseSchema = z.object({
   learningOutcomes: z.array(z.string()).optional(),
 })
 
+// Updated schema to handle null values properly
 const getCoursesSchema = z.object({
-  page: z.string().optional(),
-  limit: z.string().optional(),
-  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
-  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).optional(),
-  creatorId: z.string().optional(),
-  search: z.string().optional(),
+  page: z.string().nullable().optional(),
+  limit: z.string().nullable().optional(),
+  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).nullable().optional(),
+  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).nullable().optional(),
+  creatorId: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
 })
 
 // GET /api/courses - Get courses with filters and pagination
@@ -48,14 +48,15 @@ export async function GET(request: NextRequest) {
       search: searchParams.get('search'),
     })
 
-    const page = parseInt(params.page || '1')
-    const limit = parseInt(params.limit || '10')
+    // Convert strings to numbers with defaults, handle null values
+    const page = params.page ? parseInt(params.page) : 1
+    const limit = params.limit ? parseInt(params.limit) : 10
     
     const filters = {
-      status: params.status,
-      difficulty: params.difficulty,
-      creatorId: params.creatorId,
-      search: params.search,
+      status: params.status || undefined,
+      difficulty: params.difficulty || undefined,
+      creatorId: params.creatorId || undefined,
+      search: params.search || undefined,
     }
 
     // Students can only see published courses
