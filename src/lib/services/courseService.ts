@@ -72,9 +72,9 @@ export class CourseService {
     });
   }
 
-  // Get course by ID
+  // lib/services/courseService.ts
   static async getCourseById(id: string) {
-    return await prisma.course.findUnique({
+    const course = await prisma.course.findUnique({
       where: { id },
       include: {
         creator: {
@@ -125,6 +125,14 @@ export class CourseService {
         },
       },
     });
+
+    if (!course) return null;
+
+    // Convert Decimal to number for client component compatibility
+    return {
+      ...course,
+      price: course.price ? Number(course.price) : 0,
+    };
   }
 
   // Get courses with filters and pagination

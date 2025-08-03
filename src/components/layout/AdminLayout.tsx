@@ -1,7 +1,7 @@
 // components/layout/AdminLayout.tsx
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -41,12 +41,30 @@ export function AdminLayout({
   title,
   description,
 }: AdminLayoutProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Handle redirect in useEffect to avoid render-time side effects
+  useEffect(() => {
+    if (status === "loading") return; // Still loading
+    
+    if (!session || session.user.role !== "ADMIN") {
+      router.push("/unauthorized");
+    }
+  }, [session, status, router]);
+
+  // Show loading state while checking auth
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render content if not authorized
   if (!session || session.user.role !== "ADMIN") {
-    router.push("/unauthorized");
     return null;
   }
 
