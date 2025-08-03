@@ -1,7 +1,8 @@
+// app/(dashboard)/student/page.tsx - Updated with real data
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
+import { StudentLayout } from "@/components/layout/StudentLayout";
 import {
   Card,
   CardContent,
@@ -9,9 +10,31 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { BookOpen, Clock, Award, TrendingUp, User, LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, Clock, Award, TrendingUp, Play } from "lucide-react";
 import Link from "next/link";
-import { SignOutButton } from "@/components/ui/sign-out-button";
+import { EnrollmentService } from "@/lib/services/enrollmentService";
+import { CourseService } from "@/lib/services/courseService";
+
+async function getStudentData(userId: string) {
+  try {
+    const [enrollments, availableCourses] = await Promise.all([
+      EnrollmentService.getUserEnrollments(userId),
+      CourseService.getCourses({ status: "PUBLISHED" }, 1, 10),
+    ]);
+
+    return {
+      enrollments,
+      availableCourses: availableCourses.courses,
+    };
+  } catch (error) {
+    console.error("Error fetching student data:", error);
+    return {
+      enrollments: [],
+      availableCourses: [],
+    };
+  }
+}
 
 export default async function StudentDashboard() {
   const session = await getServerSession(authOptions);
@@ -20,35 +43,29 @@ export default async function StudentDashboard() {
     redirect("/login");
   }
 
-  if (session.user.role !== "STUDENT") {
-    redirect(`/${session.user.role.toLowerCase()}`);
-  }
+  const { enrollments, availableCourses } = await getStudentData(
+    session.user.id
+  );
+
+  const totalTimeSpent = enrollments.reduce(
+    (total, enrollment) => total + (enrollment.totalTimeSpent || 0),
+    0
+  );
+
+  const completedCourses = enrollments.filter(
+    (e) => e.status === "COMPLETED"
+  ).length;
+  const overallProgress =
+    enrollments.length > 0
+      ? Math.round(
+          enrollments.reduce((sum, e) => sum + e.overallProgress, 0) /
+            enrollments.length
+        )
+      : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-blue-600">Tech Hill</h1>
-              <span className="ml-2 text-gray-600">Student Dashboard</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <User className="h-5 w-5 text-gray-400" />
-                <span className="text-sm font-medium">
-                  {session.user.firstName} {session.user.lastName}
-                </span>
-              </div>
-              <SignOutButton />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <StudentLayout>
+      <div className="space-y-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -69,8 +86,12 @@ export default async function StudentDashboard() {
               <BookOpen className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">No courses yet</p>
+              <div className="text-2xl font-bold">{enrollments.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {enrollments.length === 0
+                  ? "Start learning today"
+                  : "Active enrollments"}
+              </p>
             </CardContent>
           </Card>
 
@@ -80,25 +101,23 @@ export default async function StudentDashboard() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0h</div>
+              <div className="text-2xl font-bold">
+                {Math.round(totalTimeSpent / 60)}h
+              </div>
               <p className="text-xs text-muted-foreground">
-                Start learning today
+                Total learning time
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Skills Mastered
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
               <Award className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0</div>
-              <p className="text-xs text-muted-foreground">
-                Complete topics to earn
-              </p>
+              <div className="text-2xl font-bold">{completedCourses}</div>
+              <p className="text-xs text-muted-foreground">Courses completed</p>
             </CardContent>
           </Card>
 
@@ -108,7 +127,7 @@ export default async function StudentDashboard() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">0%</div>
+              <div className="text-2xl font-bold">{overallProgress}%</div>
               <p className="text-xs text-muted-foreground">
                 Overall completion
               </p>
@@ -116,87 +135,96 @@ export default async function StudentDashboard() {
           </Card>
         </div>
 
-        {/* Available Courses */}
+        {/* My Courses & Available Courses */}
         <div className="grid md:grid-cols-2 gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Courses</CardTitle>
+              <CardDescription>Continue where you left off</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {enrollments.length > 0 ? (
+                <div className="space-y-4">
+                  {enrollments.slice(0, 3).map((enrollment) => (
+                    <div key={enrollment.id} className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">
+                        {enrollment.course.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        {enrollment.overallProgress}% complete
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-2 mr-4">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{ width: `${enrollment.overallProgress}%` }}
+                          />
+                        </div>
+                        <Link href={`/student/courses/${enrollment.course.id}`}>
+                          <Button size="sm">
+                            <Play className="h-4 w-4 mr-1" />
+                            Continue
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                  {enrollments.length > 3 && (
+                    <Link href="/student/courses">
+                      <Button variant="outline" className="w-full">
+                        View All Courses
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h4 className="font-medium text-gray-600 mb-2">
+                    No enrolled courses
+                  </h4>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Browse available courses to start learning
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Available Courses</CardTitle>
               <CardDescription>
-                Start your computer literacy journey with these courses
+                Start your computer literacy journey
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-semibold mb-2">Computer Basics</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Learn mouse control, keyboard skills, and basic navigation
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">
-                      4 modules • 2-3 hours
-                    </span>
-                    <Button size="sm">Enroll</Button>
+                {availableCourses.slice(0, 3).map((course) => (
+                  <div key={course.id} className="p-4 border rounded-lg">
+                    <h4 className="font-semibold mb-2">{course.title}</h4>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {course.shortDescription ||
+                        course.description.substring(0, 100) + "..."}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">
+                        {course.difficulty} • {course.duration}h
+                      </span>
+                      <Button size="sm">Enroll</Button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-semibold mb-2">Internet Essentials</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Master web browsing, email, and online safety
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">
-                      5 modules • 3-4 hours
-                    </span>
-                    <Button size="sm" variant="outline">
-                      Coming Soon
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <h4 className="font-semibold mb-2">Digital Productivity</h4>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Learn essential software and productivity tools
-                  </p>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500">
-                      6 modules • 4-5 hours
-                    </span>
-                    <Button size="sm" variant="outline">
-                      Coming Soon
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <CardDescription>
-                Your learning progress and achievements
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h4 className="font-medium text-gray-600 mb-2">
-                  No activity yet
-                </h4>
-                <p className="text-sm text-gray-500 mb-4">
-                  Enroll in a course to start tracking your progress
-                </p>
-                <Button variant="outline" size="sm">
-                  Browse Courses
-                </Button>
+                ))}
+                <Link href="/student/courses">
+                  <Button variant="outline" className="w-full">
+                    Browse All Courses
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </StudentLayout>
   );
 }
