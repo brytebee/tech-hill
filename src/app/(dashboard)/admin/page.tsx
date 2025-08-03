@@ -10,16 +10,31 @@ import {
 import { Button } from "@/components/ui/button";
 import { Users, BookOpen, TrendingUp, Settings, Plus, Eye } from "lucide-react";
 import Link from "next/link";
+import { headers } from 'next/headers'
 
 async function getDashboardStats() {
   try {
-    const response = await fetch(
-      `${process.env.NEXTAUTH_URL}/api/dashboard/stats`,
-      {
-        cache: "no-store",
-      }
-    );
-    if (!response.ok) throw new Error("Failed to fetch stats");
+    // Get the host from headers for server-side requests
+    const headersList = headers()
+    const host = headersList.get('host')
+    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http'
+    const baseUrl = `${protocol}://${host}`
+    
+    const response = await fetch(`${baseUrl}/api/dashboard/stats`, {
+      cache: "no-store",
+      headers: {
+        // Forward the cookies for authentication
+        cookie: headersList.get('cookie') || '',
+      },
+    });
+    
+    if (!response.ok) {
+      console.error(`API Error: ${response.status} ${response.statusText}`);
+      const text = await response.text();
+      console.error('Response body:', text);
+      return null;
+    }
+    
     return await response.json();
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
