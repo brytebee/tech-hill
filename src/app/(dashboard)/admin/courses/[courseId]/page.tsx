@@ -1,58 +1,73 @@
 // app/(dashboard)/admin/courses/[courseId]/page.tsx
-import { notFound } from 'next/navigation'
-import { AdminLayout } from '@/components/layout/AdminLayout'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { 
-  Edit, 
-  Trash2, 
-  Users, 
-  BookOpen, 
-  Clock, 
+import { notFound } from "next/navigation";
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Edit,
+  Trash2,
+  Users,
+  BookOpen,
+  Clock,
   DollarSign,
   Calendar,
   User,
   Play,
-  Plus
-} from 'lucide-react'
-import Link from 'next/link'
-import { CourseService } from '@/lib/services/courseService'
-import { Separator } from '@/components/ui/separator'
+  Plus,
+} from "lucide-react";
+import Link from "next/link";
+import { CourseService } from "@/lib/services/courseService";
 
 async function getCourse(courseId: string) {
   try {
-    const course = await CourseService.getCourseById(courseId)
-    return course
+    const course = await CourseService.getCourseById(courseId);
+    return course;
   } catch (error) {
-    console.error('Error fetching course:', error)
-    return null
+    console.error("Error fetching course:", error);
+    return null;
   }
 }
 
 interface CourseDetailsPageProps {
   params: Promise<{
-    courseId: string
-  }>
+    courseId: string;
+  }>;
 }
 
-export default async function CourseDetailsPage({ params }: CourseDetailsPageProps) {
+export default async function CourseDetailsPage({
+  params,
+}: CourseDetailsPageProps) {
   // Await the params before using them
-  const { courseId } = await params
-  const course = await getCourse(courseId)
+  const { courseId } = await params;
+  const course = await getCourse(courseId);
 
   if (!course) {
-    notFound()
+    notFound();
   }
 
-  const statusVariant = course.status === 'PUBLISHED' ? 'default' : 
-                       course.status === 'DRAFT' ? 'secondary' : 'destructive'
-  
-  const difficultyVariant = course.difficulty === 'BEGINNER' ? 'secondary' : 
-                           course.difficulty === 'INTERMEDIATE' ? 'default' : 'destructive'
+  const statusVariant =
+    course.status === "PUBLISHED"
+      ? "default"
+      : course.status === "DRAFT"
+      ? "secondary"
+      : "destructive";
+
+  const difficultyVariant =
+    course.difficulty === "BEGINNER"
+      ? "secondary"
+      : course.difficulty === "INTERMEDIATE"
+      ? "default"
+      : "destructive";
 
   return (
-    <AdminLayout 
+    <AdminLayout
       title={course.title}
       description="Course details and management"
     >
@@ -87,10 +102,10 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{course._count.enrollments}</div>
-              <p className="text-xs text-muted-foreground">
-                Students enrolled
-              </p>
+              <div className="text-2xl font-bold">
+                {course._count.enrollments}
+              </div>
+              <p className="text-xs text-muted-foreground">Students enrolled</p>
             </CardContent>
           </Card>
 
@@ -101,9 +116,7 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{course._count.modules}</div>
-              <p className="text-xs text-muted-foreground">
-                Course modules
-              </p>
+              <p className="text-xs text-muted-foreground">Course modules</p>
             </CardContent>
           </Card>
 
@@ -114,9 +127,7 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{course.duration}h</div>
-              <p className="text-xs text-muted-foreground">
-                Estimated time
-              </p>
+              <p className="text-xs text-muted-foreground">Estimated time</p>
             </CardContent>
           </Card>
         </div>
@@ -132,7 +143,7 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
                 <h4 className="font-medium mb-2">Description</h4>
                 <p className="text-gray-600">{course.description}</p>
               </div>
-              
+
               {course.shortDescription && (
                 <div>
                   <h4 className="font-medium mb-2">Short Description</h4>
@@ -144,7 +155,7 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
                 <div>
                   <h4 className="font-medium mb-1">Price</h4>
                   <p className="text-gray-600">
-                    {course.price > 0 ? `$${course.price}` : 'Free'}
+                    {course.price > 0 ? `$${course.price}` : "Free"}
                   </p>
                 </div>
                 <div>
@@ -158,7 +169,9 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
                   <h4 className="font-medium mb-2">Tags</h4>
                   <div className="flex flex-wrap gap-2">
                     {course.tags.map((tag) => (
-                      <Badge key={tag} variant="outline">{tag}</Badge>
+                      <Badge key={tag} variant="outline">
+                        {tag}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -185,7 +198,8 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
               <div className="flex items-center space-x-2">
                 <User className="h-4 w-4 text-gray-400" />
                 <span className="text-sm">
-                  Created by {course.creator.firstName} {course.creator.lastName}
+                  Created by {course.creator.firstName}{" "}
+                  {course.creator.lastName}
                 </span>
               </div>
 
@@ -200,26 +214,30 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
                 <div className="flex items-center space-x-2">
                   <Play className="h-4 w-4 text-gray-400" />
                   <span className="text-sm">
-                    Published {new Date(course.publishedAt).toLocaleDateString()}
+                    Published{" "}
+                    {new Date(course.publishedAt).toLocaleDateString()}
                   </span>
                 </div>
               )}
 
-              {course.learningOutcomes && course.learningOutcomes.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Learning Outcomes</h4>
-                  <ul className="text-gray-600 space-y-1">
-                    {course.learningOutcomes.map((outcome, index) => (
-                      <li key={index}>• {outcome}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {course.learningOutcomes &&
+                course.learningOutcomes.length > 0 && (
+                  <div>
+                    <h4 className="font-medium mb-2">Learning Outcomes</h4>
+                    <ul className="text-gray-600 space-y-1">
+                      {course.learningOutcomes.map((outcome, index) => (
+                        <li key={index}>• {outcome}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
               {course.syllabus && (
                 <div>
                   <h4 className="font-medium mb-2">Syllabus</h4>
-                  <p className="text-gray-600 whitespace-pre-line">{course.syllabus}</p>
+                  <p className="text-gray-600 whitespace-pre-line">
+                    {course.syllabus}
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -253,11 +271,13 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
                           Module {index + 1}: {module.title}
                         </h4>
                         {module.description && (
-                          <p className="text-gray-600 mt-1">{module.description}</p>
+                          <p className="text-gray-600 mt-1">
+                            {module.description}
+                          </p>
                         )}
                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                           <span>{module._count?.topics || 0} topics</span>
-                          <span>Duration: {module.duration || 'Not set'}</span>
+                          <span>Duration: {module.duration || "Not set"}</span>
                         </div>
                       </div>
                       <div className="flex space-x-2">
@@ -269,17 +289,24 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
                         </Button>
                       </div>
                     </div>
-                    
+
                     {module.topics && module.topics.length > 0 && (
                       <div className="mt-4 ml-4">
-                        <h5 className="font-medium text-sm text-gray-700 mb-2">Topics:</h5>
+                        <h5 className="font-medium text-sm text-gray-700 mb-2">
+                          Topics:
+                        </h5>
                         <div className="space-y-1">
                           {module.topics.map((topic) => (
-                            <div key={topic.id} className="flex items-center justify-between text-sm">
+                            <div
+                              key={topic.id}
+                              className="flex items-center justify-between text-sm"
+                            >
                               <span>{topic.title}</span>
                               <div className="flex items-center space-x-2 text-gray-500">
                                 <span>{topic.topicType}</span>
-                                {topic.duration && <span>({topic.duration}min)</span>}
+                                {topic.duration && (
+                                  <span>({topic.duration}min)</span>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -293,7 +320,9 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
               <div className="text-center py-8 text-gray-500">
                 <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-300" />
                 <p>No modules created yet</p>
-                <p className="text-sm">Add modules to structure your course content</p>
+                <p className="text-sm">
+                  Add modules to structure your course content
+                </p>
               </div>
             )}
           </CardContent>
@@ -311,17 +340,25 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
             <CardContent>
               <div className="space-y-3">
                 {course.enrollments.slice(0, 10).map((enrollment) => (
-                  <div key={enrollment.id} className="flex items-center justify-between p-3 border rounded">
+                  <div
+                    key={enrollment.id}
+                    className="flex items-center justify-between p-3 border rounded"
+                  >
                     <div>
                       <p className="font-medium">
                         {enrollment.user.firstName} {enrollment.user.lastName}
                       </p>
-                      <p className="text-sm text-gray-600">{enrollment.user.email}</p>
+                      <p className="text-sm text-gray-600">
+                        {enrollment.user.email}
+                      </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-medium">{enrollment.overallProgress}% complete</p>
+                      <p className="text-sm font-medium">
+                        {enrollment.overallProgress}% complete
+                      </p>
                       <p className="text-xs text-gray-500">
-                        Enrolled {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                        Enrolled{" "}
+                        {new Date(enrollment.enrolledAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -337,5 +374,5 @@ export default async function CourseDetailsPage({ params }: CourseDetailsPagePro
         )}
       </div>
     </AdminLayout>
-  )
+  );
 }

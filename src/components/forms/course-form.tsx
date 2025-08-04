@@ -47,7 +47,7 @@ interface CourseFormProps {
   isEdit?: boolean;
 }
 
-export default function CourseForm({
+export function CourseForm({
   course,
   onSuccess,
   isEdit = false,

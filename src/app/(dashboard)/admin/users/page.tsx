@@ -6,7 +6,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, Edit, Trash2, MoreHorizontal, Eye } from "lucide-react";
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -133,6 +133,12 @@ function UserActions({ user }: { user: User }) {
       <DropdownMenuContent align="end">
         <DropdownMenuItem asChild>
           <Link href={`/admin/users/${user.id}`}>
+            <Eye className="h-4 w-4 mr-2" />
+            View Details
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href={`/admin/users/${user.id}/edit`}>
             <Edit className="h-4 w-4 mr-2" />
             Edit
           </Link>
