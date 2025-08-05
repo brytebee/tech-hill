@@ -1,4 +1,4 @@
-// app/(dashboard)/student/page.tsx - Updated with real data
+// app/(dashboard)/student/page.tsx
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
