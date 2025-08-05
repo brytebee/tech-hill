@@ -48,7 +48,7 @@ export function AdminLayout({
   // Handle redirect in useEffect to avoid render-time side effects
   useEffect(() => {
     if (status === "loading") return; // Still loading
-    
+
     if (!session || session.user.role !== "ADMIN") {
       router.push("/unauthorized");
     }
@@ -111,10 +111,8 @@ export function AdminLayout({
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex items-center px-4 py-4 border-b">
-            <UserCheck className="h-8 w-8 text-blue-500 mr-2" />
-            <h1 className="text-xl font-bold text-blue-600">
-              Tech Hill Manager
-            </h1>
+            <Shield className="h-8 w-8 text-red-500 mr-2" />
+            <h1 className="text-xl font-bold text-blue-600">Tech Hill Admin</h1>
           </div>
           <nav className="mt-4 flex-1">
             {navigation.map((item) => (
@@ -148,7 +146,7 @@ export function AdminLayout({
                 </Button>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">
-                    {title || "Manager Dashboard"}
+                    {title || "Admin Dashboard"}
                   </h1>
                   {description && (
                     <p className="text-gray-600 mt-1">{description}</p>
@@ -157,7 +155,7 @@ export function AdminLayout({
               </div>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <UserCheck className="h-5 w-5 text-blue-500" />
+                  <Shield className="h-5 w-5 text-red-500" />
                   <span className="text-sm font-medium">
                     {session.user.firstName} {session.user.lastName}
                   </span>

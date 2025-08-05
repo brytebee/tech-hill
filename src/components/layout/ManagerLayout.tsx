@@ -1,7 +1,7 @@
 // components/layout/ManagerLayout.tsx
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -39,15 +39,36 @@ export function ManagerLayout({
   title,
   description,
 }: ManagerLayoutProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Handle redirect in useEffect to avoid render-time side effects
+  useEffect(() => {
+    if (status === "loading") return; // Still loading
+
+    if (
+      !session ||
+      (session.user.role !== "MANAGER" && session.user.role !== "ADMIN")
+    ) {
+      router.push("/unauthorized");
+    }
+  }, [session, status, router]);
+
+  // Show loading state while checking auth
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render content if not authorized
   if (
     !session ||
     (session.user.role !== "MANAGER" && session.user.role !== "ADMIN")
   ) {
-    router.push("/unauthorized");
     return null;
   }
 
@@ -96,8 +117,10 @@ export function ManagerLayout({
       <div className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
           <div className="flex items-center px-4 py-4 border-b">
-            <Shield className="h-8 w-8 text-red-500 mr-2" />
-            <h1 className="text-xl font-bold text-blue-600">Tech Hill Admin</h1>
+            <UserCheck className="h-8 w-8 text-blue-500 mr-2" />
+            <h1 className="text-xl font-bold text-blue-600">
+              Tech Hill Manager
+            </h1>
           </div>
           <nav className="mt-4 flex-1">
             {navigation.map((item) => (
@@ -131,7 +154,7 @@ export function ManagerLayout({
                 </Button>
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">
-                    {title || "Admin Dashboard"}
+                    {title || "Manager Dashboard"}
                   </h1>
                   {description && (
                     <p className="text-gray-600 mt-1">{description}</p>
@@ -140,7 +163,7 @@ export function ManagerLayout({
               </div>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <Shield className="h-5 w-5 text-red-500" />
+                  <UserCheck className="h-5 w-5 text-blue-500" />
                   <span className="text-sm font-medium">
                     {session.user.firstName} {session.user.lastName}
                   </span>

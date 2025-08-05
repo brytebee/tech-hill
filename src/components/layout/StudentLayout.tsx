@@ -1,58 +1,90 @@
-
 // components/layout/StudentLayout.tsx
-'use client'
+"use client";
 
-import { ReactNode } from 'react'
-import { useSession, signOut } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { 
-  BookOpen, 
-  TrendingUp, 
-  Award, 
-  User, 
+import { ReactNode, useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  BookOpen,
+  TrendingUp,
+  Award,
+  User,
   LogOut,
   Menu,
   X,
   Home,
-  Settings
-} from 'lucide-react'
-import { useState } from 'react'
+  Settings,
+} from "lucide-react";
+import { useState } from "react";
 
 interface StudentLayoutProps {
-  children: ReactNode
-  title?: string
-  description?: string
+  children: ReactNode;
+  title?: string;
+  description?: string;
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/student', icon: Home },
-  { name: 'My Courses', href: '/student/courses', icon: BookOpen },
-  { name: 'Progress', href: '/student/progress', icon: TrendingUp },
-  { name: 'Achievements', href: '/student/achievements', icon: Award },
-  { name: 'Profile', href: '/student/profile', icon: Settings },
-]
+  { name: "Dashboard", href: "/student", icon: Home },
+  { name: "My Courses", href: "/student/courses", icon: BookOpen },
+  { name: "Progress", href: "/student/progress", icon: TrendingUp },
+  { name: "Achievements", href: "/student/achievements", icon: Award },
+  { name: "Profile", href: "/student/profile", icon: Settings },
+];
 
-export function StudentLayout({ children, title, description }: StudentLayoutProps) {
-  const { data: session } = useSession()
-  const router = useRouter()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+export function StudentLayout({
+  children,
+  title,
+  description,
+}: StudentLayoutProps) {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Handle redirect in useEffect to avoid render-time side effects
+  useEffect(() => {
+    if (status === "loading") return; // Still loading
+
+    if (!session) {
+      router.push("/unauthorized");
+    }
+  }, [session, status, router]);
+
+  // Show loading state while checking auth
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // Don't render content if not authorized
   if (!session) {
-    router.push('/login')
-    return null
+    return null;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar */}
-      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? '' : 'hidden'}`}>
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
+      <div
+        className={`fixed inset-0 z-50 lg:hidden ${
+          sidebarOpen ? "" : "hidden"
+        }`}
+      >
+        <div
+          className="fixed inset-0 bg-gray-600 bg-opacity-75"
+          onClick={() => setSidebarOpen(false)}
+        />
         <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
           <div className="flex items-center justify-between p-4 border-b">
             <h1 className="text-xl font-bold text-blue-600">Tech Hill</h1>
-            <Button variant="ghost" size="sm" onClick={() => setSidebarOpen(false)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSidebarOpen(false)}
+            >
               <X className="h-5 w-5" />
             </Button>
           </div>
@@ -110,8 +142,12 @@ export function StudentLayout({ children, title, description }: StudentLayoutPro
                   <Menu className="h-5 w-5" />
                 </Button>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{title || 'Student Dashboard'}</h1>
-                  {description && <p className="text-gray-600 mt-1">{description}</p>}
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {title || "Student Dashboard"}
+                  </h1>
+                  {description && (
+                    <p className="text-gray-600 mt-1">{description}</p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -121,11 +157,7 @@ export function StudentLayout({ children, title, description }: StudentLayoutPro
                     {session.user.firstName} {session.user.lastName}
                   </span>
                 </div>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => signOut()}
-                >
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
@@ -135,10 +167,8 @@ export function StudentLayout({ children, title, description }: StudentLayoutPro
         </header>
 
         {/* Page content */}
-        <main className="px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
+        <main className="px-4 sm:px-6 lg:px-8 py-8">{children}</main>
       </div>
     </div>
-  )
+  );
 }
