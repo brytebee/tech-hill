@@ -115,6 +115,64 @@ const courseColumns: ColumnDef<Course>[] = [
 function CourseActions({ course }: { course: Course }) {
   const { toast } = useToast()
 
+  // Add handleArchive function
+  const handleArchive = async () => {
+    if (!confirm('Are you sure you want to archive this course? Students will no longer be able to enroll.')) return
+
+    try {
+      const response = await fetch(`/api/courses/${course.id}/archive`, {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error)
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Course archived successfully',
+      })
+
+      window.location.reload()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
+  }
+
+  // Add handleUnpublish function
+  const handleUnpublish = async () => {
+    if (!confirm('Are you sure you want to unpublish this course? It will be set to draft status.')) return
+
+    try {
+      const response = await fetch(`/api/courses/${course.id}/publish`, {
+        method: 'PUT',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error)
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Course unpublished successfully',
+      })
+
+      window.location.reload()
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this course? This action cannot be undone.')) return
 
@@ -196,10 +254,24 @@ function CourseActions({ course }: { course: Course }) {
             Publish
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={handleDelete} className="text-red-600">
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
-        </DropdownMenuItem>
+        {course.status === 'PUBLISHED' && (
+          <>
+            <DropdownMenuItem onClick={handleUnpublish}>
+              <Edit className="h-4 w-4 mr-2" />
+              Unpublish
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleArchive}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Archive
+            </DropdownMenuItem>
+          </>
+        )}
+        {course.status !== 'ARCHIVED' && (
+          <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   )
