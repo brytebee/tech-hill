@@ -1,6 +1,6 @@
 // lib/services/topicService.ts
 import { prisma } from "@/lib/db";
-import { TopicType, Prisma } from "@prisma/client";
+import { TopicType } from "@prisma/client";
 
 export interface CreateTopicData {
   title: string;
