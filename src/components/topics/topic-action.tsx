@@ -1,4 +1,4 @@
-// components/modules/module-actions.tsx
+// components/topics/topic-actions.tsx
 "use client";
 
 import { useToast } from "@/hooks/use-toast";
@@ -17,24 +17,27 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-interface ModuleActionsProps {
-  module: {
+interface TopicActionsProps {
+  topic: {
     id: string;
     status: string;
     isRequired: boolean;
-    course: {
+    module: {
       id: string;
-    };
+      course: {
+        id: string;
+      };
+    }
   };
 }
 
-export function ModuleActions({ module }: ModuleActionsProps) {
+export function ModuleActions({ topic }: TopicActionsProps) {
   const { toast } = useToast();
   const router = useRouter();
 
   const handlePublish = async () => {
     try {
-      const response = await fetch(`/api/modules/${module.id}/publish`, {
+      const response = await fetch(`/api/topics/${topic.id}/publish`, {
         method: "POST",
       });
 
@@ -52,17 +55,17 @@ export function ModuleActions({ module }: ModuleActionsProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to publish module",
+        description: error.message || "Failed to publish topic",
         variant: "destructive",
       });
     }
   };
 
   const handleUnpublish = async () => {
-    if (!confirm("Are you sure you want to unpublish this module? Students will lose access to its content.")) return;
+    if (!confirm("Are you sure you want to unpublish this topic? Students will lose access to its content.")) return;
 
     try {
-      const response = await fetch(`/api/modules/${module.id}/publish`, {
+      const response = await fetch(`/api/topics/${topic.id}/publish`, {
         method: "PUT",
       });
 
@@ -80,24 +83,24 @@ export function ModuleActions({ module }: ModuleActionsProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to unpublish module",
+        description: error.message || "Failed to unpublish topic",
         variant: "destructive",
       });
     }
   };
 
   const handleToggleRequired = async () => {
-    const action = module.isRequired ? "make optional" : "make required";
-    if (!confirm(`Are you sure you want to ${action} this module?`)) return;
+    const action = topic.isRequired ? "make optional" : "make required";
+    if (!confirm(`Are you sure you want to ${action} this topic?`)) return;
 
     try {
-      const response = await fetch(`/api/modules/${module.id}/required`, {
+      const response = await fetch(`/api/topics/${topic.id}/required`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          isRequired: !module.isRequired,
+          isRequired: !topic.isRequired,
         }),
       });
 
@@ -108,14 +111,14 @@ export function ModuleActions({ module }: ModuleActionsProps) {
 
       toast({
         title: "Success",
-        description: `Module ${module.isRequired ? "made optional" : "made required"} successfully`,
+        description: `Module ${topic.isRequired ? "made optional" : "made required"} successfully`,
       });
 
       router.refresh();
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to update module requirement",
+        description: error.message || "Failed to update topic requirement",
         variant: "destructive",
       });
     }
@@ -123,7 +126,7 @@ export function ModuleActions({ module }: ModuleActionsProps) {
 
   const handleDuplicate = async () => {
     try {
-      const response = await fetch(`/api/modules/${module.id}/duplicate`, {
+      const response = await fetch(`/api/topics/${topic.id}/duplicate`, {
         method: "POST",
       });
 
@@ -139,11 +142,11 @@ export function ModuleActions({ module }: ModuleActionsProps) {
         description: "Module duplicated successfully",
       });
 
-      router.push(`/admin/modules/${duplicatedModule.id}`);
+      router.push(`/admin/topics/${duplicatedModule.id}`);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to duplicate module",
+        description: error.message || "Failed to duplicate topic",
         variant: "destructive",
       });
     }
@@ -152,13 +155,13 @@ export function ModuleActions({ module }: ModuleActionsProps) {
   const handleArchive = async () => {
     if (
       !confirm(
-        "Are you sure you want to archive this module? It will be hidden from students but preserved for reference."
+        "Are you sure you want to archive this topic? It will be hidden from students but preserved for reference."
       )
     )
       return;
 
     try {
-      const response = await fetch(`/api/modules/${module.id}/archive`, {
+      const response = await fetch(`/api/topics/${topic.id}/archive`, {
         method: "POST",
       });
 
@@ -176,7 +179,7 @@ export function ModuleActions({ module }: ModuleActionsProps) {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to archive module",
+        description: error.message || "Failed to archive topic",
         variant: "destructive",
       });
     }
@@ -185,13 +188,13 @@ export function ModuleActions({ module }: ModuleActionsProps) {
   const handleDelete = async () => {
     if (
       !confirm(
-        "Are you sure you want to delete this module? This action cannot be undone and will permanently remove all topics and quizzes within this module."
+        "Are you sure you want to delete this topic? This action cannot be undone and will permanently remove all topics and quizzes within this topic."
       )
     )
       return;
 
     try {
-      const response = await fetch(`/api/modules/${module.id}`, {
+      const response = await fetch(`/api/topics/${topic.id}`, {
         method: "DELETE",
       });
 
@@ -205,11 +208,11 @@ export function ModuleActions({ module }: ModuleActionsProps) {
         description: "Module deleted successfully",
       });
 
-      router.push(`/admin/courses/${module.course.id}`);
+      router.push(`/admin/courses/${topic.course.id}`);
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to delete module",
+        description: error.message || "Failed to delete topic",
         variant: "destructive",
       });
     }
@@ -219,21 +222,21 @@ export function ModuleActions({ module }: ModuleActionsProps) {
     <div className="flex flex-wrap gap-2">
       {/* Primary Actions */}
       <div className="flex space-x-2">
-        {module.status === "DRAFT" && (
+        {topic.status === "DRAFT" && (
           <Button onClick={handlePublish}>
             <CheckCircle className="h-4 w-4 mr-2" />
             Publish Module
           </Button>
         )}
 
-        {module.status === "PUBLISHED" && (
+        {topic.status === "PUBLISHED" && (
           <Button onClick={handleUnpublish} variant="outline">
             <XCircle className="h-4 w-4 mr-2" />
             Unpublish
           </Button>
         )}
 
-        <Link href={`/admin/modules/${module.id}/topics/create`}>
+        <Link href={`/admin/topics/${topic.id}/topics/create`}>
           <Button variant="outline">
             <Plus className="h-4 w-4 mr-2" />
             Add Topic
@@ -244,7 +247,7 @@ export function ModuleActions({ module }: ModuleActionsProps) {
       {/* Secondary Actions */}
       <div className="flex space-x-2">
         <Button onClick={handleToggleRequired} variant="outline">
-          {module.isRequired ? (
+          {topic.isRequired ? (
             <>
               <Unlock className="h-4 w-4 mr-2" />
               Make Optional
@@ -262,7 +265,7 @@ export function ModuleActions({ module }: ModuleActionsProps) {
           Duplicate
         </Button>
 
-        <Link href={`/admin/modules/${module.id}/edit`}>
+        <Link href={`/admin/topics/${topic.id}/edit`}>
           <Button variant="outline">
             <Edit className="h-4 w-4 mr-2" />
             Edit Module
@@ -272,7 +275,7 @@ export function ModuleActions({ module }: ModuleActionsProps) {
 
       {/* Destructive Actions */}
       <div className="flex space-x-2">
-        {module.status === "PUBLISHED" && (
+        {topic.status === "PUBLISHED" && (
           <Button onClick={handleArchive} variant="outline">
             <Archive className="h-4 w-4 mr-2" />
             Archive
