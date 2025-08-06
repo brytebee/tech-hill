@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { TopicService } from "@/lib/services/topicService";
-import { TopicActions } from "@/components/topics/TopicActions";
+import { TopicActions } from "@/components/topics/topic-actions";
 
 async function getTopic(topicId: string) {
   try {
@@ -62,13 +62,13 @@ export default async function TopicDetailsPage({
 
   const getTopicTypeIcon = (type: string) => {
     switch (type) {
-      case 'LESSON':
+      case "LESSON":
         return <BookOpen className="h-5 w-5" />;
-      case 'PRACTICE':
+      case "PRACTICE":
         return <Play className="h-5 w-5" />;
-      case 'ASSESSMENT':
+      case "ASSESSMENT":
         return <CheckCircle className="h-5 w-5" />;
-      case 'RESOURCE':
+      case "RESOURCE":
         return <FileText className="h-5 w-5" />;
       default:
         return <BookOpen className="h-5 w-5" />;
@@ -77,26 +77,30 @@ export default async function TopicDetailsPage({
 
   const getTopicTypeColor = (type: string) => {
     switch (type) {
-      case 'LESSON':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'PRACTICE':
-        return 'bg-green-100 text-green-800 border-green-200';
-      case 'ASSESSMENT':
-        return 'bg-red-100 text-red-800 border-red-200';
-      case 'RESOURCE':
-        return 'bg-gray-100 text-gray-800 border-gray-200';
+      case "LESSON":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "PRACTICE":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "ASSESSMENT":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "RESOURCE":
+        return "bg-gray-100 text-gray-800 border-gray-200";
       default:
-        return 'bg-blue-100 text-blue-800 border-blue-200';
+        return "bg-blue-100 text-blue-800 border-blue-200";
     }
   };
 
-  const totalQuizPoints = topic.quizzes?.reduce((total, quiz) => 
-    total + quiz.questions.reduce((quizTotal, q) => quizTotal + q.points, 0), 0
-  ) || 0;
+  const totalQuizPoints =
+    topic.quizzes?.reduce(
+      (total, quiz) =>
+        total +
+        quiz.questions.reduce((quizTotal, q) => quizTotal + q.points, 0),
+      0
+    ) || 0;
 
-  const totalQuestions = topic.quizzes?.reduce((total, quiz) => 
-    total + quiz.questions.length, 0
-  ) || 0;
+  const totalQuestions =
+    topic.quizzes?.reduce((total, quiz) => total + quiz.questions.length, 0) ||
+    0;
 
   return (
     <AdminLayout
@@ -124,22 +128,20 @@ export default async function TopicDetailsPage({
         <div className="flex justify-between items-start">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-2 border ${getTopicTypeColor(topic.topicType)}`}>
+              <div
+                className={`px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-2 border ${getTopicTypeColor(
+                  topic.topicType
+                )}`}
+              >
                 {getTopicTypeIcon(topic.topicType)}
                 <span>{topic.topicType}</span>
               </div>
               <Badge variant={topic.isRequired ? "default" : "secondary"}>
                 {topic.isRequired ? "Required" : "Optional"}
               </Badge>
-              {topic.allowSkip && (
-                <Badge variant="outline">
-                  Skippable
-                </Badge>
-              )}
+              {topic.allowSkip && <Badge variant="outline">Skippable</Badge>}
               {topic.prerequisiteTopic && (
-                <Badge variant="outline">
-                  Has Prerequisite
-                </Badge>
+                <Badge variant="outline">Has Prerequisite</Badge>
               )}
             </div>
           </div>
@@ -163,7 +165,9 @@ export default async function TopicDetailsPage({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Passing Score</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Passing Score
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -174,7 +178,9 @@ export default async function TopicDetailsPage({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Max Attempts</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Max Attempts
+              </CardTitle>
               <Play className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -193,14 +199,18 @@ export default async function TopicDetailsPage({
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{topic.quizzes?.length || 0}</div>
+              <div className="text-2xl font-bold">
+                {topic.quizzes?.length || 0}
+              </div>
               <p className="text-xs text-muted-foreground">Assessment(s)</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Points</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Points
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -231,7 +241,9 @@ export default async function TopicDetailsPage({
                 </div>
                 <div>
                   <h4 className="font-medium mb-1">Slug</h4>
-                  <p className="text-gray-600 font-mono text-sm">{topic.slug}</p>
+                  <p className="text-gray-600 font-mono text-sm">
+                    {topic.slug}
+                  </p>
                 </div>
               </div>
 
@@ -277,7 +289,7 @@ export default async function TopicDetailsPage({
               {topic.prerequisiteTopic && (
                 <div>
                   <h4 className="font-medium mb-1">Prerequisite Topic</h4>
-                  <Link 
+                  <Link
                     href={`/admin/topics/${topic.prerequisiteTopic.id}`}
                     className="text-blue-600 hover:text-blue-800"
                   >
@@ -327,9 +339,7 @@ export default async function TopicDetailsPage({
 
               <div className="flex items-center space-x-2">
                 <BookOpen className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">
-                  Module: {topic.module.title}
-                </span>
+                <span className="text-sm">Module: {topic.module.title}</span>
               </div>
 
               <div className="space-y-2 pt-4">
@@ -340,7 +350,9 @@ export default async function TopicDetailsPage({
                     <EyeOff className="h-4 w-4 text-gray-400" />
                   )}
                   <span className="text-sm">
-                    {topic.isRequired ? "Required for completion" : "Optional topic"}
+                    {topic.isRequired
+                      ? "Required for completion"
+                      : "Optional topic"}
                   </span>
                 </div>
 
@@ -351,7 +363,9 @@ export default async function TopicDetailsPage({
                     <XCircle className="h-4 w-4 text-gray-400" />
                   )}
                   <span className="text-sm">
-                    {topic.allowSkip ? "Can be skipped if struggling" : "Cannot be skipped"}
+                    {topic.allowSkip
+                      ? "Can be skipped if struggling"
+                      : "Cannot be skipped"}
                   </span>
                 </div>
               </div>
@@ -413,23 +427,28 @@ export default async function TopicDetailsPage({
             <CardContent>
               <div className="space-y-4">
                 {topic.quizzes.map((quiz, index) => (
-                  <div key={quiz.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div
+                    key={quiz.id}
+                    className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <span className="text-sm font-medium text-gray-500">
                             {index + 1}.
                           </span>
-                          <Link 
+                          <Link
                             href={`/admin/quizzes/${quiz.id}`}
                             className="font-semibold text-lg text-blue-600 hover:text-blue-800"
                           >
                             {quiz.title}
                           </Link>
                         </div>
-                        
+
                         {quiz.description && (
-                          <p className="text-gray-600 mt-2 ml-6">{quiz.description}</p>
+                          <p className="text-gray-600 mt-2 ml-6">
+                            {quiz.description}
+                          </p>
                         )}
 
                         <div className="flex items-center space-x-4 mt-3 ml-6 text-sm text-gray-500">
@@ -440,7 +459,11 @@ export default async function TopicDetailsPage({
                           <div className="flex items-center space-x-1">
                             <CheckCircle className="h-3 w-3" />
                             <span>
-                              {quiz.questions.reduce((total, q) => total + q.points, 0)} points
+                              {quiz.questions.reduce(
+                                (total, q) => total + q.points,
+                                0
+                              )}{" "}
+                              points
                             </span>
                           </div>
                           {quiz.timeLimit && (
@@ -452,7 +475,9 @@ export default async function TopicDetailsPage({
                           <div className="flex items-center space-x-1">
                             <Play className="h-3 w-3" />
                             <span>
-                              {quiz.maxAttempts ? `${quiz.maxAttempts} attempts` : 'Unlimited attempts'}
+                              {quiz.maxAttempts
+                                ? `${quiz.maxAttempts} attempts`
+                                : "Unlimited attempts"}
                             </span>
                           </div>
                         </div>
@@ -460,24 +485,37 @@ export default async function TopicDetailsPage({
                         {/* Quiz Questions Preview */}
                         {quiz.questions.length > 0 && (
                           <div className="mt-4 ml-6">
-                            <h5 className="font-medium text-sm text-gray-700 mb-2">Questions:</h5>
+                            <h5 className="font-medium text-sm text-gray-700 mb-2">
+                              Questions:
+                            </h5>
                             <div className="space-y-1">
-                              {quiz.questions.slice(0, 3).map((question, qIndex) => (
-                                <div key={question.id} className="text-sm text-gray-600">
-                                  <span className="font-medium">{qIndex + 1}.</span> {question.question}
-                                  <span className="ml-2 text-xs text-gray-500">({question.points} pts)</span>
-                                </div>
-                              ))}
+                              {quiz.questions
+                                .slice(0, 3)
+                                .map((question, qIndex) => (
+                                  <div
+                                    key={question.id}
+                                    className="text-sm text-gray-600"
+                                  >
+                                    <span className="font-medium">
+                                      {qIndex + 1}.
+                                    </span>{" "}
+                                    {question.question}
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      ({question.points} pts)
+                                    </span>
+                                  </div>
+                                ))}
                               {quiz.questions.length > 3 && (
                                 <div className="text-sm text-gray-500">
-                                  ... and {quiz.questions.length - 3} more questions
+                                  ... and {quiz.questions.length - 3} more
+                                  questions
                                 </div>
                               )}
                             </div>
                           </div>
                         )}
                       </div>
-                      
+
                       <div className="flex space-x-2">
                         <Link href={`/admin/quizzes/${quiz.id}`}>
                           <Button variant="outline" size="sm">
@@ -519,7 +557,8 @@ export default async function TopicDetailsPage({
                 <HelpCircle className="h-16 w-16 mx-auto mb-4 text-gray-300" />
                 <h3 className="text-lg font-medium mb-2">No quizzes yet</h3>
                 <p className="mb-4">
-                  Add interactive assessments to test understanding of this topic
+                  Add interactive assessments to test understanding of this
+                  topic
                 </p>
                 <Link href={`/admin/topics/${topic.id}/quizzes/create`}>
                   <Button>

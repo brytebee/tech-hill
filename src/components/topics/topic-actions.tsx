@@ -4,16 +4,16 @@
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { 
-  Edit, 
-  Trash2, 
-  Archive, 
-  CheckCircle, 
-  XCircle, 
-  Lock, 
+import {
+  Edit,
+  Trash2,
+  Archive,
+  CheckCircle,
+  XCircle,
+  Lock,
   Unlock,
   Copy,
-  Plus
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,74 +27,79 @@ interface TopicActionsProps {
       course: {
         id: string;
       };
-    }
+    };
   };
 }
 
-export function ModuleActions({ topic }: TopicActionsProps) {
+export function TopicActions({ topic }: TopicActionsProps) {
   const { toast } = useToast();
   const router = useRouter();
 
-  const handlePublish = async () => {
-    try {
-      const response = await fetch(`/api/topics/${topic.id}/publish`, {
-        method: "POST",
-      });
+  // const handlePublish = async () => {
+  //   try {
+  //     const response = await fetch(`/api/topics/${topic.id}/publish`, {
+  //       method: "POST",
+  //     });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
+  //     if (!response.ok) {
+  //       const error = await response.json();
+  //       throw new Error(error.error);
+  //     }
 
-      toast({
-        title: "Success",
-        description: "Module published successfully",
-      });
+  //     toast({
+  //       title: "Success",
+  //       description: "Module published successfully",
+  //     });
 
-      router.refresh();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to publish topic",
-        variant: "destructive",
-      });
-    }
-  };
+  //     router.refresh();
+  //   } catch (error) {
+  //     toast({
+  //       title: "Error",
+  //       description: error.message || "Failed to publish topic",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
 
-  const handleUnpublish = async () => {
-    if (!confirm("Are you sure you want to unpublish this topic? Students will lose access to its content.")) return;
+  // const handleUnpublish = async () => {
+  //   if (
+  //     !confirm(
+  //       "Are you sure you want to unpublish this topic? Students will lose access to its content."
+  //     )
+  //   )
+  //     return;
 
-    try {
-      const response = await fetch(`/api/topics/${topic.id}/publish`, {
-        method: "PUT",
-      });
+  //   try {
+  //     const response = await fetch(`/api/topics/${topic.id}/publish`, {
+  //       method: "PUT",
+  //     });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error);
-      }
+  //     if (!response.ok) {
+  //       const error = await response.json();
+  //       throw new Error(error.error);
+  //     }
 
-      toast({
-        title: "Success",
-        description: "Module unpublished successfully",
-      });
+  //     toast({
+  //       title: "Success",
+  //       description: "Module unpublished successfully",
+  //     });
 
-      router.refresh();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to unpublish topic",
-        variant: "destructive",
-      });
-    }
-  };
+  //     router.refresh();
+  //   } catch (error) {
+  //     toast({
+  //       title: "Error",
+  //       description: error.message || "Failed to unpublish topic",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
 
   const handleToggleRequired = async () => {
     const action = topic.isRequired ? "make optional" : "make required";
     if (!confirm(`Are you sure you want to ${action} this topic?`)) return;
 
     try {
-      const response = await fetch(`/api/topics/${topic.id}/required`, {
+      const response = await fetch(`/api/topics/${topic.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -111,7 +116,9 @@ export function ModuleActions({ topic }: TopicActionsProps) {
 
       toast({
         title: "Success",
-        description: `Module ${topic.isRequired ? "made optional" : "made required"} successfully`,
+        description: `Module ${
+          topic.isRequired ? "made optional" : "made required"
+        } successfully`,
       });
 
       router.refresh();

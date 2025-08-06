@@ -1,4 +1,4 @@
-// app/(dashboard)/admin/modules/[moduleId]/topics/create/page.tsx
+// app/(dashboard)/admin/topics/[topicId]/edit/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,18 +11,33 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { TopicForm } from "@/components/forms/topic-form";
 
-interface CreateTopicPageProps {
+interface EditTopicPageProps {
   params: Promise<{
-    moduleId: string;
+    topicId: string;
   }>;
 }
 
-interface Module {
+interface Topic {
   id: string;
   title: string;
-  course: {
+  slug: string;
+  description: string;
+  content: string;
+  duration: number;
+  topicType: string;
+  videoUrl: string;
+  passingScore: number;
+  maxAttempts: number | null;
+  isRequired: boolean;
+  allowSkip: boolean;
+  prerequisiteTopicId: string | null;
+  module: {
     id: string;
     title: string;
+    course: {
+      id: string;
+      title: string;
+    };
   };
 }
 
@@ -32,11 +47,11 @@ interface PrerequisiteTopic {
   orderIndex: number;
 }
 
-export default function CreateTopicPage({ params }: CreateTopicPageProps) {
+export default function EditTopicPage({ params }: EditTopicPageProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const [moduleId, setModuleId] = useState<string>("");
-  const [module, setModule] = useState<Module | null>(null);
+  const [topicId, setTopicId] = useState<string>("");
+  const [topic, setTopic] = useState<Topic | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
   const [prerequisites, setPrerequisites] = useState<PrerequisiteTopic[]>([]);
@@ -58,28 +73,50 @@ export default function CreateTopicPage({ params }: CreateTopicPageProps) {
   useEffect(() => {
     const getParams = async () => {
       const resolvedParams = await params;
-      setModuleId(resolvedParams.moduleId);
+      setTopicId(resolvedParams.topicId);
 
       try {
-        const [moduleResponse, topicsResponse] = await Promise.all([
-          fetch(`/api/modules/${resolvedParams.moduleId}`),
-          fetch(`/api/modules/${resolvedParams.moduleId}/topics`),
-        ]);
+        const topicResponse = await fetch(
+          `/api/topics/${resolvedParams.topicId}`
+        );
 
-        if (moduleResponse.ok) {
-          const moduleData = await moduleResponse.json();
-          setModule(moduleData);
-        }
+        if (topicResponse.ok) {
+          const topicData = await topicResponse.json();
+          setTopic(topicData);
+          setFormData({
+            title: topicData.title,
+            slug: topicData.slug,
+            description: topicData.description || "",
+            content: topicData.content,
+            duration: topicData.duration || 30,
+            topicType: topicData.topicType,
+            videoUrl: topicData.videoUrl || "",
+            passingScore: topicData.passingScore,
+            maxAttempts: topicData.maxAttempts,
+            isRequired: topicData.isRequired,
+            allowSkip: topicData.allowSkip,
+            prerequisiteTopicId: topicData.prerequisiteTopicId || "",
+          });
 
-        if (topicsResponse.ok) {
-          const topicsData = await topicsResponse.json();
-          setPrerequisites(topicsData.topics);
+          // Fetch prerequisites for the module
+          const prereqResponse = await fetch(
+            `/api/modules/${topicData.module.id}/topics`
+          );
+          if (prereqResponse.ok) {
+            const prereqData = await prereqResponse.json();
+            // Exclude current topic from prerequisites
+            setPrerequisites(
+              prereqData.topics.filter(
+                (t: any) => t.id !== resolvedParams.topicId
+              )
+            );
+          }
         }
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching topic:", error);
         toast({
           title: "Error",
-          description: "Failed to load module data",
+          description: "Failed to load topic data",
           variant: "destructive",
         });
       } finally {
@@ -89,26 +126,18 @@ export default function CreateTopicPage({ params }: CreateTopicPageProps) {
     getParams();
   }, [params, toast]);
 
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "");
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/modules/${moduleId}/topics`, {
-        method: "POST",
+      const response = await fetch(`/api/topics/${topicId}`, {
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...formData,
-          slug: formData.slug || generateSlug(formData.title),
           prerequisiteTopicId: formData.prerequisiteTopicId || null,
           maxAttempts: formData.maxAttempts || null,
         }),
@@ -116,19 +145,19 @@ export default function CreateTopicPage({ params }: CreateTopicPageProps) {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to create topic");
+        throw new Error(error.error || "Failed to update topic");
       }
 
       toast({
         title: "Success",
-        description: "Topic created successfully",
+        description: "Topic updated successfully",
       });
 
-      router.push(`/admin/courses/${module?.course.id}`);
+      router.push(`/admin/courses/${topic?.module.course.id}`);
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create topic",
+        description: error.message || "Failed to update topic",
         variant: "destructive",
       });
     } finally {
@@ -137,39 +166,30 @@ export default function CreateTopicPage({ params }: CreateTopicPageProps) {
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData((prev) => {
-      const updated = { ...prev, [field]: value };
-
-      // Auto-generate slug when title changes and slug is empty
-      if (field === "title" && !prev.slug) {
-        updated.slug = generateSlug(value);
-      }
-
-      return updated;
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   if (fetchLoading) {
     return (
-      <AdminLayout
-        title="Create Topic"
-        description="Add a new topic to the module"
-      >
+      <AdminLayout title="Edit Topic" description="Update topic information">
         <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Loading...</div>
+          <div className="text-lg">Loading topic...</div>
         </div>
       </AdminLayout>
     );
   }
 
-  if (!module) {
+  if (!topic) {
     return (
       <AdminLayout
-        title="Module Not Found"
-        description="The requested module could not be found"
+        title="Topic Not Found"
+        description="The requested topic could not be found"
       >
         <div className="text-center py-8">
-          <p>Module not found</p>
+          <p>Topic not found</p>
           <Link href="/admin/courses">
             <Button className="mt-4">Back to Courses</Button>
           </Link>
@@ -180,12 +200,12 @@ export default function CreateTopicPage({ params }: CreateTopicPageProps) {
 
   return (
     <AdminLayout
-      title="Create Topic"
-      description={`Add a topic to ${module.title}`}
+      title={`Edit: ${topic.title}`}
+      description="Update topic information"
     >
       <div className="space-y-6">
         <div className="flex items-center space-x-2">
-          <Link href={`/admin/courses/${module.course.id}`}>
+          <Link href={`/admin/courses/${topic.module.course.id}`}>
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Course
@@ -204,9 +224,9 @@ export default function CreateTopicPage({ params }: CreateTopicPageProps) {
               onSubmit={handleSubmit}
               onInputChange={handleInputChange}
               loading={loading}
-              submitLabel="Create Topic"
-              cancelHref={`/admin/courses/${module.course.id}`}
-              isEdit={false}
+              submitLabel="Update Topic"
+              cancelHref={`/admin/courses/${topic.module.course.id}`}
+              isEdit={true}
             />
           </CardContent>
         </Card>

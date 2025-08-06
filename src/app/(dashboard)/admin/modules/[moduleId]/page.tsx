@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ModuleService } from "@/lib/services/moduleService";
-import { ModuleActions } from "@/components/modules/ModuleActions";
+import { ModuleActions } from "@/components/modules/module-actions";
 
 async function getModule(moduleId: string) {
   try {
@@ -56,13 +56,13 @@ export default async function ModuleDetailsPage({
 
   const getTopicTypeIcon = (type: string) => {
     switch (type) {
-      case 'LESSON':
+      case "LESSON":
         return <BookOpen className="h-4 w-4" />;
-      case 'PRACTICE':
+      case "PRACTICE":
         return <Play className="h-4 w-4" />;
-      case 'ASSESSMENT':
+      case "ASSESSMENT":
         return <CheckCircle className="h-4 w-4" />;
-      case 'RESOURCE':
+      case "RESOURCE":
         return <FileText className="h-4 w-4" />;
       default:
         return <BookOpen className="h-4 w-4" />;
@@ -71,16 +71,16 @@ export default async function ModuleDetailsPage({
 
   const getTopicTypeColor = (type: string) => {
     switch (type) {
-      case 'LESSON':
-        return 'bg-blue-100 text-blue-800';
-      case 'PRACTICE':
-        return 'bg-green-100 text-green-800';
-      case 'ASSESSMENT':
-        return 'bg-red-100 text-red-800';
-      case 'RESOURCE':
-        return 'bg-gray-100 text-gray-800';
+      case "LESSON":
+        return "bg-blue-100 text-blue-800";
+      case "PRACTICE":
+        return "bg-green-100 text-green-800";
+      case "ASSESSMENT":
+        return "bg-red-100 text-red-800";
+      case "RESOURCE":
+        return "bg-gray-100 text-gray-800";
       default:
-        return 'bg-blue-100 text-blue-800';
+        return "bg-blue-100 text-blue-800";
     }
   };
 
@@ -149,7 +149,9 @@ export default async function ModuleDetailsPage({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Passing Score</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Passing Score
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -160,14 +162,18 @@ export default async function ModuleDetailsPage({
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unlock Delay</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Unlock Delay
+              </CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
                 {module.unlockDelay ? `${module.unlockDelay}h` : "0h"}
               </div>
-              <p className="text-xs text-muted-foreground">After prerequisite</p>
+              <p className="text-xs text-muted-foreground">
+                After prerequisite
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -202,7 +208,7 @@ export default async function ModuleDetailsPage({
               {module.prerequisiteModule && (
                 <div>
                   <h4 className="font-medium mb-1">Prerequisite</h4>
-                  <Link 
+                  <Link
                     href={`/admin/modules/${module.prerequisiteModule.id}`}
                     className="text-blue-600 hover:text-blue-800"
                   >
@@ -252,9 +258,7 @@ export default async function ModuleDetailsPage({
 
               <div className="flex items-center space-x-2">
                 <BookOpen className="h-4 w-4 text-gray-400" />
-                <span className="text-sm">
-                  Part of {module.course.title}
-                </span>
+                <span className="text-sm">Part of {module.course.title}</span>
               </div>
 
               <div className="pt-4">
@@ -290,20 +294,27 @@ export default async function ModuleDetailsPage({
             {module.topics && module.topics.length > 0 ? (
               <div className="space-y-4">
                 {module.topics.map((topic, index) => (
-                  <div key={topic.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+                  <div
+                    key={topic.id}
+                    className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
                           <span className="text-sm font-medium text-gray-500">
                             {index + 1}.
                           </span>
-                          <Link 
+                          <Link
                             href={`/admin/topics/${topic.id}`}
                             className="font-semibold text-blue-600 hover:text-blue-800"
                           >
                             {topic.title}
                           </Link>
-                          <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getTopicTypeColor(topic.topicType)}`}>
+                          <div
+                            className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getTopicTypeColor(
+                              topic.topicType
+                            )}`}
+                          >
                             {getTopicTypeIcon(topic.topicType)}
                             <span>{topic.topicType}</span>
                           </div>
@@ -343,7 +354,7 @@ export default async function ModuleDetailsPage({
                           )}
                         </div>
                       </div>
-                      
+
                       <div className="flex space-x-2">
                         <Link href={`/admin/topics/${topic.id}`}>
                           <Button variant="outline" size="sm">

@@ -20,9 +20,11 @@ import {
   User,
   Play,
   Plus,
+  Eye,
 } from "lucide-react";
 import { CourseService } from "@/lib/services/courseService";
 import CourseActions from "@/components/courses/course-actions";
+import Link from "next/link";
 
 async function getCourse(courseId: string) {
   try {
@@ -71,27 +73,6 @@ export default async function CourseDetailsPage({
       description="Course details and management"
     >
       <div className="space-y-8">
-        {/* Header Actions */}
-        {/* <div className="flex justify-between items-start">
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Badge variant={statusVariant}>{course.status}</Badge>
-              <Badge variant={difficultyVariant}>{course.difficulty}</Badge>
-            </div>
-          </div>
-          <div className="flex space-x-2">
-            <Link href={`/admin/courses/${course.id}/edit`}>
-              <Button>
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Course
-              </Button>
-            </Link>
-            <Button variant="destructive">
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </Button>
-          </div>
-        </div> */}
         {/* Header Actions */}
         <div className="flex justify-between items-start">
           <div className="space-y-2">
@@ -263,10 +244,12 @@ export default async function CourseDetailsPage({
                   Manage course content and structure
                 </CardDescription>
               </div>
-              <Button variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Module
-              </Button>
+              <Link href={`/admin/courses/${course.id}/modules/create`}>
+                <Button variant="outline">
+                  <Edit className="h-4 w-4 mr-2" />
+                  Add Module
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -290,12 +273,16 @@ export default async function CourseDetailsPage({
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/admin/modules/${module.id}/edit`}>
+                          <Button variant="outline" size="sm">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/modules/${module.id}`}>
+                          <Button variant="outline" size="sm">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
                       </div>
                     </div>
 
