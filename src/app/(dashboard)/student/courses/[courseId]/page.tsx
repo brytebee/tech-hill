@@ -59,11 +59,28 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
     redirect(`/student/courses?enroll=${courseId}`);
   }
 
+  // Serialize the course data to handle Decimal and Date objects
+  const serializedCourse = {
+    ...course,
+    price: course.price ? Number(course.price) : null,
+    createdAt: course.createdAt?.toISOString(),
+    updatedAt: course.updatedAt?.toISOString(),
+    publishedAt: course.publishedAt?.toISOString(),
+  };
+
+  // Serialize the enrollment data
+  const serializedEnrollment = {
+    ...enrollment,
+    enrolledAt: enrollment.enrolledAt.toISOString(),
+    completedAt: enrollment.completedAt?.toISOString(),
+    lastAccessAt: enrollment.lastAccessAt?.toISOString(),
+  };
+
   return (
     <StudentLayout>
       <StudentCourseOverview 
-        course={course}
-        enrollment={enrollment}
+        course={serializedCourse}
+        enrollment={serializedEnrollment}
         userId={session.user.id}
       />
     </StudentLayout>
