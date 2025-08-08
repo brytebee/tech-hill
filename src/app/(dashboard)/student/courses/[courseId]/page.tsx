@@ -1,0 +1,71 @@
+// app/(dashboard)/student/courses/[courseId]/page.tsx
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { StudentLayout } from "@/components/layout/StudentLayout";
+import { CourseService } from "@/lib/services/courseService";
+import { EnrollmentService } from "@/lib/services/enrollmentService";
+import { StudentCourseOverview } from "@/components/students/StudentCourseOverview";
+
+interface PageProps {
+  params: Promise<{ courseId: string }>;
+}
+
+async function getCourseData(courseId: string, userId: string) {
+  try {
+    const [course, enrollment] = await Promise.all([
+      CourseService.getCourseById(courseId),
+      EnrollmentService.getUserEnrollmentByCourse(userId, courseId),
+    ]);
+
+    if (!course) {
+      return null;
+    }
+
+    // Only allow access to published courses for students
+    if (course.status !== 'PUBLISHED') {
+      return null;
+    }
+
+    return {
+      course,
+      enrollment,
+    };
+  } catch (error) {
+    console.error("Error fetching course data:", error);
+    return null;
+  }
+}
+
+export default async function StudentCourseDetailsPage({ params }: PageProps) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  const { courseId } = await params;
+  const data = await getCourseData(courseId, session.user.id);
+
+  if (!data) {
+    notFound();
+  }
+
+  const { course, enrollment } = data;
+
+  // Check if user is enrolled
+  if (!enrollment || enrollment.status !== 'ACTIVE') {
+    redirect(`/student/courses?enroll=${courseId}`);
+  }
+
+  return (
+    <StudentLayout>
+      <StudentCourseOverview 
+        course={course}
+        enrollment={enrollment}
+        userId={session.user.id}
+      />
+    </StudentLayout>
+  );
+}
