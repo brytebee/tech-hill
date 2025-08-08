@@ -16,7 +16,7 @@ async function getCourseData(courseId: string, userId: string) {
   try {
     const [course, enrollment] = await Promise.all([
       CourseService.getCourseById(courseId),
-      EnrollmentService.getUserEnrollmentByCourse(userId, courseId),
+      EnrollmentService.getEnrollment(userId, courseId),
     ]);
 
     if (!course) {
