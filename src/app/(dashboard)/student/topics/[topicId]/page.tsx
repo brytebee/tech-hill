@@ -21,12 +21,12 @@ async function getTopicData(topicId: string, userId: string) {
     }
 
     // Check if user is enrolled in the course
-    const enrollment = await EnrollmentService.getUserEnrollmentByCourse(
-      userId, 
+    const enrollment = await EnrollmentService.getEnrollment(
+      userId,
       topic.module.course.id
     );
 
-    if (!enrollment || enrollment.status !== 'ACTIVE') {
+    if (!enrollment || enrollment.status !== "ACTIVE") {
       return null;
     }
 
@@ -62,8 +62,8 @@ export default async function StudentTopicDetailsPage({ params }: PageProps) {
   const { topic, enrollment } = data;
 
   return (
-    <StudentLayout>
-      <StudentTopicViewer 
+    <StudentLayout title={topic.title} description={`${topic.description}`}>
+      <StudentTopicViewer
         topic={topic}
         enrollment={enrollment}
         userId={session.user.id}

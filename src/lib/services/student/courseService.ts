@@ -1,5 +1,5 @@
-// lib/services/student/course-services.ts
-import { prisma } from "@/lib/prisma";
+// lib/services/student/courseService.ts
+import { prisma } from "@/lib/db";
 
 export class StudentCourseService {
   // Mark topic as started (IN_PROGRESS)
@@ -17,7 +17,7 @@ export class StudentCourseService {
 
       if (existingProgress) {
         // If already started or completed, don't change status
-        if (existingProgress.status !== 'NOT_STARTED') {
+        if (existingProgress.status !== "NOT_STARTED") {
           return existingProgress;
         }
 
@@ -25,7 +25,7 @@ export class StudentCourseService {
         return await prisma.topicProgress.update({
           where: { id: existingProgress.id },
           data: {
-            status: 'IN_PROGRESS',
+            status: "IN_PROGRESS",
             startedAt: new Date(),
           },
         });
@@ -36,7 +36,7 @@ export class StudentCourseService {
         data: {
           userId,
           topicId,
-          status: 'IN_PROGRESS',
+          status: "IN_PROGRESS",
           startedAt: new Date(),
         },
       });
@@ -64,7 +64,7 @@ export class StudentCourseService {
           data: {
             userId,
             topicId,
-            status: 'COMPLETED',
+            status: "COMPLETED",
             startedAt: new Date(),
             completedAt: new Date(),
           },
@@ -75,7 +75,7 @@ export class StudentCourseService {
       return await prisma.topicProgress.update({
         where: { id: progress.id },
         data: {
-          status: 'COMPLETED',
+          status: "COMPLETED",
           completedAt: new Date(),
           startedAt: progress.startedAt || new Date(),
         },
@@ -94,10 +94,10 @@ export class StudentCourseService {
         where: { id: courseId },
         include: {
           modules: {
-            orderBy: { order: 'asc' },
+            orderBy: { order: "asc" },
             include: {
               topics: {
-                orderBy: { orderIndex: 'asc' },
+                orderBy: { orderIndex: "asc" },
                 select: {
                   id: true,
                   isRequired: true,
@@ -113,7 +113,7 @@ export class StudentCourseService {
       }
 
       // Get user's topic progress
-      const topicIds = course.modules.flatMap(m => m.topics.map(t => t.id));
+      const topicIds = course.modules.flatMap((m) => m.topics.map((t) => t.id));
       const topicProgress = await prisma.topicProgress.findMany({
         where: {
           userId,
@@ -122,26 +122,28 @@ export class StudentCourseService {
       });
 
       const progressMap = new Map(
-        topicProgress.map(p => [p.topicId, p.status])
+        topicProgress.map((p) => [p.topicId, p.status])
       );
 
       // Calculate module progress
-      const moduleProgress = course.modules.map(module => {
+      const moduleProgress = course.modules.map((module) => {
         const topics = module.topics;
-        const completedTopics = topics.filter(t => 
-          progressMap.get(t.id) === 'COMPLETED'
+        const completedTopics = topics.filter(
+          (t) => progressMap.get(t.id) === "COMPLETED"
         ).length;
 
-        const requiredTopics = topics.filter(t => t.isRequired).length;
-        const completedRequiredTopics = topics.filter(t => 
-          t.isRequired && progressMap.get(t.id) === 'COMPLETED'
+        const requiredTopics = topics.filter((t) => t.isRequired).length;
+        const completedRequiredTopics = topics.filter(
+          (t) => t.isRequired && progressMap.get(t.id) === "COMPLETED"
         ).length;
 
-        const progress = topics.length > 0 
-          ? Math.round((completedTopics / topics.length) * 100)
-          : 100;
+        const progress =
+          topics.length > 0
+            ? Math.round((completedTopics / topics.length) * 100)
+            : 100;
 
-        const isComplete = requiredTopics === 0 || completedRequiredTopics === requiredTopics;
+        const isComplete =
+          requiredTopics === 0 || completedRequiredTopics === requiredTopics;
 
         return {
           moduleId: module.id,
@@ -155,11 +157,15 @@ export class StudentCourseService {
       });
 
       // Calculate overall course progress
-      const totalTopics = course.modules.reduce((sum, m) => sum + m.topics.length, 0);
-      const completedTopics = topicProgress.filter(p => p.status === 'COMPLETED').length;
-      const overallProgress = totalTopics > 0 
-        ? Math.round((completedTopics / totalTopics) * 100)
-        : 0;
+      const totalTopics = course.modules.reduce(
+        (sum, m) => sum + m.topics.length,
+        0
+      );
+      const completedTopics = topicProgress.filter(
+        (p) => p.status === "COMPLETED"
+      ).length;
+      const overallProgress =
+        totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
 
       return {
         courseId,
@@ -200,7 +206,7 @@ export class StudentCourseService {
         where: {
           userId,
           courseId: topic.module.course.id,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
       });
 
@@ -219,7 +225,7 @@ export class StudentCourseService {
           },
         });
 
-        if (!prereqProgress || prereqProgress.status !== 'COMPLETED') {
+        if (!prereqProgress || prereqProgress.status !== "COMPLETED") {
           return {
             canAccess: false,
             reason: "Prerequisite topic not completed",
@@ -230,8 +236,11 @@ export class StudentCourseService {
 
       // Check prerequisite module
       if (topic.module.prerequisiteModule) {
-        const moduleProgress = await this.getModuleProgress(userId, topic.module.prerequisiteModule.id);
-        
+        const moduleProgress = await this.getModuleProgress(
+          userId,
+          topic.module.prerequisiteModule.id
+        );
+
         if (!moduleProgress.isComplete) {
           return {
             canAccess: false,
@@ -267,7 +276,7 @@ export class StudentCourseService {
         throw new Error("Module not found");
       }
 
-      const topicIds = module.topics.map(t => t.id);
+      const topicIds = module.topics.map((t) => t.id);
       const topicProgress = await prisma.topicProgress.findMany({
         where: {
           userId,
@@ -275,18 +284,25 @@ export class StudentCourseService {
         },
       });
 
-      const completedTopics = topicProgress.filter(p => p.status === 'COMPLETED').length;
-      const requiredTopics = module.topics.filter(t => t.isRequired).length;
-      const completedRequiredTopics = module.topics.filter(t => 
-        t.isRequired && 
-        topicProgress.some(p => p.topicId === t.id && p.status === 'COMPLETED')
+      const completedTopics = topicProgress.filter(
+        (p) => p.status === "COMPLETED"
+      ).length;
+      const requiredTopics = module.topics.filter((t) => t.isRequired).length;
+      const completedRequiredTopics = module.topics.filter(
+        (t) =>
+          t.isRequired &&
+          topicProgress.some(
+            (p) => p.topicId === t.id && p.status === "COMPLETED"
+          )
       ).length;
 
-      const progress = module.topics.length > 0 
-        ? Math.round((completedTopics / module.topics.length) * 100)
-        : 100;
+      const progress =
+        module.topics.length > 0
+          ? Math.round((completedTopics / module.topics.length) * 100)
+          : 100;
 
-      const isComplete = requiredTopics === 0 || completedRequiredTopics === requiredTopics;
+      const isComplete =
+        requiredTopics === 0 || completedRequiredTopics === requiredTopics;
 
       return {
         moduleId,
@@ -341,17 +357,29 @@ export class StudentCourseService {
         let isCorrect = false;
         let pointsEarned = 0;
 
-        if (question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') {
-          const correctOption = question.options.find(o => o.isCorrect);
+        if (
+          question.questionType === "MULTIPLE_CHOICE" ||
+          question.questionType === "TRUE_FALSE"
+        ) {
+          const correctOption = question.options.find((o) => o.isCorrect);
           isCorrect = userAnswer === correctOption?.id;
           pointsEarned = isCorrect ? question.points : 0;
-        } else if (question.questionType === 'MULTIPLE_SELECT') {
-          const correctOptions = question.options.filter(o => o.isCorrect).map(o => o.id);
+        } else if (question.questionType === "MULTIPLE_SELECT") {
+          const correctOptions = question.options
+            .filter((o) => o.isCorrect)
+            .map((o) => o.id);
           const userAnswers = Array.isArray(userAnswer) ? userAnswer : [];
-          isCorrect = correctOptions.length === userAnswers.length &&
-            correctOptions.every(id => userAnswers.includes(id));
-          pointsEarned = isCorrect ? question.points : 
-            Math.round(question.points * (userAnswers.filter(id => correctOptions.includes(id)).length / correctOptions.length));
+          isCorrect =
+            correctOptions.length === userAnswers.length &&
+            correctOptions.every((id) => userAnswers.includes(id));
+          pointsEarned = isCorrect
+            ? question.points
+            : Math.round(
+                question.points *
+                  (userAnswers.filter((id) => correctOptions.includes(id))
+                    .length /
+                    correctOptions.length)
+              );
         } else {
           // For SHORT_ANSWER and ESSAY, we'll mark as correct for now
           // In a real app, this would require manual grading or AI evaluation
@@ -369,7 +397,8 @@ export class StudentCourseService {
         });
       }
 
-      const score = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+      const score =
+        totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
       const passed = score >= quiz.passingScore;
 
       // Create quiz attempt record
@@ -427,7 +456,7 @@ export class StudentCourseService {
         where: {
           userId,
           courseId,
-          status: 'ACTIVE',
+          status: "ACTIVE",
         },
         data: {
           overallProgress: progress.overallProgress,
@@ -436,17 +465,20 @@ export class StudentCourseService {
       });
 
       // Check if course is completed (all required modules completed)
-      const allModulesCompleted = progress.moduleProgress.every(m => m.isComplete);
-      
-      if (allModulesCompleted && progress.overallProgress >= 80) { // Assuming 80% completion threshold
+      const allModulesCompleted = progress.moduleProgress.every(
+        (m) => m.isComplete
+      );
+
+      if (allModulesCompleted && progress.overallProgress >= 80) {
+        // Assuming 80% completion threshold
         await prisma.enrollment.updateMany({
           where: {
             userId,
             courseId,
-            status: 'ACTIVE',
+            status: "ACTIVE",
           },
           data: {
-            status: 'COMPLETED',
+            status: "COMPLETED",
             completedAt: new Date(),
           },
         });
@@ -505,11 +537,13 @@ export class StudentCourseService {
       }
 
       // Generate certificate ID
-      const certificateId = `CERT-${courseId.slice(-6).toUpperCase()}-${userId.slice(-6).toUpperCase()}-${Date.now()}`;
+      const certificateId = `CERT-${courseId.slice(-6).toUpperCase()}-${userId
+        .slice(-6)
+        .toUpperCase()}-${Date.now()}`;
 
       const certificate = await prisma.certificate.create({
         data: {
-          certificateId,
+          id: certificateId,
           userId,
           courseId,
           studentName: `${user.firstName} ${user.lastName}`,
@@ -531,16 +565,16 @@ export class StudentCourseService {
   static async getNextTopic(userId: string, courseId: string) {
     try {
       const courseProgress = await this.getCourseProgress(userId, courseId);
-      
+
       // Get course structure
       const course = await prisma.course.findUnique({
         where: { id: courseId },
         include: {
           modules: {
-            orderBy: { order: 'asc' },
+            orderBy: { order: "asc" },
             include: {
               topics: {
-                orderBy: { orderIndex: 'asc' },
+                orderBy: { orderIndex: "asc" },
               },
             },
           },
@@ -555,10 +589,13 @@ export class StudentCourseService {
       for (const module of course.modules) {
         for (const topic of module.topics) {
           const topicStatus = courseProgress.topicProgress.get(topic.id);
-          
-          if (topicStatus !== 'COMPLETED') {
-            const accessibility = await this.getTopicAccessibility(userId, topic.id);
-            
+
+          if (topicStatus !== "COMPLETED") {
+            const accessibility = await this.getTopicAccessibility(
+              userId,
+              topic.id
+            );
+
             if (accessibility.canAccess) {
               return {
                 ...topic,
@@ -566,7 +603,7 @@ export class StudentCourseService {
                   id: module.id,
                   title: module.title,
                 },
-                status: topicStatus || 'NOT_STARTED',
+                status: topicStatus || "NOT_STARTED",
               };
             }
           }

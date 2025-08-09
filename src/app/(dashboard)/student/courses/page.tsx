@@ -20,21 +20,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  BookOpen, 
-  Clock, 
-  Award, 
-  Play, 
+import {
+  BookOpen,
+  Clock,
+  Award,
+  Play,
   Search,
   Filter,
   CheckCircle,
   UserCheck,
-  X
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
 import { CourseService } from "@/lib/services/courseService";
-import { EnrollButton } from "@/components/student/EnrollButton";
+import { EnrollButton } from "@/components/students/EnrollButton";
 
 interface PageProps {
   searchParams: Promise<{
@@ -44,36 +44,46 @@ interface PageProps {
   }>;
 }
 
-async function getCoursesData(userId: string, searchParams: {
-  search?: string;
-  difficulty?: string;
-  page?: string;
-}) {
+async function getCoursesData(
+  userId: string,
+  searchParams: {
+    search?: string;
+    difficulty?: string;
+    page?: string;
+  }
+) {
   try {
-    const page = parseInt(searchParams.page || '1');
+    const page = parseInt(searchParams.page || "1");
     const limit = 12;
 
     const [coursesResult, enrollments] = await Promise.all([
-      CourseService.getCourses({
-        status: "PUBLISHED",
-        search: searchParams.search,
-        difficulty: searchParams.difficulty === 'none' ? undefined : searchParams.difficulty as any,
-      }, page, limit),
+      CourseService.getCourses(
+        {
+          status: "PUBLISHED",
+          search: searchParams.search,
+          difficulty:
+            searchParams.difficulty === "none"
+              ? undefined
+              : (searchParams.difficulty as any),
+        },
+        page,
+        limit
+      ),
       EnrollmentService.getUserEnrollments(userId),
     ]);
 
     // Create a map of enrolled course IDs for quick lookup
     const enrolledCourseIds = new Set(
       enrollments
-        .filter(e => e.status === 'ACTIVE' || e.status === 'COMPLETED')
-        .map(e => e.courseId)
+        .filter((e) => e.status === "ACTIVE" || e.status === "COMPLETED")
+        .map((e) => e.courseId)
     );
 
     // Add enrollment status to courses
-    const coursesWithEnrollment = coursesResult.courses.map(course => ({
+    const coursesWithEnrollment = coursesResult.courses.map((course) => ({
       ...course,
       isEnrolled: enrolledCourseIds.has(course.id),
-      enrollment: enrollments.find(e => e.courseId === course.id),
+      enrollment: enrollments.find((e) => e.courseId === course.id),
     }));
 
     return {
@@ -97,14 +107,14 @@ async function getCoursesData(userId: string, searchParams: {
 
 function getDifficultyColor(difficulty: string) {
   switch (difficulty) {
-    case 'BEGINNER':
-      return 'bg-green-100 text-green-800';
-    case 'INTERMEDIATE':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'ADVANCED':
-      return 'bg-red-100 text-red-800';
+    case "BEGINNER":
+      return "bg-green-100 text-green-800";
+    case "INTERMEDIATE":
+      return "bg-yellow-100 text-yellow-800";
+    case "ADVANCED":
+      return "bg-red-100 text-red-800";
     default:
-      return 'bg-gray-100 text-gray-800';
+      return "bg-gray-100 text-gray-800";
   }
 }
 
@@ -128,14 +138,14 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
           {course.shortDescription || course.description}
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="flex-1 flex flex-col justify-between">
         <div className="space-y-3 mb-4">
           <div className="flex items-center text-sm text-gray-600">
             <Clock className="h-4 w-4 mr-1" />
             {course.duration} hours
           </div>
-          
+
           {course.tags && course.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {course.tags.slice(0, 3).map((tag: string) => (
@@ -155,7 +165,9 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Progress</span>
-                <span className="font-medium">{course.enrollment.overallProgress}%</span>
+                <span className="font-medium">
+                  {course.enrollment.overallProgress}%
+                </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div
@@ -173,11 +185,13 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
               <Link href={`/student/courses/${course.id}`} className="flex-1">
                 <Button className="w-full">
                   <Play className="h-4 w-4 mr-2" />
-                  {course.enrollment?.overallProgress > 0 ? 'Continue' : 'Start'}
+                  {course.enrollment?.overallProgress > 0
+                    ? "Continue"
+                    : "Start"}
                 </Button>
               </Link>
-              <EnrollButton 
-                courseId={course.id} 
+              <EnrollButton
+                courseId={course.id}
                 isEnrolled={true}
                 variant="outline"
                 size="default"
@@ -186,8 +200,8 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
               </EnrollButton>
             </>
           ) : (
-            <EnrollButton 
-              courseId={course.id} 
+            <EnrollButton
+              courseId={course.id}
               isEnrolled={false}
               className="w-full"
             >
@@ -200,12 +214,14 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
   );
 }
 
-function SearchAndFilters({ searchParams }: { 
+function SearchAndFilters({
+  searchParams,
+}: {
   searchParams: {
     search?: string;
     difficulty?: string;
     page?: string;
-  }
+  };
 }) {
   return (
     <Card>
@@ -216,14 +232,17 @@ function SearchAndFilters({ searchParams }: {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Search courses..."
-                defaultValue={searchParams.search || ''}
+                defaultValue={searchParams.search || ""}
                 name="search"
                 className="pl-10"
               />
             </div>
           </div>
-          
-          <Select defaultValue={searchParams.difficulty || 'none'} name="difficulty">
+
+          <Select
+            defaultValue={searchParams.difficulty || "none"}
+            name="difficulty"
+          >
             <SelectTrigger className="w-full md:w-[180px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Difficulty" />
@@ -244,28 +263,26 @@ function SearchAndFilters({ searchParams }: {
   );
 }
 
-function Pagination({ currentPage, totalPages }: { currentPage: number; totalPages: number }) {
+function Pagination({
+  currentPage,
+  totalPages,
+}: {
+  currentPage: number;
+  totalPages: number;
+}) {
   if (totalPages <= 1) return null;
 
   return (
     <div className="flex justify-center items-center space-x-2">
-      <Button
-        variant="outline"
-        disabled={currentPage <= 1}
-        size="sm"
-      >
+      <Button variant="outline" disabled={currentPage <= 1} size="sm">
         Previous
       </Button>
-      
+
       <span className="text-sm text-gray-600">
         Page {currentPage} of {totalPages}
       </span>
-      
-      <Button
-        variant="outline"
-        disabled={currentPage >= totalPages}
-        size="sm"
-      >
+
+      <Button variant="outline" disabled={currentPage >= totalPages} size="sm">
         Next
       </Button>
     </div>
@@ -282,11 +299,11 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
   // Await searchParams before using its properties
   const resolvedSearchParams = await searchParams;
 
-  const { courses, totalPages, totalCourses, currentPage, enrollments } = 
+  const { courses, totalPages, totalCourses, currentPage, enrollments } =
     await getCoursesData(session.user.id, resolvedSearchParams);
 
-  const enrolledCount = enrollments.filter(e => 
-    e.status === 'ACTIVE' || e.status === 'COMPLETED'
+  const enrolledCount = enrollments.filter(
+    (e) => e.status === "ACTIVE" || e.status === "COMPLETED"
   ).length;
 
   return (
@@ -300,7 +317,7 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
               Discover and manage your computer literacy courses
             </p>
           </div>
-          
+
           <div className="flex items-center gap-4 text-sm text-gray-600">
             <div className="flex items-center">
               <BookOpen className="h-4 w-4 mr-1" />
@@ -323,9 +340,9 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.map((course) => (
-                <CourseCard 
-                  key={course.id} 
-                  course={course} 
+                <CourseCard
+                  key={course.id}
+                  course={course}
                   userId={session.user.id}
                 />
               ))}
@@ -343,12 +360,15 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
                 No courses found
               </h3>
               <p className="text-gray-500 mb-4">
-                {resolvedSearchParams.search || (resolvedSearchParams.difficulty && resolvedSearchParams.difficulty !== 'none')
+                {resolvedSearchParams.search ||
+                (resolvedSearchParams.difficulty &&
+                  resolvedSearchParams.difficulty !== "none")
                   ? "Try adjusting your search criteria"
-                  : "No courses are currently available"
-                }
+                  : "No courses are currently available"}
               </p>
-              {(resolvedSearchParams.search || (resolvedSearchParams.difficulty && resolvedSearchParams.difficulty !== 'none')) && (
+              {(resolvedSearchParams.search ||
+                (resolvedSearchParams.difficulty &&
+                  resolvedSearchParams.difficulty !== "none")) && (
                 <Link href="/student/courses">
                   <Button variant="outline">Clear Filters</Button>
                 </Link>

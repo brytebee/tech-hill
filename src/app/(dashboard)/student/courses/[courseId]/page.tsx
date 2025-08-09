@@ -24,7 +24,7 @@ async function getCourseData(courseId: string, userId: string) {
     }
 
     // Only allow access to published courses for students
-    if (course.status !== 'PUBLISHED') {
+    if (course.status !== "PUBLISHED") {
       return null;
     }
 
@@ -54,15 +54,17 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
 
   const { course, enrollment } = data;
 
+  if (!course) {
+    redirect("/student");
+  }
   // Check if user is enrolled
-  if (!enrollment || enrollment.status !== 'ACTIVE') {
+  if (!enrollment || enrollment.status !== "ACTIVE") {
     redirect(`/student/courses?enroll=${courseId}`);
   }
 
   // Serialize the course data to handle Decimal and Date objects
   const serializedCourse = {
     ...course,
-    price: course.price ? Number(course.price) : null,
     createdAt: course.createdAt?.toISOString(),
     updatedAt: course.updatedAt?.toISOString(),
     publishedAt: course.publishedAt?.toISOString(),
@@ -77,8 +79,11 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
   };
 
   return (
-    <StudentLayout>
-      <StudentCourseOverview 
+    <StudentLayout
+      title={serializedCourse.title}
+      description={serializedCourse.shortDescription as string}
+    >
+      <StudentCourseOverview
         course={serializedCourse}
         enrollment={serializedEnrollment}
         userId={session.user.id}

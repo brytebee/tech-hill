@@ -504,7 +504,7 @@ import {
 import Link from "next/link";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
 import { CourseService } from "@/lib/services/courseService";
-import { EnrollButton } from "@/components/student/EnrollButton";
+import { EnrollButton } from "@/components/students/EnrollButton";
 
 interface PageProps {
   searchParams: Promise<{

@@ -48,7 +48,7 @@ export class EnrollmentService {
 
   // Get enrollment by user and course
   static async getEnrollment(userId: string, courseId: string) {
-    return await prisma.enrollment.findUnique({
+    const enrollment = await prisma.enrollment.findUnique({
       where: {
         userId_courseId: {
           userId,
@@ -70,6 +70,18 @@ export class EnrollmentService {
         },
       },
     });
+
+    if (!enrollment) return null;
+
+    // Transform the price from Decimal to Number in emdedded course
+    return {
+      ...enrollment,
+      enrollment: {
+        course: {
+          price: enrollment.course.price ? Number(enrollment.course.price) : 0,
+        },
+      },
+    };
   }
 
   // Get user enrollments

@@ -1,7 +1,7 @@
 // components/students/StudentCourseOverview.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -12,7 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   BookOpen,
   Clock,
@@ -92,40 +96,40 @@ interface StudentCourseOverviewProps {
 
 function getDifficultyColor(difficulty: string) {
   switch (difficulty) {
-    case 'BEGINNER':
-      return 'bg-green-100 text-green-800 border-green-200';
-    case 'INTERMEDIATE':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-    case 'ADVANCED':
-      return 'bg-red-100 text-red-800 border-red-200';
+    case "BEGINNER":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "INTERMEDIATE":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case "ADVANCED":
+      return "bg-red-100 text-red-800 border-red-200";
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 }
 
 function getTopicIcon(type: string) {
   switch (type) {
-    case 'VIDEO':
+    case "VIDEO":
       return <Video className="h-4 w-4" />;
-    case 'PRACTICE':
+    case "PRACTICE":
       return <Target className="h-4 w-4" />;
-    case 'ASSESSMENT':
+    case "ASSESSMENT":
       return <Award className="h-4 w-4" />;
-    case 'RESOURCE':
+    case "RESOURCE":
       return <FileText className="h-4 w-4" />;
     default:
       return <BookOpen className="h-4 w-4" />;
   }
 }
 
-function ModuleCard({ 
-  module, 
-  isLocked, 
-  isExpanded, 
-  onToggle, 
-  courseId 
-}: { 
-  module: Module; 
+function ModuleCard({
+  module,
+  isLocked,
+  isExpanded,
+  onToggle,
+  courseId,
+}: {
+  module: Module;
   isLocked: boolean;
   isExpanded: boolean;
   onToggle: () => void;
@@ -133,36 +137,47 @@ function ModuleCard({
 }) {
   // Mock progress data - in real app, this would come from TopicProgress
   const completedTopics = Math.floor(module.topics.length * 0.3); // 30% completion mock
-  const progressPercentage = module.topics.length > 0 ? 
-    Math.round((completedTopics / module.topics.length) * 100) : 0;
+  const progressPercentage =
+    module.topics.length > 0
+      ? Math.round((completedTopics / module.topics.length) * 100)
+      : 0;
 
   return (
-    <Card className={`transition-all duration-200 ${isLocked ? 'opacity-60' : ''}`}>
+    <Card
+      className={`transition-all duration-200 ${isLocked ? "opacity-60" : ""}`}
+    >
       <Collapsible open={isExpanded && !isLocked} onOpenChange={onToggle}>
-        <CollapsibleTrigger asChild>
+        <CollapsibleTrigger>
           <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  {isLocked ? (
-                    <Lock className="h-5 w-5 text-gray-400" />
-                  ) : progressPercentage === 100 ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <div className="relative">
-                      {isExpanded ? (
-                        <ChevronDown className="h-5 w-5 text-gray-600" />
-                      ) : (
-                        <ChevronRight className="h-5 w-5 text-gray-600" />
-                      )}
-                    </div>
-                  )}
+                  {
+                    isLocked ? (
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      progressPercentage === 100 && (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      )
+                    )
+                    // : (
+                    //   <div className="relative">
+                    //     {isExpanded ? (
+                    //       <ChevronDown className="h-5 w-5 text-gray-600" />
+                    //     ) : (
+                    //       <ChevronRight className="h-5 w-5 text-gray-600" />
+                    //     )}
+                    //   </div>
+                    // )
+                  }
                 </div>
                 <div className="flex-grow">
                   <CardTitle className="text-lg flex items-center gap-2">
                     Module {module.order}: {module.title}
                     {module.isRequired && (
-                      <Badge variant="secondary" className="text-xs">Required</Badge>
+                      <Badge variant="secondary" className="text-xs">
+                        Required
+                      </Badge>
                     )}
                   </CardTitle>
                   <CardDescription className="flex items-center gap-4 mt-1">
@@ -200,21 +215,21 @@ function ModuleCard({
             {module.description && (
               <p className="text-sm text-gray-600 mb-4">{module.description}</p>
             )}
-            
+
             <div className="space-y-2">
               {module.topics.map((topic, index) => {
                 const isTopicCompleted = index < completedTopics;
                 const isTopicCurrent = index === completedTopics && !isLocked;
-                
+
                 return (
                   <div
                     key={topic.id}
                     className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
                       isTopicCompleted
-                        ? 'bg-green-50 border-green-200'
+                        ? "bg-green-50 border-green-200"
                         : isTopicCurrent
-                        ? 'bg-blue-50 border-blue-200'
-                        : 'bg-gray-50 border-gray-200'
+                        ? "bg-blue-50 border-blue-200"
+                        : "bg-gray-50 border-gray-200"
                     }`}
                   >
                     <div className="flex items-center space-x-3">
@@ -234,27 +249,33 @@ function ModuleCard({
                               {topic.duration} min
                             </span>
                           )}
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className="text-xs px-1 py-0"
                           >
                             {topic.topicType.toLowerCase()}
                           </Badge>
                           {topic.isRequired && (
-                            <Badge variant="secondary" className="text-xs px-1 py-0">
+                            <Badge
+                              variant="secondary"
+                              className="text-xs px-1 py-0"
+                            >
                               Required
                             </Badge>
                           )}
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex-shrink-0">
-                      {(isTopicCompleted || isTopicCurrent) ? (
+                      {isTopicCompleted || isTopicCurrent ? (
                         <Link href={`/student/topics/${topic.id}`}>
-                          <Button size="sm" variant={isTopicCompleted ? "outline" : "default"}>
+                          <Button
+                            size="sm"
+                            variant={isTopicCompleted ? "outline" : "default"}
+                          >
                             <Play className="h-3 w-3 mr-1" />
-                            {isTopicCompleted ? 'Review' : 'Start'}
+                            {isTopicCompleted ? "Review" : "Start"}
                           </Button>
                         </Link>
                       ) : (
@@ -275,12 +296,14 @@ function ModuleCard({
   );
 }
 
-export function StudentCourseOverview({ 
-  course, 
-  enrollment, 
-  userId 
+export function StudentCourseOverview({
+  course,
+  enrollment,
+  userId,
 }: StudentCourseOverviewProps) {
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(
+    new Set()
+  );
 
   const toggleModule = (moduleId: string) => {
     const newExpanded = new Set(expandedModules);
@@ -297,8 +320,11 @@ export function StudentCourseOverview({
     const completed = new Set<string>(); // Mock - would come from ModuleProgress
     const locked = new Set<string>();
 
-    course.modules.forEach(module => {
-      if (module.prerequisiteModuleId && !completed.has(module.prerequisiteModuleId)) {
+    course.modules.forEach((module) => {
+      if (
+        module.prerequisiteModuleId &&
+        !completed.has(module.prerequisiteModuleId)
+      ) {
         locked.add(module.id);
       }
     });
@@ -319,7 +345,10 @@ export function StudentCourseOverview({
                 <Badge className={getDifficultyColor(course.difficulty)}>
                   {course.difficulty}
                 </Badge>
-                <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-100 text-blue-800"
+                >
                   Enrolled
                 </Badge>
               </div>
@@ -329,7 +358,7 @@ export function StudentCourseOverview({
               <p className="text-gray-600 mb-4">
                 {course.shortDescription || course.description}
               </p>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-gray-400" />
@@ -355,16 +384,23 @@ export function StudentCourseOverview({
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-medium">Course Progress</h3>
-              <span className="text-sm font-medium">{enrollment.overallProgress}%</span>
+              <span className="text-sm font-medium">
+                {enrollment.overallProgress}%
+              </span>
             </div>
             <Progress value={enrollment.overallProgress} className="h-2" />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Started {new Date(enrollment.enrolledAt).toLocaleDateString()}</span>
               <span>
-                {enrollment.completedAt 
-                  ? `Completed ${new Date(enrollment.completedAt).toLocaleDateString()}` 
-                  : `${course.modules.length - lockedModules.size} of ${course.modules.length} modules available`
-                }
+                Started {new Date(enrollment.enrolledAt).toLocaleDateString()}
+              </span>
+              <span>
+                {enrollment.completedAt
+                  ? `Completed ${new Date(
+                      enrollment.completedAt
+                    ).toLocaleDateString()}`
+                  : `${course.modules.length - lockedModules.size} of ${
+                      course.modules.length
+                    } modules available`}
               </span>
             </div>
           </div>
@@ -396,8 +432,8 @@ export function StudentCourseOverview({
       {/* Course Modules */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Course Content</h2>
-        
-        {course.modules.map(module => (
+
+        {course.modules.map((module) => (
           <ModuleCard
             key={module.id}
             module={module}
@@ -417,7 +453,7 @@ export function StudentCourseOverview({
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {course.tags.map(tag => (
+              {course.tags.map((tag) => (
                 <Badge key={tag} variant="outline">
                   {tag}
                 </Badge>

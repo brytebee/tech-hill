@@ -3,12 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -29,6 +24,7 @@ import {
   Calendar,
 } from "lucide-react";
 import Link from "next/link";
+import { StudentCourseService } from "@/lib/services/student/courseService";
 
 interface Quiz {
   id: string;
@@ -89,13 +85,13 @@ interface StudentTopicViewerProps {
 
 function getTopicIcon(type: string) {
   switch (type) {
-    case 'VIDEO':
+    case "VIDEO":
       return <Video className="h-5 w-5" />;
-    case 'PRACTICE':
+    case "PRACTICE":
       return <Target className="h-5 w-5" />;
-    case 'ASSESSMENT':
+    case "ASSESSMENT":
       return <Award className="h-5 w-5" />;
-    case 'RESOURCE':
+    case "RESOURCE":
       return <FileText className="h-5 w-5" />;
     default:
       return <BookOpen className="h-5 w-5" />;
@@ -104,23 +100,23 @@ function getTopicIcon(type: string) {
 
 function getTopicTypeColor(type: string) {
   switch (type) {
-    case 'VIDEO':
-      return 'bg-purple-100 text-purple-800 border-purple-200';
-    case 'PRACTICE':
-      return 'bg-blue-100 text-blue-800 border-blue-200';
-    case 'ASSESSMENT':
-      return 'bg-orange-100 text-orange-800 border-orange-200';
-    case 'RESOURCE':
-      return 'bg-green-100 text-green-800 border-green-200';
+    case "VIDEO":
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    case "PRACTICE":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "ASSESSMENT":
+      return "bg-orange-100 text-orange-800 border-orange-200";
+    case "RESOURCE":
+      return "bg-green-100 text-green-800 border-green-200";
     default:
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 }
 
-export function StudentTopicViewer({ 
-  topic, 
-  enrollment, 
-  userId 
+export function StudentTopicViewer({
+  topic,
+  enrollment,
+  userId,
 }: StudentTopicViewerProps) {
   const router = useRouter();
   const [isCompleted, setIsCompleted] = useState(false);
@@ -138,9 +134,16 @@ export function StudentTopicViewer({
 
   const handleMarkComplete = async () => {
     try {
-      // In real app: call API to update TopicProgress status to COMPLETED
-      setIsCompleted(true);
-      console.log("Marking topic as completed:", topic.id);
+      const res = await fetch(`/api/student/topics/${topic.id}/mark-complete`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Marking topic as completed:", topic.id);
+        setIsCompleted(true);
+      } else {
+        if (!res.ok) throw new Error("Failed to fetch users");
+      }
     } catch (error) {
       console.error("Failed to mark topic as completed:", error);
     }
@@ -154,7 +157,7 @@ export function StudentTopicViewer({
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Breadcrumb Navigation */}
       <nav className="flex items-center space-x-2 text-sm text-gray-500">
-        <Link 
+        <Link
           href={`/student/courses/${topic.module.course.id}`}
           className="hover:text-gray-700 flex items-center gap-1"
         >
@@ -187,9 +190,9 @@ export function StudentTopicViewer({
                   </Badge>
                 )}
               </div>
-              
+
               <CardTitle className="text-2xl mb-2">{topic.title}</CardTitle>
-              
+
               {topic.description && (
                 <p className="text-gray-600 mb-4">{topic.description}</p>
               )}
@@ -213,7 +216,10 @@ export function StudentTopicViewer({
                 )}
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-gray-400" />
-                  <span>{topic.module.course.creator.firstName} {topic.module.course.creator.lastName}</span>
+                  <span>
+                    {topic.module.course.creator.firstName}{" "}
+                    {topic.module.course.creator.lastName}
+                  </span>
                 </div>
               </div>
             </div>
@@ -230,7 +236,8 @@ export function StudentTopicViewer({
               <span className="font-medium">Prerequisite Required</span>
             </div>
             <p className="text-orange-700 mt-1">
-              Complete "{topic.prerequisiteTopic.title}" before accessing this topic.
+              Complete "{topic.prerequisiteTopic.title}" before accessing this
+              topic.
             </p>
           </CardContent>
         </Card>
@@ -266,7 +273,7 @@ export function StudentTopicViewer({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div 
+          <div
             className="prose max-w-none"
             dangerouslySetInnerHTML={{ __html: topic.content }}
           />
@@ -291,12 +298,8 @@ export function StudentTopicViewer({
                 >
                   <div className="flex items-center gap-3">
                     <FileText className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">
-                      Resource {index + 1}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {attachment}
-                    </span>
+                    <span className="font-medium">Resource {index + 1}</span>
+                    <span className="text-sm text-gray-500">{attachment}</span>
                   </div>
                   <Button variant="outline" size="sm">
                     Download
@@ -319,7 +322,7 @@ export function StudentTopicViewer({
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topic.quizzes.map(quiz => (
+              {topic.quizzes.map((quiz) => (
                 <div
                   key={quiz.id}
                   className="flex items-center justify-between p-4 border rounded-lg"
@@ -330,7 +333,9 @@ export function StudentTopicViewer({
                       <span>{quiz.questions.length} questions</span>
                       <span>Passing: {quiz.passingScore}%</span>
                       <span>
-                        Total: {quiz.questions.reduce((sum, q) => sum + q.points, 0)} points
+                        Total:{" "}
+                        {quiz.questions.reduce((sum, q) => sum + q.points, 0)}{" "}
+                        points
                       </span>
                     </div>
                   </div>
@@ -352,15 +357,14 @@ export function StudentTopicViewer({
             <div>
               {!isCompleted && (
                 <p className="text-sm text-gray-600 mb-2">
-                  Mark this topic as complete when you're done studying the material.
+                  Mark this topic as complete when you're done studying the
+                  material.
                 </p>
               )}
             </div>
             <div className="flex gap-3">
               {topic.allowSkip && !topic.isRequired && (
-                <Button variant="outline">
-                  Skip Topic
-                </Button>
+                <Button variant="outline">Skip Topic</Button>
               )}
               {!isCompleted ? (
                 <Button onClick={handleMarkComplete}>
@@ -386,13 +390,13 @@ export function StudentTopicViewer({
             Back to Course
           </Button>
         </Link>
-        
+
         <div className="text-center">
           <p className="text-sm text-gray-500">
             Topic {topic.orderIndex} in {topic.module.title}
           </p>
         </div>
-        
+
         <Button variant="outline" disabled>
           Next Topic
           <ArrowRight className="h-4 w-4 ml-2" />
