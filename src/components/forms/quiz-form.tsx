@@ -29,7 +29,10 @@ const quizFormSchema = z.object({
   shuffleOptions: z.boolean().optional(),
   showFeedback: z.boolean().optional(),
   allowReview: z.boolean().optional(),
-  passingScore: z.number().min(0).max(100, "Passing score must be between 0 and 100"),
+  passingScore: z
+    .number()
+    .min(0)
+    .max(100, "Passing score must be between 0 and 100"),
   maxAttempts: z.number().min(1).optional(),
   adaptiveDifficulty: z.boolean().optional(),
   requireMastery: z.boolean().optional(),
@@ -78,8 +81,8 @@ export function QuizForm({
   const onSubmit = async (data: QuizFormData) => {
     setLoading(true);
     try {
-      const url = isEdit 
-        ? `/api/quizzes/${quiz.id}` 
+      const url = isEdit
+        ? `/api/quizzes/${quiz.id}`
         : `/api/topics/${topicId}/quizzes`;
       const method = isEdit ? "PUT" : "POST";
 
@@ -111,9 +114,9 @@ export function QuizForm({
       } else {
         // Redirect to quiz questions page or back to topic
         if (isEdit) {
-          router.push(`/admin/quizzes/${quiz.id}/questions`);
+          router.push(`/admin/quizzes/${quiz.id}/questions/create`);
         } else {
-          router.push(`/admin/quizzes/${result.id}/questions`);
+          router.push(`/admin/quizzes/${result.id}/questions/create`);
         }
       }
     } catch (error: any) {
@@ -134,9 +137,9 @@ export function QuizForm({
         <CardDescription>
           {isEdit
             ? "Update quiz settings and configuration"
-            : topic 
-              ? `Add a new quiz to "${topic.title}"`
-              : "Add a new quiz to the topic"}
+            : topic
+            ? `Add a new quiz to "${topic.title}"`
+            : "Add a new quiz to the topic"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -173,7 +176,7 @@ export function QuizForm({
           {/* Quiz Configuration */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Quiz Configuration</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="timeLimit">Time Limit (minutes)</Label>
@@ -227,7 +230,7 @@ export function QuizForm({
           {/* Quiz Behavior */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Quiz Behavior</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
@@ -305,7 +308,7 @@ export function QuizForm({
           {/* Advanced Features */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Advanced Features</h3>
-            
+
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
                 <Checkbox
@@ -345,11 +348,7 @@ export function QuizForm({
               Cancel
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading
-                ? "Saving..."
-                : isEdit
-                ? "Update Quiz"
-                : "Create Quiz"}
+              {loading ? "Saving..." : isEdit ? "Update Quiz" : "Create Quiz"}
             </Button>
           </div>
         </form>
