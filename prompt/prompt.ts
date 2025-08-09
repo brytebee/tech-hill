@@ -176,118 +176,408 @@ enum TopicType {
   RESOURCE     // Downloadable materials
 }
 
-## **Day 3 Prompt: Student Learning Interface**
+// Enhanced Quiz System
+model Quiz {
+  id          String   @id @default(cuid())
+  topicId     String
+  title       String
+  description String?
+  
+  // Quiz Configuration
+  timeLimit   Int?     // Minutes (null = no time limit)
+  shuffleQuestions Boolean @default(false)
+  shuffleOptions Boolean @default(false)
+  showFeedback Boolean @default(true) // Show correct answers after
+  allowReview Boolean @default(true) // Allow reviewing answers
+  passingScore Int     @default(80) // Percentage to pass
+  maxAttempts Int?     // Null = unlimited
+  
+  // Advanced Features
+  adaptiveDifficulty Boolean @default(false) // Adjust based on performance
+  requireMastery Boolean @default(false) // Must get all questions right
+  practiceMode Boolean @default(false) // Doesn't count toward progress
+  
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-```
-Day 3 of Course Management System development. Core database operations and layouts are complete.
+  topic     Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  QuizAttempt[]
 
-COMPLETED YESTERDAY:
-- Database service functions for CRUD operations ✅
-- API routes for users and courses ✅
-- Role-based layouts for all user types ✅
-- Admin dashboard with user management ✅
-- Student dashboard showing courses ✅
+  @@map("quizzes")
+}
 
-DAY 3 FOCUS: Student Learning Experience
-Today I'm building the core learning interface where students interact with course content.
+// Enhanced Question System
+model Question {
+  id            String       @id @default(cuid())
+  quizId        String
+  questionText  String       @db.Text
+  questionType  QuestionType @default(MULTIPLE_CHOICE)
+  orderIndex    Int
+  points        Int          @default(1)
+  explanation   String?      @db.Text // Detailed explanation shown after answering
+  hint          String?      // Optional hint for students
+  difficulty    QuestionDifficulty @default(MEDIUM)
+  tags          String[]     // For categorization and analytics
+  
+  // Advanced Question Features
+  timeLimit     Int?         // Seconds for this question
+  allowPartialCredit Boolean @default(false)
+  caseSensitive Boolean     @default(false) // For text answers
+  
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-GOALS:
-1. Build course overview/details page showing topics and progress
-2. Create topic list with visual progress indicators
-3. Implement topic content display page with rich content
-4. Add progress tracking when students access topics
-5. Build basic quiz interface for question display
-6. Implement quiz answer submission system
-7. Create quiz results page with score display
-8. Update UserProgress based on quiz performance
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  options Option[]
+  answers Answer[]
 
-KEY FEATURES TO IMPLEMENT:
-- Topic progression logic (NOT_STARTED → IN_PROGRESS → COMPLETED)
-- Progress bars and visual indicators
-- Quiz taking functionality with different question types
-- Score calculation and pass/fail logic (80% pass score except data shows otherwise)
+  @@map("questions")
+}
 
-SUCCESS CRITERIA FOR TODAY:
-- Students can view course content and navigate topics
-- Topic access updates progress status automatically
-- Basic quiz taking works with score calculation
-- Quiz results are stored and displayed
-- Progress updates reflect learning activity
+enum QuestionType {
+  MULTIPLE_CHOICE
+  MULTIPLE_SELECT  // Multiple correct answers
+  TRUE_FALSE
+  SHORT_ANSWER
+  LONG_ANSWER
+  MATCHING
+  ORDERING
+}
 
-Please help me start with the course overview page and topic navigation system.
-```
+enum QuestionDifficulty {
+  EASY
+  MEDIUM
+  HARD
+}
 
+// Enhanced Answer Options
+model Option {
+  id         String  @id @default(cuid())
+  questionId String
+  text       String  @db.Text
+  isCorrect  Boolean @default(false)
+  orderIndex Int
+  explanation String? // Why this option is right/wrong
 
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers  Answer[]
 
-Student Learning Interface
-- [ ] Build course overview page for students
-- [ ] Create topic list with progress indicators
-- [ ] Implement topic content display page
-- [ ] Add progress tracking when topics are accessed
-- [ ] Build basic quiz interface (question display)
-- [ ] Implement quiz answer submission
-- [ ] Create quiz results page
-- [ ] Update user progress based on quiz scores
+  @@map("options")
+}
 
-Checklist:
-- [ ] ✅ Students can view course content
-- [ ] ✅ Topic progression works (NOT_STARTED → IN_PROGRESS)
-- [ ] ✅ Basic quiz taking functionality works
-- [ ] ✅ Quiz scores are calculated and stored
-- [ ] ✅ Progress updates automatically
+// Enhanced Enrollment with Progress Tracking
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+  SUSPENDED
+  ON_HOLD
+}
 
-Brief description:
-Pages you are building start from the student course details page. This should nicely arranges course into modules that are foldable. Within the modules, topics are also foldable/hiddable. You can use a colapsable sidebar to achieve this or use any modern design that bests help student navigate easily. Even when the modules are available in the page, they should be locked until other modules are completed and marked as complete or if skippable, skipped. Based on the completed per total modules in the course the progress visual which you should add, should updated accordingly on the learning page. 
+model Enrollment {
+  id              String           @id @default(cuid())
+  status          EnrollmentStatus @default(ACTIVE)
+  overallProgress Int              @default(0) // Overall course progress percentage
+  
+  // Completion & Performance
+  completedAt     DateTime?
+  certificateIssued Boolean        @default(false)
+  finalGrade      Int?             // Final course grade percentage
+  totalTimeSpent  Int              @default(0) // Total minutes spent
+  
+  // Attempts & Retakes
+  attemptNumber   Int              @default(1)
+  canRetake       Boolean          @default(true)
+  nextRetakeAt    DateTime?        // When they can retake if failed
+  
+  // Timestamps
+  enrolledAt      DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  lastAccessAt    DateTime?
+  
+  // Relations
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
 
+// Detailed Module Progress Tracking
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  NEEDS_REVIEW
+  FAILED
+}
 
-Artifacts:
-app/(dashboard)/student/courses/[courseId]
-app/(dashboard)/student/topics  // maybe title list only that redirects to topic details with 
-app/(dashboard)/student/topics/[topicId]
-quiz interface, be creative, modern but light on styling as you'd see from the provided components below, emphasis is currenlty on functinality and not design, so design is light. However, I'd like a quiz interface where questions are displayed one after the other, a timer, question number/total, some quiz details, user details, etc.
+model ModuleProgress {
+  id            String         @id @default(cuid())
+  userId        String
+  moduleId      String
+  status        ProgressStatus @default(NOT_STARTED)
+  
+  // Progress Metrics
+  progressPercentage Int         @default(0)
+  currentScore  Int?            // Current average score
+  bestScore     Int?            // Best attempt score
+  attemptsUsed  Int            @default(0)
+  timeSpent     Int            @default(0) // Minutes spent
+  
+  // Status Tracking
+  startedAt     DateTime?
+  completedAt   DateTime?
+  lastAccessAt  DateTime?
+  unlockedAt    DateTime?       // When module became available
+  
+  // Mastery Tracking
+  masteryLevel  MasteryLevel   @default(NOVICE)
+  strugglingAreas String[]      // Topics where student is struggling
+  strongAreas   String[]       // Topics where student excels
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-Optional:
-Should you decide to use a sidebar
-Artifact should be:
-components/students/sidebar
-components/breadcrumbs/student
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
 
-My project structure take the format of api, services, forms, pages. Create just the other assets, I'll provide the APIs and components for cues. File structure:
-- components/students/**  // reusable components
-- components/forms/**  // forms
-- app/(dashboard)/student/** // pages
-- lib/services/student/** // services such as course-actions specific for students
-Naming pattern: lower-case */
+  @@unique([userId, moduleId])
+  @@map("module_progress")
+}
 
-API
+// Granular Topic Progress
+model TopicProgress {
+  id            String         @id @default(cuid())
+  userId        String
+  topicId       String
+  status        ProgressStatus @default(NOT_STARTED)
+  
+  // Detailed Analytics
+  attemptCount  Int            @default(0)
+  bestScore     Int?           // Best quiz score as percentage
+  averageScore  Int?           // Average across all attempts
+  timeSpent     Int            @default(0) // Minutes spent on topic
+  
+  // Learning Analytics
+  viewCount     Int            @default(0) // How many times viewed
+  completionRate Int           @default(0) // Percentage of topic completed
+  strugglingIndicator Boolean  @default(false) // Algorithm sets this
+  masteryAchieved Boolean     @default(false)
+  
+  // Timestamps
+  startedAt     DateTime?
+  completedAt   DateTime?
+  lastAccessAt  DateTime?
+  
+  // Spaced Repetition
+  nextReviewAt  DateTime?      // When to review this topic again
+  reviewCount   Int            @default(0)
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-// app/api/courses/[courseId]/route.ts 
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@map("topic_progress")
+}
+
+enum MasteryLevel {
+  NOVICE
+  DEVELOPING
+  PROFICIENT
+  ADVANCED
+  EXPERT
+}
+
+// Enhanced Quiz Attempts with Detailed Analytics
+model QuizAttempt {
+  id          String    @id @default(cuid())
+  userId      String
+  quizId      String
+  
+  // Performance Metrics
+  score       Int       // Percentage score
+  passed      Boolean   @default(false)
+  isPractice  Boolean   @default(false) // Practice vs real attempt
+  
+  // Timing Analytics
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  timeSpent   Int?      // Seconds spent on quiz
+  
+  // Detailed Analytics
+  questionsCorrect Int   @default(0)
+  questionsTotal   Int   @default(0)
+  averageTimePerQuestion Int? // Seconds per question
+  
+  // Behavioral Analytics
+  questionsSkipped Int   @default(0)
+  questionsReviewed Int  @default(0)
+  hintsUsed       Int    @default(0)
+  
+  // Learning Insights
+  difficultyAreas Json?  // Topics/skills where student struggled
+  strengthAreas   Json?  // Topics/skills where student excelled
+  recommendedReview String[] // Topics to review
+  
+  createdAt   DateTime  @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  answers Answer[]
+
+  @@map("quiz_attempts")
+}
+
+// Enhanced Answer Tracking
+model Answer {
+  id            String  @id @default(cuid())
+  attemptId     String
+  questionId    String
+  
+  // Answer Data
+  selectedOption String? // For multiple choice (option ID)
+  selectedOptions String[] // For multiple select
+  textAnswer    String? // For text answers
+  
+  // Performance Data
+  isCorrect     Boolean @default(false)
+  points        Int     @default(0)
+  partialCredit Int?    // Partial points awarded
+  
+  // Timing & Behavior
+  timeSpent     Int?    // Seconds on this question
+  attemptCount  Int     @default(1) // How many times they changed answer
+  usedHint      Boolean @default(false)
+  flaggedForReview Boolean @default(false)
+  
+  createdAt     DateTime @default(now())
+
+  attempt  QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  option   Option?     @relation(fields: [selectedOption], references: [id])
+
+  @@map("answers")
+}
+
+// Enhanced Submissions for Assignments
+enum SubmissionStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  GRADED
+  RETURNED
+  RESUBMITTED
+}
+
+model Submission {
+  id          String           @id @default(cuid())
+  userId      String
+  topicId     String
+  
+  content     String           @db.Text
+  attachments String[]         // File URLs
+  
+  // Grading
+  score       Int?
+  maxScore    Int              @default(100)
+  feedback    String?          @db.Text
+  rubricScores Json?           // Detailed rubric scoring
+  
+  status      SubmissionStatus @default(DRAFT)
+  attemptNumber Int            @default(1)
+  
+  // Timestamps
+  submittedAt DateTime?
+  gradedAt    DateTime?
+  returnedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@map("submissions")
+}
+
+// Enhanced Certificate System
+enum CertificateType {
+  COURSE_COMPLETION
+  MASTERY_ACHIEVEMENT  
+  SKILL_BADGE
+  MILESTONE
+}
+
+model Certificate {
+  id           String          @id @default(cuid())
+  userId       String
+  courseId     String
+  
+  certificateNumber String      @unique
+  certificateType CertificateType @default(COURSE_COMPLETION)
+  title        String          // "Computer Literacy Mastery"
+  description  String?         // Achievement description
+  
+  // Performance Data
+  finalScore   Int?            // Final course score
+  completionTime Int?          // Days to complete
+  masteryLevel MasteryLevel?   // Level achieved
+  
+  // Certificate Details
+  issuedAt     DateTime        @default(now())
+  validFrom    DateTime        @default(now())
+  validUntil   DateTime?       // For certifications that expire
+  templateUrl  String?         // URL to certificate template
+  badgeUrl     String?         // Digital badge URL
+  
+  // Verification
+  verificationCode String      @unique
+  isRevoked    Boolean         @default(false)
+  revokedAt    DateTime?
+  revokedReason String?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId, certificateType])
+  @@map("certificates")
+}
+
+Create this page, its form and api. Observe the pattern of the resources below:
+http://localhost:3000/admin/topics/cmdywjn7z0005pp8iqoynijv6/quizzes/create
+
+API:
+Sample below:
+// app/api/courses/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { CourseService } from '@/lib/services/courseService'
 import { z } from 'zod'
 
-const updateCourseSchema = z.object({
-  title: z.string().min(1).optional(),
-  description: z.string().min(1).optional(),
+const createCourseSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().min(1, 'Description is required'),
   shortDescription: z.string().optional(),
   thumbnail: z.string().optional(),
-  status: z.enum(['DRAFT', 'PUBLISHED', 'ARCHIVED']).optional(),
   difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).optional(),
-  duration: z.number().min(1).optional(),
+  duration: z.number().min(1, 'Duration must be at least 1 hour'),
   price: z.number().min(0).optional(),
   tags: z.array(z.string()).optional(),
   prerequisites: z.array(z.string()).optional(),
   syllabus: z.string().optional(),
   learningOutcomes: z.array(z.string()).optional(),
 })
-
-// GET /api/courses/[courseId] - Get course by ID
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { courseId: string } }
-) {
+// POST /api/courses - Create a new course
+export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -295,26 +585,32 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { courseId } = params
-    const course = await CourseService.getCourseById(courseId)
-
-    if (!course) {
-      return NextResponse.json({ error: 'Course not found' }, { status: 404 })
-    }
-
-    // Students can only view published courses
-    if (session.user.role === 'STUDENT' && course.status !== 'PUBLISHED') {
-      return NextResponse.json({ error: 'Course not available' }, { status: 403 })
-    }
-
-    // Managers can only view their own courses (unless admin)
-    if (session.user.role === 'MANAGER' && course.creatorId !== session.user.id) {
+    // Only admins and managers can create courses
+    if (session.user.role === 'STUDENT') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    return NextResponse.json(course)
+    const body = await request.json()
+    const validatedData = createCourseSchema.parse(body)
+
+    const courseData = {
+      ...validatedData,
+      creatorId: session.user.id,
+    }
+
+    const course = await CourseService.createCourse(courseData)
+
+    return NextResponse.json(course, { status: 201 })
   } catch (error) {
-    console.error('GET /api/courses/[courseId] error:', error)
+    console.error('POST /api/courses error:', error)
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid data', details: error.errors },
+        { status: 400 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -322,157 +618,36 @@ export async function GET(
   }
 }
 
-SERVICES
-// lib/services/courseService.ts
-static async getCourseById(id: string) {
-  const course = await prisma.course.findUnique({
-    where: { id },
-    include: {
-      creator: {
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-        },
-      },
-      modules: {
-        orderBy: { order: "asc" },
-        include: {
-          topics: {
-            orderBy: { orderIndex: "asc" },
-            select: {
-              id: true,
-              title: true,
-              duration: true,
-              topicType: true,
-              isRequired: true,
-            },
-          },
-          _count: {
-            select: {
-              topics: true,
-            },
-          },
-        },
-      },
-      enrollments: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-        },
-      },
-      _count: {
-        select: {
-          enrollments: true,
-          modules: true,
-        },
-      },
-    },
-  });
+COMPONENT:
+Take design cues from the components below
 
-  if (!course) return null;
+// app/(dashboard)/admin/courses/create/page.tsx
+import { AdminLayout } from "@/components/layout/AdminLayout";
+import { CourseForm } from "@/components/forms/course-form";
 
-  // Convert Decimal to number for client component compatibility
-  return {
-    ...course,
-    price: course.price ? Number(course.price) : 0,
-  };
-}
-// lib/services/topicService.ts
-export class TopicService {
-  // other services already here, so just use these and show getTopicsByCourse if needed.
-  // Get topic by ID
-  static async getTopicById(id: string) {
-    return await prisma.topic.findUnique({
-      where: { id },
-      include: {
-        module: {
-          include: {
-            course: {
-              select: {
-                id: true,
-                title: true,
-                creator: {
-                  select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-        prerequisiteTopic: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        dependentTopics: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        quizzes: {
-          where: { isActive: true },
-          include: {
-            questions: {
-              select: {
-                id: true,
-                questionType: true,
-                points: true,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-  // Get topics by module
-  static async getTopicsByModule(moduleId: string) {
-    return await prisma.topic.findMany({
-      where: { moduleId },
-      orderBy: { orderIndex: "asc" },
-      include: {
-        prerequisiteTopic: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-        quizzes: {
-          where: { isActive: true },
-          select: {
-            id: true,
-            title: true,
-            passingScore: true,
-          },
-        },
-      },
-    });
-  }
-
-  // We could introduce getTopicsByCourse if needed
-
+export default function CreateCoursePage() {
+  return (
+    <AdminLayout
+      title="Create Course"
+      description="Add a new course to the platform"
+    >
+      <CourseForm />
+    </AdminLayout>
+  );
 }
 
-COMPONENTS
-For design cues I'll provide my student Courses page which is wrapped in StudentLayout
 
-// app/(dashboard)/student/courses/page.tsx
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { StudentLayout } from "@/components/layout/StudentLayout";
+// components/forms/course-form.tsx
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -480,9 +655,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -490,343 +662,258 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  BookOpen, 
-  Clock, 
-  Award, 
-  Play, 
-  Search,
-  Filter,
-  CheckCircle,
-  UserCheck,
-  X
-} from "lucide-react";
-import Link from "next/link";
-import { EnrollmentService } from "@/lib/services/enrollmentService";
-import { CourseService } from "@/lib/services/courseService";
-import { EnrollButton } from "@/components/students/EnrollButton";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 
-interface PageProps {
-  searchParams: Promise<{
-    search?: string;
-    difficulty?: string;
-    page?: string;
-  }>;
+const courseFormSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  shortDescription: z.string().optional(),
+  difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]),
+  duration: z.number().min(1, "Duration must be at least 1 hour"),
+  price: z.number().min(0).optional(),
+  tags: z.string().optional(),
+  prerequisites: z.string().optional(),
+  syllabus: z.string().optional(),
+  learningOutcomes: z.string().optional(),
+});
+
+type CourseFormData = z.infer<typeof courseFormSchema>;
+
+interface CourseFormProps {
+  course?: any;
+  onSuccess?: () => void;
+  isEdit?: boolean;
 }
 
-async function getCoursesData(userId: string, searchParams: {
-  search?: string;
-  difficulty?: string;
-  page?: string;
-}) {
-  try {
-    const page = parseInt(searchParams.page || '1');
-    const limit = 12;
+export function CourseForm({
+  course,
+  onSuccess,
+  isEdit = false,
+}: CourseFormProps) {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
-    const [coursesResult, enrollments] = await Promise.all([
-      CourseService.getCourses({
-        status: "PUBLISHED",
-        search: searchParams.search,
-        difficulty: searchParams.difficulty === 'none' ? undefined : searchParams.difficulty as any,
-      }, page, limit),
-      EnrollmentService.getUserEnrollments(userId),
-    ]);
+  const form = useForm<CourseFormData>({
+    resolver: zodResolver(courseFormSchema),
+    defaultValues: {
+      title: course?.title || "",
+      description: course?.description || "",
+      shortDescription: course?.shortDescription || "",
+      difficulty: course?.difficulty || "BEGINNER",
+      duration: course?.duration || 1,
+      price: course?.price || 0,
+      tags: course?.tags?.join(", ") || "",
+      prerequisites: course?.prerequisites?.join(", ") || "",
+      syllabus: course?.syllabus || "",
+      learningOutcomes: course?.learningOutcomes?.join("\n") || "",
+    },
+  });
 
-    // Create a map of enrolled course IDs for quick lookup
-    const enrolledCourseIds = new Set(
-      enrollments
-        .filter(e => e.status === 'ACTIVE' || e.status === 'COMPLETED')
-        .map(e => e.courseId)
-    );
+  const onSubmit = async (data: CourseFormData) => {
+    setLoading(true);
+    try {
+      const url = isEdit ? `/api/courses/${course.id}` : "/api/courses";
+      const method = isEdit ? "PUT" : "POST";
 
-    // Add enrollment status to courses
-    const coursesWithEnrollment = coursesResult.courses.map(course => ({
-      ...course,
-      isEnrolled: enrolledCourseIds.has(course.id),
-      enrollment: enrollments.find(e => e.courseId === course.id),
-    }));
+      const payload = {
+        ...data,
+        tags: data.tags ? data.tags.split(",").map((tag) => tag.trim()) : [],
+        prerequisites: data.prerequisites
+          ? data.prerequisites.split(",").map((req) => req.trim())
+          : [],
+        learningOutcomes: data.learningOutcomes
+          ? data.learningOutcomes
+              .split("\n")
+              .filter((outcome) => outcome.trim())
+          : [],
+      };
 
-    return {
-      courses: coursesWithEnrollment,
-      totalPages: coursesResult.totalPages,
-      totalCourses: coursesResult.totalCourses,
-      currentPage: page,
-      enrollments,
-    };
-  } catch (error) {
-    console.error("Error fetching courses data:", error);
-    return {
-      courses: [],
-      totalPages: 1,
-      totalCourses: 0,
-      currentPage: 1,
-      enrollments: [],
-    };
-  }
-}
+      const response = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-function getDifficultyColor(difficulty: string) {
-  switch (difficulty) {
-    case 'BEGINNER':
-      return 'bg-green-100 text-green-800';
-    case 'INTERMEDIATE':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'ADVANCED':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-}
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Something went wrong");
+      }
 
-function CourseCard({ course, userId }: { course: any; userId: string }) {
+      toast({
+        title: "Success",
+        description: `Course ${isEdit ? "updated" : "created"} successfully`,
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/admin/courses");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="max-w-4xl mx-auto">
       <CardHeader>
-        <div className="flex justify-between items-start mb-2">
-          <Badge className={getDifficultyColor(course.difficulty)}>
-            {course.difficulty}
-          </Badge>
-          {course.isEnrolled && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-              <UserCheck className="h-3 w-3 mr-1" />
-              Enrolled
-            </Badge>
-          )}
-        </div>
-        <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
-        <CardDescription className="line-clamp-3">
-          {course.shortDescription || course.description}
+        <CardTitle>{isEdit ? "Edit Course" : "Create New Course"}</CardTitle>
+        <CardDescription>
+          {isEdit
+            ? "Update course information"
+            : "Add a new course to the system"}
         </CardDescription>
       </CardHeader>
-      
-      <CardContent className="flex-1 flex flex-col justify-between">
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center text-sm text-gray-600">
-            <Clock className="h-4 w-4 mr-1" />
-            {course.duration} hours
+      <CardContent>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="title">Course Title</Label>
+            <Input
+              id="title"
+              {...form.register("title")}
+              placeholder="Enter course title"
+            />
+            {form.formState.errors.title && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.title.message}
+              </p>
+            )}
           </div>
-          
-          {course.tags && course.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {course.tags.slice(0, 3).map((tag: string) => (
-                <Badge key={tag} variant="outline" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-              {course.tags.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{course.tags.length - 3}
-                </Badge>
+
+          <div className="space-y-2">
+            <Label htmlFor="shortDescription">Short Description</Label>
+            <Input
+              id="shortDescription"
+              {...form.register("shortDescription")}
+              placeholder="Brief description for course cards"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Full Description</Label>
+            <Textarea
+              id="description"
+              {...form.register("description")}
+              placeholder="Detailed course description"
+              rows={4}
+            />
+            {form.formState.errors.description && (
+              <p className="text-sm text-red-600">
+                {form.formState.errors.description.message}
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="difficulty">Difficulty Level</Label>
+              <Select
+                onValueChange={(value) =>
+                  form.setValue("difficulty", value as any)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="BEGINNER">Beginner</SelectItem>
+                  <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                  <SelectItem value="ADVANCED">Advanced</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duration (hours)</Label>
+              <Input
+                id="duration"
+                type="number"
+                {...form.register("duration", { valueAsNumber: true })}
+                placeholder="Course duration"
+                min="1"
+              />
+              {form.formState.errors.duration && (
+                <p className="text-sm text-red-600">
+                  {form.formState.errors.duration.message}
+                </p>
               )}
             </div>
-          )}
-
-          {course.isEnrolled && course.enrollment && (
             <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Progress</span>
-                <span className="font-medium">{course.enrollment.overallProgress}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
-                  style={{ width: `${course.enrollment.overallProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          {course.isEnrolled ? (
-            <>
-              <Link href={`/student/courses/${course.id}`} className="flex-1">
-                <Button className="w-full">
-                  <Play className="h-4 w-4 mr-2" />
-                  {course.enrollment?.overallProgress > 0 ? 'Continue' : 'Start'}
-                </Button>
-              </Link>
-              <EnrollButton 
-                courseId={course.id} 
-                isEnrolled={true}
-                variant="outline"
-                size="default"
-              >
-                <X className="h-4 w-4" />
-              </EnrollButton>
-            </>
-          ) : (
-            <EnrollButton 
-              courseId={course.id} 
-              isEnrolled={false}
-              className="w-full"
-            >
-              Enroll Now
-            </EnrollButton>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SearchAndFilters({ searchParams }: { 
-  searchParams: {
-    search?: string;
-    difficulty?: string;
-    page?: string;
-  }
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Label htmlFor="price">Price ($)</Label>
               <Input
-                placeholder="Search courses..."
-                defaultValue={searchParams.search || ''}
-                name="search"
-                className="pl-10"
+                id="price"
+                type="number"
+                {...form.register("price", { valueAsNumber: true })}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
               />
             </div>
           </div>
-          
-          <Select defaultValue={searchParams.difficulty || 'none'} name="difficulty">
-            <SelectTrigger className="w-full md:w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Difficulty" />
-            </SelectTrigger>
-            <SelectContent>
-              {/* TODO: Watch out for the "none" here and ensure it's not a source of bugs */}
-              <SelectItem value="none">All Levels</SelectItem>
-              <SelectItem value="BEGINNER">Beginner</SelectItem>
-              <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-              <SelectItem value="ADVANCED">Advanced</SelectItem>
-            </SelectContent>
-          </Select>
 
-          <Button type="submit">Apply Filters</Button>
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="tags">Tags</Label>
+            <Input
+              id="tags"
+              {...form.register("tags")}
+              placeholder="Separate tags with commas (e.g., computer basics, beginner, essential skills)"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="prerequisites">Prerequisites</Label>
+            <Input
+              id="prerequisites"
+              {...form.register("prerequisites")}
+              placeholder="Separate prerequisites with commas"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="syllabus">Syllabus</Label>
+            <Textarea
+              id="syllabus"
+              {...form.register("syllabus")}
+              placeholder="Course syllabus and structure"
+              rows={4}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="learningOutcomes">Learning Outcomes</Label>
+            <Textarea
+              id="learningOutcomes"
+              {...form.register("learningOutcomes")}
+              placeholder="Enter each learning outcome on a new line"
+              rows={4}
+            />
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading
+                ? "Saving..."
+                : isEdit
+                ? "Update Course"
+                : "Create Course"}
+            </Button>
+          </div>
+        </form>
       </CardContent>
     </Card>
-  );
-}
-
-function Pagination({ currentPage, totalPages }: { currentPage: number; totalPages: number }) {
-  if (totalPages <= 1) return null;
-
-  return (
-    <div className="flex justify-center items-center space-x-2">
-      <Button
-        variant="outline"
-        disabled={currentPage <= 1}
-        size="sm"
-      >
-        Previous
-      </Button>
-      
-      <span className="text-sm text-gray-600">
-        Page {currentPage} of {totalPages}
-      </span>
-      
-      <Button
-        variant="outline"
-        disabled={currentPage >= totalPages}
-        size="sm"
-      >
-        Next
-      </Button>
-    </div>
-  );
-}
-
-export default async function StudentCoursesPage({ searchParams }: PageProps) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  // Await searchParams before using its properties
-  const resolvedSearchParams = await searchParams;
-
-  const { courses, totalPages, totalCourses, currentPage, enrollments } = 
-    await getCoursesData(session.user.id, resolvedSearchParams);
-
-  const enrolledCount = enrollments.filter(e => 
-    e.status === 'ACTIVE' || e.status === 'COMPLETED'
-  ).length;
-
-  return (
-    <StudentLayout>
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
-            <p className="text-gray-600 mt-1">
-              Discover and manage your computer literacy courses
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <div className="flex items-center">
-              <BookOpen className="h-4 w-4 mr-1" />
-              {totalCourses} Available
-            </div>
-            <div className="flex items-center">
-              <UserCheck className="h-4 w-4 mr-1" />
-              {enrolledCount} Enrolled
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filters */}
-        <form method="GET">
-          <SearchAndFilters searchParams={resolvedSearchParams} />
-        </form>
-
-        {/* Course Grid */}
-        {courses.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map((course) => (
-                <CourseCard 
-                  key={course.id} 
-                  course={course} 
-                  userId={session.user.id}
-                />
-              ))}
-            </div>
-
-            {/* Pagination */}
-            <Pagination currentPage={currentPage} totalPages={totalPages} />
-          </>
-        ) : (
-          /* Empty State */
-          <Card>
-            <CardContent className="text-center py-12">
-              <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-600 mb-2">
-                No courses found
-              </h3>
-              <p className="text-gray-500 mb-4">
-                {resolvedSearchParams.search || (resolvedSearchParams.difficulty && resolvedSearchParams.difficulty !== 'none')
-                  ? "Try adjusting your search criteria"
-                  : "No courses are currently available"
-                }
-              </p>
-              {(resolvedSearchParams.search || (resolvedSearchParams.difficulty && resolvedSearchParams.difficulty !== 'none')) && (
-                <Link href="/student/courses">
-                  <Button variant="outline">Clear Filters</Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </StudentLayout>
   );
 }
