@@ -1,65 +1,44 @@
 // components/ui/radio-group.tsx
-import * as Radio from "@radix-ui/react-radio-group";
+"use client"
 
-interface RadioGroupItem {
-  value: string;
-  label: string;
-}
+import * as React from "react"
+import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
+import { Circle } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-interface RadioGroupProps {
-  items: RadioGroupItem[];
-  value: string;
-  onChange: (value: string) => void;
-}
-
-const RadioGroup: React.FC<RadioGroupProps> = ({ items, value, onChange }) => {
+const RadioGroup = React.forwardRef<
+  React.ElementRef<typeof RadioGroupPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Root>
+>(({ className, ...props }, ref) => {
   return (
-    <Radio.Root
-      value={value}
-      onValueChange={onChange}
-      className="flex flex-col gap-2"
+    <RadioGroupPrimitive.Root
+      className={cn("grid gap-2", className)}
+      {...props}
+      ref={ref}
+    />
+  )
+})
+RadioGroup.displayName = RadioGroupPrimitive.Root.displayName
+
+const RadioGroupItem = React.forwardRef<
+  React.ElementRef<typeof RadioGroupPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
+>(({ className, ...props }, ref) => {
+  return (
+    <RadioGroupPrimitive.Item
+      ref={ref}
+      className={cn(
+        "aspect-square h-4 w-4 rounded-full border border-primary text-primary ring-offset-background focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      )}
+      {...props}
     >
-      {items.map((item) => (
-        <Radio.Item
-          key={item.value}
-          value={item.value}
-          className="flex items-center gap-2"
-        >
-          <Radio.Indicator className="w-4 h-4 bg-blue-600 rounded-full" />
-          {item.label}
-        </Radio.Item>
-      ))}
-    </Radio.Root>
-  );
-};
+      <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
+        <Circle className="h-2.5 w-2.5 fill-current text-current" />
+      </RadioGroupPrimitive.Indicator>
+    </RadioGroupPrimitive.Item>
+  )
+})
+RadioGroupItem.displayName = RadioGroupPrimitive.Item.displayName
 
-export { RadioGroup };
-
-/*```
-tsx
-import { RadioGroup } from '@/components/ui/radio-group';
-
-const QuizInterface = () => {
-  const [selectedValue, setSelectedValue] = useState('');
-
-  const handleRadioChange = (value: string) => {
-    setSelectedValue(value);
-  };
-
-  const radioGroupItems = [
-    { value: 'option1', label: 'Option 1' },
-    { value: 'option2', label: 'Option 2' },
-    { value: 'option3', label: 'Option 3' },
-  ];
-
-  return (
-    <div>
-      <RadioGroup
-        items={radioGroupItems}
-        value={selectedValue}
-        onChange={handleRadioChange}
-      />
-    </div>
-  );
-};
-```*/
+export { RadioGroup, RadioGroupItem }
