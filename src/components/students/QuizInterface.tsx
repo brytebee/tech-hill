@@ -432,10 +432,10 @@ export function QuizInterface({
                     {quiz.questions.length} questions.
                   </p>
                   {!canSubmit() && (
-                    <p className="text-red-600 flex items-center gap-2">
+                    <div className="text-red-600 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4" />
                       Please answer all required questions before submitting.
-                    </p>
+                    </div>
                   )}
                   <p>
                     Once submitted, you cannot change your answers. Are you sure
