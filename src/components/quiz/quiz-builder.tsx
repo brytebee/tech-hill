@@ -21,11 +21,18 @@ import { Badge } from "@/components/ui/badge";
 export interface QuestionData {
   id?: string;
   questionText: string;
-  questionType: 'MULTIPLE_CHOICE' | 'MULTIPLE_SELECT' | 'TRUE_FALSE' | 'SHORT_ANSWER' | 'LONG_ANSWER' | 'MATCHING' | 'ORDERING';
+  questionType:
+    | "MULTIPLE_CHOICE"
+    | "MULTIPLE_SELECT"
+    | "TRUE_FALSE"
+    | "SHORT_ANSWER"
+    | "LONG_ANSWER"
+    | "MATCHING"
+    | "ORDERING";
   points: number;
   explanation?: string;
   hint?: string;
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  difficulty: "EASY" | "MEDIUM" | "HARD";
   tags: string[];
   timeLimit?: number;
   allowPartialCredit: boolean;
@@ -112,11 +119,14 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
     setQuestions(reorderedQuestions);
   };
 
-  const moveQuestion = (index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
+  const moveQuestion = (index: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? index - 1 : index + 1;
     if (newIndex >= 0 && newIndex < questions.length) {
       const newQuestions = [...questions];
-      [newQuestions[index], newQuestions[newIndex]] = [newQuestions[newIndex], newQuestions[index]];
+      [newQuestions[index], newQuestions[newIndex]] = [
+        newQuestions[newIndex],
+        newQuestions[index],
+      ];
       // Update order indices
       newQuestions[index].orderIndex = index;
       newQuestions[newIndex].orderIndex = newIndex;
@@ -131,23 +141,45 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
       const validationErrors = [];
       questions.forEach((question, index) => {
         if (!question.questionText.trim()) {
-          validationErrors.push(`Question ${index + 1}: Question text is required`);
+          validationErrors.push(
+            `Question ${index + 1}: Question text is required`
+          );
         }
-        
-        const requiresOptions = ['MULTIPLE_CHOICE', 'MULTIPLE_SELECT', 'TRUE_FALSE', 'MATCHING', 'ORDERING'].includes(question.questionType);
+
+        const requiresOptions = [
+          "MULTIPLE_CHOICE",
+          "MULTIPLE_SELECT",
+          "TRUE_FALSE",
+          "MATCHING",
+          "ORDERING",
+        ].includes(question.questionType);
         if (requiresOptions) {
-          const validOptions = question.options.filter(opt => opt.text.trim());
+          const validOptions = question.options.filter((opt) =>
+            opt.text.trim()
+          );
           if (validOptions.length === 0) {
-            validationErrors.push(`Question ${index + 1}: At least one option is required`);
+            validationErrors.push(
+              `Question ${index + 1}: At least one option is required`
+            );
           }
-          
-          const correctAnswers = validOptions.filter(opt => opt.isCorrect);
+
+          const correctAnswers = validOptions.filter((opt) => opt.isCorrect);
           if (correctAnswers.length === 0) {
-            validationErrors.push(`Question ${index + 1}: At least one correct answer is required`);
+            validationErrors.push(
+              `Question ${index + 1}: At least one correct answer is required`
+            );
           }
-          
-          if ((question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') && correctAnswers.length > 1) {
-            validationErrors.push(`Question ${index + 1}: Only one correct answer allowed for this question type`);
+
+          if (
+            (question.questionType === "MULTIPLE_CHOICE" ||
+              question.questionType === "TRUE_FALSE") &&
+            correctAnswers.length > 1
+          ) {
+            validationErrors.push(
+              `Question ${
+                index + 1
+              }: Only one correct answer allowed for this question type`
+            );
           }
         }
       });
@@ -163,14 +195,14 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
 
       // Save all questions
       const response = await fetch(`/api/quizzes/${quiz.id}/questions/bulk`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questions }),
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to save quiz');
+        throw new Error(error.error || "Failed to save quiz");
       }
 
       toast({
@@ -178,8 +210,8 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
         description: "Quiz saved successfully",
       });
 
-      // Refresh the page to get updated data
-      router.refresh();
+      // Redirect user back to the previous page
+      router.back();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -210,9 +242,15 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
-                onClick={() => setActiveTab(activeTab === "preview" ? "builder" : "preview")}
+                onClick={() =>
+                  setActiveTab(activeTab === "preview" ? "builder" : "preview")
+                }
               >
-                {activeTab === "preview" ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                {activeTab === "preview" ? (
+                  <EyeOff className="w-4 h-4 mr-2" />
+                ) : (
+                  <Eye className="w-4 h-4 mr-2" />
+                )}
                 {activeTab === "preview" ? "Edit" : "Preview"}
               </Button>
               <Button onClick={saveQuiz} disabled={loading}>
@@ -238,10 +276,12 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
               key={index}
               question={question}
               index={index}
-              onUpdate={(updatedQuestion) => updateQuestion(index, updatedQuestion)}
+              onUpdate={(updatedQuestion) =>
+                updateQuestion(index, updatedQuestion)
+              }
               onRemove={() => removeQuestion(index)}
-              onMoveUp={() => moveQuestion(index, 'up')}
-              onMoveDown={() => moveQuestion(index, 'down')}
+              onMoveUp={() => moveQuestion(index, "up")}
+              onMoveDown={() => moveQuestion(index, "down")}
               canMoveUp={index > 0}
               canMoveDown={index < questions.length - 1}
               totalQuestions={questions.length}
@@ -251,7 +291,9 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
           {questions.length === 0 && (
             <Card className="text-center py-12">
               <CardContent>
-                <p className="text-muted-foreground mb-4">No questions yet. Add your first question to get started.</p>
+                <p className="text-muted-foreground mb-4">
+                  No questions yet. Add your first question to get started.
+                </p>
                 <Button onClick={addQuestion}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add First Question
@@ -278,32 +320,40 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
           <Card>
             <CardHeader>
               <CardTitle>Quiz Settings</CardTitle>
-              <CardDescription>Configure quiz behavior and requirements</CardDescription>
+              <CardDescription>
+                Configure quiz behavior and requirements
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="font-medium">Time Limit:</span> {quiz.timeLimit ? `${quiz.timeLimit} minutes` : 'No limit'}
+                  <span className="font-medium">Time Limit:</span>{" "}
+                  {quiz.timeLimit ? `${quiz.timeLimit} minutes` : "No limit"}
                 </div>
                 <div>
-                  <span className="font-medium">Passing Score:</span> {quiz.passingScore}%
+                  <span className="font-medium">Passing Score:</span>{" "}
+                  {quiz.passingScore}%
                 </div>
                 <div>
-                  <span className="font-medium">Max Attempts:</span> {quiz.maxAttempts || 'Unlimited'}
+                  <span className="font-medium">Max Attempts:</span>{" "}
+                  {quiz.maxAttempts || "Unlimited"}
                 </div>
                 <div>
-                  <span className="font-medium">Shuffle Questions:</span> {quiz.shuffleQuestions ? 'Yes' : 'No'}
+                  <span className="font-medium">Shuffle Questions:</span>{" "}
+                  {quiz.shuffleQuestions ? "Yes" : "No"}
                 </div>
                 <div>
-                  <span className="font-medium">Shuffle Options:</span> {quiz.shuffleOptions ? 'Yes' : 'No'}
+                  <span className="font-medium">Shuffle Options:</span>{" "}
+                  {quiz.shuffleOptions ? "Yes" : "No"}
                 </div>
                 <div>
-                  <span className="font-medium">Show Feedback:</span> {quiz.showFeedback ? 'Yes' : 'No'}
+                  <span className="font-medium">Show Feedback:</span>{" "}
+                  {quiz.showFeedback ? "Yes" : "No"}
                 </div>
               </div>
               <div className="mt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => router.push(`/admin/quizzes/${quiz.id}/edit`)}
                 >
                   <Settings className="w-4 h-4 mr-2" />

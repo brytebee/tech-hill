@@ -11,7 +11,7 @@ interface CreateQuizPageProps {
 }
 
 export default async function CreateQuizPage({ params }: CreateQuizPageProps) {
-  const { topicId } = params;
+  const { topicId } = await params;
 
   // Fetch topic details for context
   const topic = await prisma.topic.findUnique({
@@ -28,6 +28,11 @@ export default async function CreateQuizPage({ params }: CreateQuizPageProps) {
   if (!topic) {
     notFound();
   }
+
+  const serializeTopic = {
+    ...topic,
+    module: { course: { price: Number(topic.module.course.price) } },
+  };
 
   return (
     <AdminLayout
@@ -50,7 +55,7 @@ export default async function CreateQuizPage({ params }: CreateQuizPageProps) {
         { label: "Create Quiz" },
       ]}
     >
-      <QuizForm topicId={topicId} topic={topic} />
+      <QuizForm topicId={topicId} topic={serializeTopic} />
     </AdminLayout>
   );
 }

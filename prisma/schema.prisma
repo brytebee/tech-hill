@@ -269,7 +269,7 @@ model Question {
   tags          String[]     // For categorization and analytics
   
   // Advanced Question Features
-  timeLimit     Int?         // Seconds for this question
+  timeLimit     Int         @default(30) // Seconds for this question
   allowPartialCredit Boolean @default(false)
   caseSensitive Boolean     @default(false) // For text answers
   

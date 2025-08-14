@@ -1,53 +1,5 @@
 Note: The system is built with NextJS 15 
 
-enum UserRole {
-  ADMIN
-  MANAGER
-  STUDENT
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-}
-
-model User {
-  id            String      @id @default(cuid())
-  email         String      @unique
-  password      String
-  firstName     String
-  lastName      String
-  role          UserRole    @default(STUDENT)
-  status        UserStatus  @default(ACTIVE)
-  profileImage  String?
-  phoneNumber   String?
-  dateOfBirth   DateTime?
-  address       String?
-  
-  // Timestamps
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  lastLoginAt   DateTime?
-  
-  // NextAuth relations
-  accounts      Account[]
-  sessions      Session[]
-  
-  // Application relations
-  enrollments   Enrollment[]
-  createdCourses Course[]   @relation("CourseCreator")
-  
-  // Assessment & Progress Relations
-  quizAttempts  QuizAttempt[]
-  topicProgress TopicProgress[]
-  moduleProgress ModuleProgress[]
-  submissions   Submission[]
-  certificates  Certificate[]
-  
-  @@map("users")
-}
-
 // Course Structure
 enum CourseStatus {
   DRAFT
@@ -268,46 +220,6 @@ model Option {
   @@map("options")
 }
 
-// Enhanced Enrollment with Progress Tracking
-enum EnrollmentStatus {
-  ACTIVE
-  COMPLETED
-  DROPPED
-  SUSPENDED
-  ON_HOLD
-}
-
-model Enrollment {
-  id              String           @id @default(cuid())
-  status          EnrollmentStatus @default(ACTIVE)
-  overallProgress Int              @default(0) // Overall course progress percentage
-  
-  // Completion & Performance
-  completedAt     DateTime?
-  certificateIssued Boolean        @default(false)
-  finalGrade      Int?             // Final course grade percentage
-  totalTimeSpent  Int              @default(0) // Total minutes spent
-  
-  // Attempts & Retakes
-  attemptNumber   Int              @default(1)
-  canRetake       Boolean          @default(true)
-  nextRetakeAt    DateTime?        // When they can retake if failed
-  
-  // Timestamps
-  enrolledAt      DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  lastAccessAt    DateTime?
-  
-  // Relations
-  userId          String
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId        String
-  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, courseId])
-  @@map("enrollments")
-}
-
 // Detailed Module Progress Tracking
 enum ProgressStatus {
   NOT_STARTED
@@ -508,47 +420,683 @@ model Submission {
   @@map("submissions")
 }
 
-// Enhanced Certificate System
-enum CertificateType {
-  COURSE_COMPLETION
-  MASTERY_ACHIEVEMENT  
-  SKILL_BADGE
-  MILESTONE
+
+http://localhost:3000/admin/quizzes/cme9tre2x0005pp1fo6www1lc/questions
+All questions of the quiz should be fetched and rendered. I added a component so you can take design cues from it, thank you.
+
+// app/(dashboard)/admin/quizzes/[quizId]/questions/page.tsx
+import { AdminLayout } from "@/components/layout/AdminLayout";
+// example. import { QuestionList } from "@/components/questions/question-list";
+import { prisma } from "@/lib/db";
+import { notFound, redirect } from "next/navigation";
+
+interface CreateQuestionPageProps {
+  params: {
+    quizId: string;
+  };
 }
 
-model Certificate {
-  id           String          @id @default(cuid())
-  userId       String
-  courseId     String
-  
-  certificateNumber String      @unique
-  certificateType CertificateType @default(COURSE_COMPLETION)
-  title        String          // "Computer Literacy Mastery"
-  description  String?         // Achievement description
-  
-  // Performance Data
-  finalScore   Int?            // Final course score
-  completionTime Int?          // Days to complete
-  masteryLevel MasteryLevel?   // Level achieved
-  
-  // Certificate Details
-  issuedAt     DateTime        @default(now())
-  validFrom    DateTime        @default(now())
-  validUntil   DateTime?       // For certifications that expire
-  templateUrl  String?         // URL to certificate template
-  badgeUrl     String?         // Digital badge URL
-  
-  // Verification
-  verificationCode String      @unique
-  isRevoked    Boolean         @default(false)
-  revokedAt    DateTime?
-  revokedReason String?
+export default async function CreateQuestionPage({
+  params,
+}: CreateQuestionPageProps) {
+  const { quizId } = await params;
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  // Fetch all questions for a quiz
+  const questions = await prisma.question.findMany({
+    where: { quizId },
+    include: {
+      quiz: {
+        include: {
+          topic: {
+            include: {
+              module: {
+                include: {
+                  course: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
 
-  @@unique([userId, courseId, certificateType])
-  @@map("certificates")
+  if (!questions) {
+    notFound();
+  }
+
+  if (questions.length === 0) {
+    redirect(`/admin/quizzes${quizId}/builder`);
+  }
+
+  return (
+    <AdminLayout
+      title={`${questions[0].quiz.title} Questions`}
+      description={`All questions for "${questions[0].quiz.title}" quiz`}
+    >
+      <p>Hi there!</p>
+      {/* TODO: Convert the QuestionForm below to a question list */}
+      {/* List should be rendered here */}
+    </AdminLayout>
+  );
 }
 
-A few things are missing from the current quiz creation, view quiz, adding questions to quiz, view all questions of a quiz flow. ATM, one question is created and sent to the server which is not very efficient. How can we collect all questions for a quiz and send them all at once. Feel free to create additional resources if needed to implement an intuitive, clean and user friendly flow.
+
+http://localhost:3000/student/quiz/[quidId]?topicId=[topicId]
+create an endpoint for this and replace the page with real data.
+
+// app/(dashboard)/student/quiz/[quizId]/page.tsx
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { StudentLayout } from "@/components/layout/StudentLayout";
+import { QuizInterface } from "@/components/students/QuizInterface";
+
+interface PageProps {
+  params: Promise<{ quizId: string }>;
+  searchParams: Promise<{ topicId?: string }>;
+}
+
+// Mock quiz data - replace this with real data
+async function getQuizData(quizId: string, userId: string) {
+  try {
+    // Mock data structure
+    const quiz = {
+      id: quizId,
+      title: "Introduction to Computer Basics Quiz",
+      description: "Test your understanding of computer fundamentals",
+      passingScore: 80,
+      timeLimit: 30, // minutes
+      allowRetakes: true,
+      maxAttempts: 3,
+      shuffleQuestions: true,
+      showResults: true,
+      topic: {
+        id: "topic-1",
+        title: "Computer Fundamentals",
+        module: {
+          title: "Introduction Module",
+          course: {
+            id: "course-1",
+            title: "Computer Literacy Basics",
+          },
+        },
+      },
+      questions: [
+        {
+          id: "q1",
+          questionText: "What does CPU stand for?",
+          questionType: "MULTIPLE_CHOICE",
+          points: 5,
+          required: true,
+          options: [
+            { id: "opt1", text: "Central Processing Unit", isCorrect: true },
+            { id: "opt2", text: "Computer Personal Unit", isCorrect: false },
+            { id: "opt3", text: "Central Program Unit", isCorrect: false },
+            { id: "opt4", text: "Computer Processing Unit", isCorrect: false },
+          ],
+        },
+        {
+          id: "q2",
+          questionText:
+            "Which of the following are input devices? (Select all that apply)",
+          questionType: "MULTIPLE_SELECT",
+          points: 10,
+          required: true,
+          options: [
+            { id: "opt1", text: "Keyboard", isCorrect: true },
+            { id: "opt2", text: "Mouse", isCorrect: true },
+            { id: "opt3", text: "Monitor", isCorrect: false },
+            { id: "opt4", text: "Microphone", isCorrect: true },
+            { id: "opt5", text: "Printer", isCorrect: false },
+          ],
+        },
+        {
+          id: "q3",
+          questionText: "RAM stands for Random Access Memory.",
+          questionType: "TRUE_FALSE",
+          points: 5,
+          required: true,
+          options: [
+            { id: "opt1", text: "True", isCorrect: true },
+            { id: "opt2", text: "False", isCorrect: false },
+          ],
+        },
+        {
+          id: "q4",
+          questionText: "Explain the difference between hardware and software.",
+          questionType: "SHORT_ANSWER",
+          points: 15,
+          required: true,
+          sampleAnswer:
+            "Hardware refers to physical components of a computer system, while software refers to programs and applications that run on the hardware.",
+        },
+        {
+          id: "q5",
+          questionText:
+            "Write a brief essay about the importance of computer literacy in today's world (minimum 100 words).",
+          questionType: "ESSAY",
+          points: 25,
+          required: false,
+          minWords: 100,
+          maxWords: 500,
+        },
+      ],
+    };
+
+    // Check if user has attempts left
+    const attempts = []; // Mock - would come from QuizAttempt service
+    const canTakeQuiz = quiz.maxAttempts
+      ? attempts.length < quiz.maxAttempts
+      : true;
+
+    return {
+      quiz,
+      attempts,
+      canTakeQuiz,
+    };
+  } catch (error) {
+    console.error("Error fetching quiz data:", error);
+    return null;
+  }
+}
+
+export default async function QuizPage({ params, searchParams }: PageProps) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  const { quizId } = await params;
+  const { topicId } = await searchParams;
+  const data = await getQuizData(quizId, session.user.id);
+
+  if (!data || !data.canTakeQuiz) {
+    notFound();
+  }
+
+  const { quiz, attempts } = data;
+
+  return (
+    <StudentLayout>
+      <QuizInterface
+        quiz={quiz}
+        attempts={attempts}
+        userId={session.user.id}
+        topicId={topicId}
+      />
+    </StudentLayout>
+  );
+}
+
+// components/students/QuizInterface.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  User,
+  FileText,
+  Award,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  AlertTriangle,
+  Save,
+  Send,
+  Timer,
+} from "lucide-react";
+
+interface QuizOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+interface QuizQuestion {
+  id: string;
+  questionText: string;
+  questionType:
+    | "MULTIPLE_CHOICE"
+    | "MULTIPLE_SELECT"
+    | "TRUE_FALSE"
+    | "SHORT_ANSWER"
+    | "ESSAY";
+  points: number;
+  required: boolean;
+  options?: QuizOption[];
+  sampleAnswer?: string;
+  minWords?: number;
+  maxWords?: number;
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  description?: string;
+  passingScore: number;
+  timeLimit?: number;
+  allowRetakes: boolean;
+  maxAttempts?: number;
+  shuffleQuestions: boolean;
+  showResults: boolean;
+  topic: {
+    id: string;
+    title: string;
+    module: {
+      title: string;
+      course: {
+        id: string;
+        title: string;
+      };
+    };
+  };
+  questions: QuizQuestion[];
+}
+
+interface QuizInterfaceProps {
+  quiz: Quiz;
+  attempts: any[];
+  userId: string;
+  topicId?: string;
+}
+
+type Answer = string | string[];
+
+export function QuizInterface({
+  quiz,
+  attempts,
+  userId,
+  topicId,
+}: QuizInterfaceProps) {
+  const router = useRouter();
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [timeLeft, setTimeLeft] = useState(
+    quiz.timeLimit ? quiz.timeLimit * 60 : null
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+
+  // Timer effect
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          // Auto-submit when time runs out
+          handleSubmitQuiz();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
+
+  const handleAnswerChange = (questionId: string, answer: Answer) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
+    }));
+  };
+
+  const getAnsweredCount = () => {
+    return Object.keys(answers).length;
+  };
+
+  const getProgressPercentage = () => {
+    return Math.round((getAnsweredCount() / quiz.questions.length) * 100);
+  };
+
+  const handleSubmitQuiz = async () => {
+    setIsSubmitting(true);
+    try {
+      // In real app: submit answers to API
+      const submitData = {
+        quizId: quiz.id,
+        userId,
+        topicId,
+        answers,
+        timeSpent: quiz.timeLimit
+          ? quiz.timeLimit * 60 - (timeLeft || 0)
+          : null,
+      };
+
+      console.log("Submitting quiz:", submitData);
+
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Redirect to results page
+      router.push(`/student/quiz/${quiz.id}/results?attempt=latest`);
+    } catch (error) {
+      console.error("Failed to submit quiz:", error);
+      setIsSubmitting(false);
+    }
+  };
+
+  const canSubmit = () => {
+    const requiredQuestions = quiz.questions.filter((q) => q.required);
+    const answeredRequired = requiredQuestions.filter(
+      (q) => answers[q.id]
+    ).length;
+    return answeredRequired === requiredQuestions.length;
+  };
+
+  const renderQuestion = (question: QuizQuestion, index: number) => {
+    const answer = answers[question.id];
+
+    switch (question.questionType) {
+      case "MULTIPLE_CHOICE":
+      case "TRUE_FALSE":
+        return (
+          <RadioGroup
+            value={(answer as string) || ""}
+            onValueChange={(value) => handleAnswerChange(question.id, value)}
+          >
+            {question.options?.map((option) => (
+              <div key={option.id} className="flex items-center space-x-2">
+                <RadioGroupItem value={option.id} id={option.id} />
+                <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                  {option.text}
+                </Label>
+              </div>
+            ))}
+          </RadioGroup>
+        );
+
+      case "MULTIPLE_SELECT":
+        const selectedOptions = (answer as string[]) || [];
+        return (
+          <div className="space-y-3">
+            {question.options?.map((option) => (
+              <div key={option.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={option.id}
+                  checked={selectedOptions.includes(option.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleAnswerChange(question.id, [
+                        ...selectedOptions,
+                        option.id,
+                      ]);
+                    } else {
+                      handleAnswerChange(
+                        question.id,
+                        selectedOptions.filter((id) => id !== option.id)
+                      );
+                    }
+                  }}
+                />
+                <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                  {option.text}
+                </Label>
+              </div>
+            ))}
+          </div>
+        );
+
+      case "SHORT_ANSWER":
+        return (
+          <Textarea
+            placeholder="Enter your answer..."
+            value={(answer as string) || ""}
+            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+            className="min-h-[100px]"
+          />
+        );
+
+      case "ESSAY":
+        const wordCount = (((answer as string) || "").match(/\S+/g) || [])
+          .length;
+        return (
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Write your essay here..."
+              value={(answer as string) || ""}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              className="min-h-[200px]"
+            />
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Word count: {wordCount}</span>
+              {question.minWords && (
+                <span
+                  className={
+                    wordCount >= question.minWords
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }
+                >
+                  Minimum: {question.minWords} words
+                </span>
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return <div>Unsupported question type</div>;
+    }
+  };
+
+  const currentQ = quiz.questions[currentQuestion];
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Quiz Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">{quiz.title}</CardTitle>
+              <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {quiz.topic.module.course.title}
+                </span>
+                <span className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {quiz.questions.length} questions
+                </span>
+                <span className="flex items-center gap-1">
+                  <Award className="h-3 w-3" />
+                  {quiz.passingScore}% to pass
+                </span>
+              </div>
+            </div>
+
+            <div className="text-right">
+              {timeLeft !== null && (
+                <div
+                  className={`flex items-center gap-2 text-lg font-mono ${
+                    timeLeft < 300 ? "text-red-600" : "text-gray-700"
+                  }`}
+                >
+                  <Timer className="h-5 w-5" />
+                  {formatTime(timeLeft)}
+                </div>
+              )}
+              {attempts.length > 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Attempt {attempts.length + 1} of {quiz.maxAttempts || "∞"}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Progress Bar */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Quiz Progress</span>
+            <span className="text-sm text-gray-600">
+              {getAnsweredCount()} of {quiz.questions.length} answered
+            </span>
+          </div>
+          <Progress value={getProgressPercentage()} className="h-2" />
+        </CardContent>
+      </Card>
+
+      {/* Question Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Badge variant="outline">
+                Question {currentQuestion + 1} of {quiz.questions.length}
+              </Badge>
+              <Badge className="bg-blue-100 text-blue-800">
+                {currentQ.points} points
+              </Badge>
+              {currentQ.required && <Badge variant="secondary">Required</Badge>}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {answers[currentQ.id] && (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              )}
+            </div>
+          </div>
+
+          <CardTitle className="text-lg leading-relaxed mt-4">
+            {currentQ.questionText}
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>{renderQuestion(currentQ, currentQuestion)}</CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={() => setCurrentQuestion((prev) => Math.max(0, prev - 1))}
+          disabled={currentQuestion === 0}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
+
+        <div className="flex items-center gap-2">
+          {quiz.questions.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentQuestion(index)}
+              className={`w-8 h-8 rounded-full text-sm font-medium transition-colors ${
+                index === currentQuestion
+                  ? "bg-blue-600 text-white"
+                  : answers[quiz.questions[index].id]
+                  ? "bg-green-100 text-green-800 border border-green-200"
+                  : "bg-gray-100 text-gray-600 border border-gray-200"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+
+        {currentQuestion < quiz.questions.length - 1 ? (
+          <Button
+            onClick={() =>
+              setCurrentQuestion((prev) =>
+                Math.min(quiz.questions.length - 1, prev + 1)
+              )
+            }
+          >
+            Next
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        ) : (
+          <AlertDialog
+            open={showSubmitDialog}
+            onOpenChange={setShowSubmitDialog}
+          >
+            <AlertDialogTrigger asChild>
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                disabled={!canSubmit()}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Submit Quiz
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Submit Quiz?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <p>
+                    You have answered {getAnsweredCount()} out of{" "}
+                    {quiz.questions.length} questions.
+                  </p>
+                  {!canSubmit() && (
+                    <div className="text-red-600 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Please answer all required questions before submitting.
+                    </div>
+                  )}
+                  <p>
+                    Once submitted, you cannot change your answers. Are you sure
+                    you want to submit?
+                  </p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Review Answers</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleSubmitQuiz}
+                  disabled={!canSubmit() || isSubmitting}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isSubmitting ? "Submitting..." : "Submit Quiz"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
+      {/* Auto-save indicator */}
+      <div className="text-center">
+        <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+          <Save className="h-3 w-3" />
+          Answers are saved automatically
+        </p>
+      </div>
+    </div>
+  );
+}
+

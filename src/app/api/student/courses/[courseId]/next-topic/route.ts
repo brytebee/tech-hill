@@ -16,7 +16,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { courseId } = params;
+    const { courseId } = await params;
 
     const nextTopic = await StudentCourseService.getNextTopic(
       session.user.id,

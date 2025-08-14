@@ -16,7 +16,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { topicId } = params;
+    const { topicId } = await params;
 
     const complete = await StudentCourseService.completeTopic(
       session.user.id,

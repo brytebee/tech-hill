@@ -10,8 +10,10 @@ interface QuizBuilderPageProps {
   };
 }
 
-export default async function QuizBuilderPage({ params }: QuizBuilderPageProps) {
-  const { quizId } = params;
+export default async function QuizBuilderPage({
+  params,
+}: QuizBuilderPageProps) {
+  const { quizId } = await params;
 
   // Fetch quiz with existing questions
   const quiz = await prisma.quiz.findUnique({
@@ -29,14 +31,14 @@ export default async function QuizBuilderPage({ params }: QuizBuilderPageProps) 
       questions: {
         include: {
           options: {
-            orderBy: { orderIndex: 'asc' }
-          }
+            orderBy: { orderIndex: "asc" },
+          },
         },
         where: {
-          isActive: true
+          isActive: true,
         },
-        orderBy: { orderIndex: 'asc' }
-      }
+        orderBy: { orderIndex: "asc" },
+      },
     },
   });
 
@@ -44,32 +46,39 @@ export default async function QuizBuilderPage({ params }: QuizBuilderPageProps) 
     notFound();
   }
 
+  const serializeQuiz = {
+    ...quiz,
+    topic: {
+      module: { course: { price: Number(quiz.topic.module.course.price) } },
+    },
+  };
+
   return (
     <AdminLayout
       title={`Quiz Builder: ${quiz.title}`}
       description="Create and manage quiz questions"
-      breadcrumbs={[
-        { label: "Courses", href: "/admin/courses" },
-        { 
-          label: quiz.topic.module.course.title, 
-          href: `/admin/courses/${quiz.topic.module.course.id}` 
-        },
-        { 
-          label: quiz.topic.module.title, 
-          href: `/admin/courses/${quiz.topic.module.course.id}/modules/${quiz.topic.module.id}` 
-        },
-        { 
-          label: quiz.topic.title, 
-          href: `/admin/topics/${quiz.topic.id}` 
-        },
-        { 
-          label: quiz.title, 
-          href: `/admin/quizzes/${quiz.id}` 
-        },
-        { label: "Builder" },
-      ]}
+      // breadcrumbs={[
+      //   { label: "Courses", href: "/admin/courses" },
+      //   {
+      //     label: quiz.topic.module.course.title,
+      //     href: `/admin/courses/${quiz.topic.module.course.id}`,
+      //   },
+      //   {
+      //     label: quiz.topic.module.title,
+      //     href: `/admin/courses/${quiz.topic.module.course.id}/modules/${quiz.topic.module.id}`,
+      //   },
+      //   {
+      //     label: quiz.topic.title,
+      //     href: `/admin/topics/${quiz.topic.id}`,
+      //   },
+      //   {
+      //     label: quiz.title,
+      //     href: `/admin/quizzes/${quiz.id}`,
+      //   },
+      //   { label: "Builder" },
+      // ]}
     >
-      <QuizBuilder quiz={quiz} />
+      <QuizBuilder quiz={serializeQuiz} />
     </AdminLayout>
   );
 }

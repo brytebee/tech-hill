@@ -32,9 +32,9 @@ async function getQuizData(quizId: string, userId: string) {
           title: "Introduction Module",
           course: {
             id: "course-1",
-            title: "Computer Literacy Basics"
-          }
-        }
+            title: "Computer Literacy Basics",
+          },
+        },
       },
       questions: [
         {
@@ -47,12 +47,13 @@ async function getQuizData(quizId: string, userId: string) {
             { id: "opt1", text: "Central Processing Unit", isCorrect: true },
             { id: "opt2", text: "Computer Personal Unit", isCorrect: false },
             { id: "opt3", text: "Central Program Unit", isCorrect: false },
-            { id: "opt4", text: "Computer Processing Unit", isCorrect: false }
-          ]
+            { id: "opt4", text: "Computer Processing Unit", isCorrect: false },
+          ],
         },
         {
           id: "q2",
-          questionText: "Which of the following are input devices? (Select all that apply)",
+          questionText:
+            "Which of the following are input devices? (Select all that apply)",
           questionType: "MULTIPLE_SELECT",
           points: 10,
           required: true,
@@ -61,8 +62,8 @@ async function getQuizData(quizId: string, userId: string) {
             { id: "opt2", text: "Mouse", isCorrect: true },
             { id: "opt3", text: "Monitor", isCorrect: false },
             { id: "opt4", text: "Microphone", isCorrect: true },
-            { id: "opt5", text: "Printer", isCorrect: false }
-          ]
+            { id: "opt5", text: "Printer", isCorrect: false },
+          ],
         },
         {
           id: "q3",
@@ -72,8 +73,8 @@ async function getQuizData(quizId: string, userId: string) {
           required: true,
           options: [
             { id: "opt1", text: "True", isCorrect: true },
-            { id: "opt2", text: "False", isCorrect: false }
-          ]
+            { id: "opt2", text: "False", isCorrect: false },
+          ],
         },
         {
           id: "q4",
@@ -81,23 +82,27 @@ async function getQuizData(quizId: string, userId: string) {
           questionType: "SHORT_ANSWER",
           points: 15,
           required: true,
-          sampleAnswer: "Hardware refers to physical components of a computer system, while software refers to programs and applications that run on the hardware."
+          sampleAnswer:
+            "Hardware refers to physical components of a computer system, while software refers to programs and applications that run on the hardware.",
         },
         {
           id: "q5",
-          questionText: "Write a brief essay about the importance of computer literacy in today's world (minimum 100 words).",
+          questionText:
+            "Write a brief essay about the importance of computer literacy in today's world (minimum 100 words).",
           questionType: "ESSAY",
           points: 25,
           required: false,
           minWords: 100,
-          maxWords: 500
-        }
-      ]
+          maxWords: 500,
+        },
+      ],
     };
 
     // Check if user has attempts left
     const attempts = []; // Mock - would come from QuizAttempt service
-    const canTakeQuiz = quiz.maxAttempts ? attempts.length < quiz.maxAttempts : true;
+    const canTakeQuiz = quiz.maxAttempts
+      ? attempts.length < quiz.maxAttempts
+      : true;
 
     return {
       quiz,
@@ -129,7 +134,7 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
 
   return (
     <StudentLayout>
-      <QuizInterface 
+      <QuizInterface
         quiz={quiz}
         attempts={attempts}
         userId={session.user.id}

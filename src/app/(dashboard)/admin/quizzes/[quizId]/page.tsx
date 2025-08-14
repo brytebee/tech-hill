@@ -11,7 +11,7 @@ interface QuizPageProps {
 }
 
 export default async function QuizPage({ params }: QuizPageProps) {
-  const { quizId } = params;
+  const { quizId } = await params;
 
   // Fetch quiz with all related data
   const quiz = await prisma.quiz.findUnique({
@@ -29,18 +29,18 @@ export default async function QuizPage({ params }: QuizPageProps) {
       questions: {
         include: {
           options: {
-            orderBy: { orderIndex: 'asc' }
+            orderBy: { orderIndex: "asc" },
           },
           _count: {
             select: {
-              answers: true
-            }
-          }
+              answers: true,
+            },
+          },
         },
         where: {
-          isActive: true
+          isActive: true,
         },
-        orderBy: { orderIndex: 'asc' }
+        orderBy: { orderIndex: "asc" },
       },
       attempts: {
         include: {
@@ -49,19 +49,19 @@ export default async function QuizPage({ params }: QuizPageProps) {
               id: true,
               firstName: true,
               lastName: true,
-              email: true
-            }
-          }
+              email: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' },
-        take: 10 // Recent attempts
+        orderBy: { createdAt: "desc" },
+        take: 10, // Recent attempts
       },
       _count: {
         select: {
           questions: true,
-          attempts: true
-        }
-      }
+          attempts: true,
+        },
+      },
     },
   });
 
@@ -69,28 +69,35 @@ export default async function QuizPage({ params }: QuizPageProps) {
     notFound();
   }
 
+  const serializeQuiz = {
+    ...quiz,
+    topic: {
+      module: { course: { price: Number(quiz.topic.module.course.price) } },
+    },
+  };
+
   return (
     <AdminLayout
       title={quiz.title}
       description={quiz.description || "Quiz details and management"}
-      breadcrumbs={[
-        { label: "Courses", href: "/admin/courses" },
-        { 
-          label: quiz.topic.module.course.title, 
-          href: `/admin/courses/${quiz.topic.module.course.id}` 
-        },
-        { 
-          label: quiz.topic.module.title, 
-          href: `/admin/courses/${quiz.topic.module.course.id}/modules/${quiz.topic.module.id}` 
-        },
-        { 
-          label: quiz.topic.title, 
-          href: `/admin/topics/${quiz.topic.id}` 
-        },
-        { label: quiz.title },
-      ]}
+      // breadcrumbs={[
+      //   { label: "Courses", href: "/admin/courses" },
+      //   {
+      //     label: quiz.topic.module.course.title,
+      //     href: `/admin/courses/${quiz.topic.module.course.id}`,
+      //   },
+      //   {
+      //     label: quiz.topic.module.title,
+      //     href: `/admin/courses/${quiz.topic.module.course.id}/modules/${quiz.topic.module.id}`,
+      //   },
+      //   {
+      //     label: quiz.topic.title,
+      //     href: `/admin/topics/${quiz.topic.id}`,
+      //   },
+      //   { label: quiz.title },
+      // ]}
     >
-      <QuizOverview quiz={quiz} />
+      <QuizOverview quiz={serializeQuiz} />
     </AdminLayout>
   );
 }

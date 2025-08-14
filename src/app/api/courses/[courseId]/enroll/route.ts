@@ -67,7 +67,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { courseId } = params;
+    const { courseId } = await params;
 
     await EnrollmentService.updateEnrollmentStatus(
       session.user.id,

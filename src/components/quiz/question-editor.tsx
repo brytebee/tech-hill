@@ -5,11 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -20,15 +16,15 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  Trash2, 
-  Plus, 
+import {
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  Plus,
   Minus,
   GripVertical,
   Settings2,
-  HelpCircle
+  HelpCircle,
 } from "lucide-react";
 import {
   Collapsible,
@@ -50,11 +46,11 @@ interface QuestionEditorProps {
 }
 
 const QUESTION_TYPES = [
-  { value: 'MULTIPLE_CHOICE', label: 'Multiple Choice', requiresOptions: true },
-  { value: 'MULTIPLE_SELECT', label: 'Multiple Select', requiresOptions: true },
-  { value: 'TRUE_FALSE', label: 'True/False', requiresOptions: true },
-  { value: 'SHORT_ANSWER', label: 'Short Answer', requiresOptions: false },
-  { value: 'LONG_ANSWER', label: 'Long Answer', requiresOptions: false },
+  { value: "MULTIPLE_CHOICE", label: "Multiple Choice", requiresOptions: true },
+  { value: "MULTIPLE_SELECT", label: "Multiple Select", requiresOptions: true },
+  { value: "TRUE_FALSE", label: "True/False", requiresOptions: true },
+  { value: "SHORT_ANSWER", label: "Short Answer", requiresOptions: false },
+  { value: "LONG_ANSWER", label: "Long Answer", requiresOptions: false },
 ];
 
 export function QuestionEditor({
@@ -71,29 +67,33 @@ export function QuestionEditor({
   const [isExpanded, setIsExpanded] = useState(true);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const currentType = QUESTION_TYPES.find(type => type.value === question.questionType);
+  const currentType = QUESTION_TYPES.find(
+    (type) => type.value === question.questionType
+  );
   const requiresOptions = currentType?.requiresOptions;
 
   const updateQuestion = (updates: Partial<QuestionData>) => {
     onUpdate({ ...question, ...updates });
   };
 
-  const updateQuestionType = (newType: QuestionData['questionType']) => {
+  const updateQuestionType = (newType: QuestionData["questionType"]) => {
     let newOptions = question.options;
-    
-    if (newType === 'TRUE_FALSE') {
+
+    if (newType === "TRUE_FALSE") {
       newOptions = [
-        { text: 'True', isCorrect: true, explanation: '' },
-        { text: 'False', isCorrect: false, explanation: '' },
+        { text: "True", isCorrect: true, explanation: "" },
+        { text: "False", isCorrect: false, explanation: "" },
       ];
-    } else if (!QUESTION_TYPES.find(t => t.value === newType)?.requiresOptions) {
+    } else if (
+      !QUESTION_TYPES.find((t) => t.value === newType)?.requiresOptions
+    ) {
       newOptions = [];
     } else if (question.options.length === 0) {
       newOptions = [
-        { text: '', isCorrect: true, explanation: '' },
-        { text: '', isCorrect: false, explanation: '' },
-        { text: '', isCorrect: false, explanation: '' },
-        { text: '', isCorrect: false, explanation: '' },
+        { text: "", isCorrect: true, explanation: "" },
+        { text: "", isCorrect: false, explanation: "" },
+        { text: "", isCorrect: false, explanation: "" },
+        { text: "", isCorrect: false, explanation: "" },
       ];
     }
 
@@ -101,7 +101,10 @@ export function QuestionEditor({
   };
 
   const addOption = () => {
-    const newOptions = [...question.options, { text: '', isCorrect: false, explanation: '' }];
+    const newOptions = [
+      ...question.options,
+      { text: "", isCorrect: false, explanation: "" },
+    ];
     updateQuestion({ options: newOptions });
   };
 
@@ -112,8 +115,11 @@ export function QuestionEditor({
     }
   };
 
-  const updateOption = (optionIndex: number, updates: Partial<QuestionData['options'][0]>) => {
-    const newOptions = question.options.map((option, i) => 
+  const updateOption = (
+    optionIndex: number,
+    updates: Partial<QuestionData["options"][0]>
+  ) => {
+    const newOptions = question.options.map((option, i) =>
       i === optionIndex ? { ...option, ...updates } : option
     );
     updateQuestion({ options: newOptions });
@@ -121,12 +127,17 @@ export function QuestionEditor({
 
   const toggleCorrectAnswer = (optionIndex: number) => {
     const newOptions = question.options.map((option, i) => {
-      if (question.questionType === 'MULTIPLE_CHOICE' || question.questionType === 'TRUE_FALSE') {
+      if (
+        question.questionType === "MULTIPLE_CHOICE" ||
+        question.questionType === "TRUE_FALSE"
+      ) {
         // Single correct answer - uncheck others
         return { ...option, isCorrect: i === optionIndex };
       } else {
         // Multiple correct answers allowed
-        return i === optionIndex ? { ...option, isCorrect: !option.isCorrect } : option;
+        return i === optionIndex
+          ? { ...option, isCorrect: !option.isCorrect }
+          : option;
       }
     });
     updateQuestion({ options: newOptions });
@@ -134,20 +145,20 @@ export function QuestionEditor({
 
   const getValidationErrors = () => {
     const errors = [];
-    
+
     if (!question.questionText.trim()) {
-      errors.push('Question text is required');
+      errors.push("Question text is required");
     }
 
     if (requiresOptions) {
-      const validOptions = question.options.filter(opt => opt.text.trim());
+      const validOptions = question.options.filter((opt) => opt.text.trim());
       if (validOptions.length === 0) {
-        errors.push('At least one option is required');
+        errors.push("At least one option is required");
       }
-      
-      const correctAnswers = validOptions.filter(opt => opt.isCorrect);
+
+      const correctAnswers = validOptions.filter((opt) => opt.isCorrect);
       if (correctAnswers.length === 0) {
-        errors.push('At least one correct answer is required');
+        errors.push("At least one correct answer is required");
       }
     }
 
@@ -158,16 +169,19 @@ export function QuestionEditor({
   const hasErrors = errors.length > 0;
 
   return (
-    <Card className={`${hasErrors ? 'border-red-200 bg-red-50/50' : ''}`}>
+    <Card className={`${hasErrors ? "border-red-200 bg-red-50/50" : ""}`}>
       <CardHeader className="pb-3">
         <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
           <div className="flex items-center justify-between">
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" className="p-0 h-auto font-medium text-left">
+            <CollapsibleTrigger>
+              <Button
+                variant="ghost"
+                className="p-0 h-auto font-medium text-left"
+              >
                 <div className="flex items-center gap-2">
                   <GripVertical className="w-4 h-4 text-muted-foreground" />
                   <span>Question {index + 1}</span>
-                  <Badge variant={hasErrors ? 'destructive' : 'secondary'}>
+                  <Badge variant={hasErrors ? "destructive" : "secondary"}>
                     {currentType?.label}
                   </Badge>
                   {question.points !== 1 && (
@@ -175,13 +189,13 @@ export function QuestionEditor({
                   )}
                   {hasErrors && (
                     <Badge variant="destructive" className="text-xs">
-                      {errors.length} error{errors.length > 1 ? 's' : ''}
+                      {errors.length} error{errors.length > 1 ? "s" : ""}
                     </Badge>
                   )}
                 </div>
               </Button>
             </CollapsibleTrigger>
-            
+
             <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
@@ -220,7 +234,9 @@ export function QuestionEditor({
                 <Textarea
                   id={`question-${index}`}
                   value={question.questionText}
-                  onChange={(e) => updateQuestion({ questionText: e.target.value })}
+                  onChange={(e) =>
+                    updateQuestion({ questionText: e.target.value })
+                  }
                   placeholder="Enter your question here..."
                   rows={2}
                 />
@@ -230,7 +246,10 @@ export function QuestionEditor({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Question Type</Label>
-                  <Select value={question.questionType} onValueChange={updateQuestionType}>
+                  <Select
+                    value={question.questionType}
+                    onValueChange={updateQuestionType}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -246,7 +265,12 @@ export function QuestionEditor({
 
                 <div className="space-y-2">
                   <Label>Difficulty</Label>
-                  <Select value={question.difficulty} onValueChange={(value: any) => updateQuestion({ difficulty: value })}>
+                  <Select
+                    value={question.difficulty}
+                    onValueChange={(value: any) =>
+                      updateQuestion({ difficulty: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -264,7 +288,9 @@ export function QuestionEditor({
                     type="number"
                     min="1"
                     value={question.points}
-                    onChange={(e) => updateQuestion({ points: parseInt(e.target.value) || 1 })}
+                    onChange={(e) =>
+                      updateQuestion({ points: parseInt(e.target.value) || 1 })
+                    }
                   />
                 </div>
               </div>
@@ -274,7 +300,7 @@ export function QuestionEditor({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <Label>Answer Options</Label>
-                    {question.questionType !== 'TRUE_FALSE' && (
+                    {question.questionType !== "TRUE_FALSE" && (
                       <Button
                         type="button"
                         variant="outline"
@@ -286,30 +312,38 @@ export function QuestionEditor({
                       </Button>
                     )}
                   </div>
-                  
+
                   <div className="space-y-2">
                     {question.options.map((option, optionIndex) => (
-                      <div key={optionIndex} className="flex items-center gap-2 p-3 border rounded-lg">
+                      <div
+                        key={optionIndex}
+                        className="flex items-center gap-2 p-3 border rounded-lg"
+                      >
                         <Checkbox
                           checked={option.isCorrect}
-                          onCheckedChange={() => toggleCorrectAnswer(optionIndex)}
+                          onCheckedChange={() =>
+                            toggleCorrectAnswer(optionIndex)
+                          }
                         />
                         <Input
                           placeholder={`Option ${optionIndex + 1}`}
                           value={option.text}
-                          onChange={(e) => updateOption(optionIndex, { text: e.target.value })}
+                          onChange={(e) =>
+                            updateOption(optionIndex, { text: e.target.value })
+                          }
                           className="flex-1"
                         />
-                        {question.questionType !== 'TRUE_FALSE' && question.options.length > 2 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => removeOption(optionIndex)}
-                          >
-                            <Minus className="w-4 h-4" />
-                          </Button>
-                        )}
+                        {question.questionType !== "TRUE_FALSE" &&
+                          question.options.length > 2 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeOption(optionIndex)}
+                            >
+                              <Minus className="w-4 h-4" />
+                            </Button>
+                          )}
                       </div>
                     ))}
                   </div>
@@ -318,31 +352,42 @@ export function QuestionEditor({
 
               {/* Advanced Settings */}
               <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="p-0 h-auto text-sm text-muted-foreground">
+                <CollapsibleTrigger>
+                  <Button
+                    variant="ghost"
+                    className="p-0 h-auto text-sm text-muted-foreground"
+                  >
                     <Settings2 className="w-4 h-4 mr-2" />
                     Advanced Settings
                   </Button>
                 </CollapsibleTrigger>
-                
+
                 <CollapsibleContent className="space-y-4 mt-4 pt-4 border-t">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Hint (Optional)</Label>
                       <Input
-                        value={question.hint || ''}
-                        onChange={(e) => updateQuestion({ hint: e.target.value })}
+                        value={question.hint || ""}
+                        onChange={(e) =>
+                          updateQuestion({ hint: e.target.value })
+                        }
                         placeholder="Helpful hint for students"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <Label>Time Limit (seconds)</Label>
                       <Input
                         type="number"
                         min="1"
-                        value={question.timeLimit || ''}
-                        onChange={(e) => updateQuestion({ timeLimit: e.target.value ? parseInt(e.target.value) : undefined })}
+                        value={question.timeLimit || ""}
+                        onChange={(e) =>
+                          updateQuestion({
+                            timeLimit: e.target.value
+                              ? parseInt(e.target.value)
+                              : undefined,
+                          })
+                        }
                         placeholder="No limit"
                       />
                     </div>
@@ -351,8 +396,10 @@ export function QuestionEditor({
                   <div className="space-y-2">
                     <Label>Explanation (Optional)</Label>
                     <Textarea
-                      value={question.explanation || ''}
-                      onChange={(e) => updateQuestion({ explanation: e.target.value })}
+                      value={question.explanation || ""}
+                      onChange={(e) =>
+                        updateQuestion({ explanation: e.target.value })
+                      }
                       placeholder="Explain the correct answer..."
                       rows={2}
                     />
@@ -363,7 +410,9 @@ export function QuestionEditor({
                       <Checkbox
                         id={`partial-${index}`}
                         checked={question.allowPartialCredit}
-                        onCheckedChange={(checked) => updateQuestion({ allowPartialCredit: !!checked })}
+                        onCheckedChange={(checked) =>
+                          updateQuestion({ allowPartialCredit: !!checked })
+                        }
                       />
                       <Label htmlFor={`partial-${index}`} className="text-sm">
                         Allow Partial Credit
@@ -375,7 +424,9 @@ export function QuestionEditor({
                         <Checkbox
                           id={`case-${index}`}
                           checked={question.caseSensitive}
-                          onCheckedChange={(checked) => updateQuestion({ caseSensitive: !!checked })}
+                          onCheckedChange={(checked) =>
+                            updateQuestion({ caseSensitive: !!checked })
+                          }
                         />
                         <Label htmlFor={`case-${index}`} className="text-sm">
                           Case Sensitive
@@ -392,10 +443,14 @@ export function QuestionEditor({
                   <div className="flex items-start gap-2">
                     <HelpCircle className="w-4 h-4 text-red-600 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-red-800">This question needs attention:</p>
+                      <p className="text-sm font-medium text-red-800">
+                        This question needs attention:
+                      </p>
                       <ul className="mt-1 text-sm text-red-700">
                         {errors.map((error, i) => (
-                          <li key={i} className="list-disc list-inside">{error}</li>
+                          <li key={i} className="list-disc list-inside">
+                            {error}
+                          </li>
                         ))}
                       </ul>
                     </div>

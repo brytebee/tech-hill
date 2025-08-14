@@ -114,9 +114,9 @@ export function QuizForm({
       } else {
         // Redirect to quiz questions page or back to topic
         if (isEdit) {
-          router.push(`/admin/quizzes/${quiz.id}/questions/create`);
+          router.push(`/admin/quizzes/${quiz.id}/builder`);
         } else {
-          router.push(`/admin/quizzes/${result.id}/questions/create`);
+          router.push(`/admin/quizzes/${result.id}/builder`);
         }
       }
     } catch (error: any) {

@@ -35,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { courseId } = params
+    const { courseId } = await params
 
     // Check if course exists and user has permission
     const course = await CourseService.getCourseById(courseId)
@@ -87,7 +87,7 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { courseId } = params
+    const { courseId } = await params
 
     // Check if course exists and user has permission
     const course = await CourseService.getCourseById(courseId)

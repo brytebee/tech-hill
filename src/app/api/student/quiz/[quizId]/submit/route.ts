@@ -23,7 +23,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { quizId } = params;
+    const { quizId } = await params;
     const body = await request.json();
     const validatedData = submitQuizSchema.parse(body);
 

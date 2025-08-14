@@ -19,17 +19,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  Edit, 
-  Settings, 
-  Play, 
-  BarChart3, 
-  Users, 
+import {
+  Edit,
+  Settings,
+  Play,
+  BarChart3,
+  Users,
   Clock,
   Target,
   FileQuestion,
   Zap,
-  Eye
+  Eye,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -40,13 +40,25 @@ interface QuizOverviewProps {
 export function QuizOverview({ quiz }: QuizOverviewProps) {
   const router = useRouter();
 
-  const totalPoints = quiz.questions.reduce((sum: number, q: any) => sum + q.points, 0);
-  const averageScore = quiz.attempts.length > 0 
-    ? Math.round(quiz.attempts.reduce((sum: number, a: any) => sum + a.score, 0) / quiz.attempts.length)
-    : 0;
-  const passRate = quiz.attempts.length > 0
-    ? Math.round((quiz.attempts.filter((a: any) => a.passed).length / quiz.attempts.length) * 100)
-    : 0;
+  const totalPoints = quiz.questions.reduce(
+    (sum: number, q: any) => sum + q.points,
+    0
+  );
+  const averageScore =
+    quiz.attempts.length > 0
+      ? Math.round(
+          quiz.attempts.reduce((sum: number, a: any) => sum + a.score, 0) /
+            quiz.attempts.length
+        )
+      : 0;
+  const passRate =
+    quiz.attempts.length > 0
+      ? Math.round(
+          (quiz.attempts.filter((a: any) => a.passed).length /
+            quiz.attempts.length) *
+            100
+        )
+      : 0;
 
   const difficultyStats = quiz.questions.reduce((acc: any, q: any) => {
     acc[q.difficulty] = (acc[q.difficulty] || 0) + 1;
@@ -69,13 +81,28 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
               <CardDescription>{quiz.description}</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={() => router.push(`/admin/quizzes/${quiz.id}/builder`)}
-              >
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Questions
-              </Button>
+              {quiz.questions.length > 0 && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(`/admin/quizzes/${quiz.id}/questions`)
+                    }
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    All Questions
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      router.push(`/admin/quizzes/${quiz.id}/builder`)
+                    }
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Questions
+                  </Button>
+                </>
+              )}
               <Button
                 variant="outline"
                 onClick={() => router.push(`/admin/quizzes/${quiz.id}/edit`)}
@@ -114,9 +141,7 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{quiz._count.attempts}</div>
-            <p className="text-xs text-muted-foreground">
-              Total submissions
-            </p>
+            <p className="text-xs text-muted-foreground">Total submissions</p>
           </CardContent>
         </Card>
 
@@ -127,9 +152,7 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{averageScore}%</div>
-            <p className="text-xs text-muted-foreground">
-              Across all attempts
-            </p>
+            <p className="text-xs text-muted-foreground">Across all attempts</p>
           </CardContent>
         </Card>
 
@@ -152,14 +175,16 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
         <Card>
           <CardHeader>
             <CardTitle>Quiz Configuration</CardTitle>
-            <CardDescription>Current quiz settings and requirements</CardDescription>
+            <CardDescription>
+              Current quiz settings and requirements
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-medium">Time Limit:</span>
                 <p className="text-muted-foreground">
-                  {quiz.timeLimit ? `${quiz.timeLimit} minutes` : 'No limit'}
+                  {quiz.timeLimit ? `${quiz.timeLimit} minutes` : "No limit"}
                 </p>
               </div>
               <div>
@@ -168,27 +193,39 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
               </div>
               <div>
                 <span className="font-medium">Max Attempts:</span>
-                <p className="text-muted-foreground">{quiz.maxAttempts || 'Unlimited'}</p>
+                <p className="text-muted-foreground">
+                  {quiz.maxAttempts || "Unlimited"}
+                </p>
               </div>
               <div>
                 <span className="font-medium">Shuffle Questions:</span>
-                <p className="text-muted-foreground">{quiz.shuffleQuestions ? 'Yes' : 'No'}</p>
+                <p className="text-muted-foreground">
+                  {quiz.shuffleQuestions ? "Yes" : "No"}
+                </p>
               </div>
               <div>
                 <span className="font-medium">Shuffle Options:</span>
-                <p className="text-muted-foreground">{quiz.shuffleOptions ? 'Yes' : 'No'}</p>
+                <p className="text-muted-foreground">
+                  {quiz.shuffleOptions ? "Yes" : "No"}
+                </p>
               </div>
               <div>
                 <span className="font-medium">Show Feedback:</span>
-                <p className="text-muted-foreground">{quiz.showFeedback ? 'Yes' : 'No'}</p>
+                <p className="text-muted-foreground">
+                  {quiz.showFeedback ? "Yes" : "No"}
+                </p>
               </div>
               <div>
                 <span className="font-medium">Allow Review:</span>
-                <p className="text-muted-foreground">{quiz.allowReview ? 'Yes' : 'No'}</p>
+                <p className="text-muted-foreground">
+                  {quiz.allowReview ? "Yes" : "No"}
+                </p>
               </div>
               <div>
                 <span className="font-medium">Practice Mode:</span>
-                <p className="text-muted-foreground">{quiz.practiceMode ? 'Yes' : 'No'}</p>
+                <p className="text-muted-foreground">
+                  {quiz.practiceMode ? "Yes" : "No"}
+                </p>
               </div>
             </div>
 
@@ -227,21 +264,26 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
               </div>
               <div className="space-y-2">
                 {Object.entries(difficultyStats).map(([difficulty, count]) => (
-                  <div key={difficulty} className="flex items-center justify-between">
+                  <div
+                    key={difficulty}
+                    className="flex items-center justify-between"
+                  >
                     <div className="flex items-center gap-2">
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={
-                          difficulty === 'EASY' ? 'text-green-600 border-green-200' :
-                          difficulty === 'MEDIUM' ? 'text-yellow-600 border-yellow-200' :
-                          'text-red-600 border-red-200'
+                          difficulty === "EASY"
+                            ? "text-green-600 border-green-200"
+                            : difficulty === "MEDIUM"
+                            ? "text-yellow-600 border-yellow-200"
+                            : "text-red-600 border-red-200"
                         }
                       >
                         {difficulty.toLowerCase()}
                       </Badge>
                     </div>
                     <span className="text-sm text-muted-foreground">
-                      {count} question{(count as number) !== 1 ? 's' : ''}
+                      {count} question{(count as number) !== 1 ? "s" : ""}
                     </span>
                   </div>
                 ))}
@@ -255,7 +297,7 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
               <div className="space-y-2">
                 {Object.entries(
                   quiz.questions.reduce((acc: any, q: any) => {
-                    const type = q.questionType.replace('_', ' ').toLowerCase();
+                    const type = q.questionType.replace("_", " ").toLowerCase();
                     acc[type] = (acc[type] || 0) + 1;
                     return acc;
                   }, {})
@@ -280,9 +322,11 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
                 <CardTitle>Recent Attempts</CardTitle>
                 <CardDescription>Latest quiz submissions</CardDescription>
               </div>
-              <Button 
-                variant="outline" 
-                onClick={() => router.push(`/admin/quizzes/${quiz.id}/attempts`)}
+              <Button
+                variant="outline"
+                onClick={() =>
+                  router.push(`/admin/quizzes/${quiz.id}/attempts`)
+                }
               >
                 <Eye className="w-4 h-4 mr-2" />
                 View All
@@ -324,7 +368,7 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge 
+                      <Badge
                         variant={attempt.passed ? "default" : "destructive"}
                       >
                         {attempt.passed ? "Passed" : "Failed"}
@@ -334,13 +378,18 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
                       <div className="flex items-center gap-1">
                         <Clock className="w-4 h-4 text-muted-foreground" />
                         <span className="text-sm">
-                          {attempt.timeSpent ? `${Math.round(attempt.timeSpent / 60)}m` : 'N/A'}
+                          {attempt.timeSpent
+                            ? `${Math.round(attempt.timeSpent / 60)}m`
+                            : "N/A"}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm text-muted-foreground">
-                        {format(new Date(attempt.createdAt), 'MMM dd, yyyy HH:mm')}
+                        {format(
+                          new Date(attempt.createdAt),
+                          "MMM dd, yyyy HH:mm"
+                        )}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -359,17 +408,25 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
               <CardTitle>Questions</CardTitle>
               <CardDescription>All questions in this quiz</CardDescription>
             </div>
-            <Button onClick={() => router.push(`/admin/quizzes/${quiz.id}/builder`)}>
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Questions
-            </Button>
+            {quiz.questions.length > 0 && (
+              <Button
+                onClick={() => router.push(`/admin/quizzes/${quiz.id}/builder`)}
+              >
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Questions
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           {quiz.questions.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground mb-4">No questions added yet.</p>
-              <Button onClick={() => router.push(`/admin/quizzes/${quiz.id}/builder`)}>
+              <p className="text-muted-foreground mb-4">
+                No questions added yet.
+              </p>
+              <Button
+                onClick={() => router.push(`/admin/quizzes/${quiz.id}/builder`)}
+              >
                 <FileQuestion className="w-4 h-4 mr-2" />
                 Add Questions
               </Button>
@@ -381,11 +438,17 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm font-medium">Question {index + 1}</span>
-                        <Badge variant="outline">{question.points} pt{question.points !== 1 ? 's' : ''}</Badge>
+                        <span className="text-sm font-medium">
+                          Question {index + 1}
+                        </span>
+                        <Badge variant="outline">
+                          {question.points} pt{question.points !== 1 ? "s" : ""}
+                        </Badge>
                         <Badge variant="secondary">{question.difficulty}</Badge>
                         <Badge variant="outline">
-                          {question.questionType.replace('_', ' ').toLowerCase()}
+                          {question.questionType
+                            .replace("_", " ")
+                            .toLowerCase()}
                         </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
@@ -393,8 +456,17 @@ export function QuizOverview({ quiz }: QuizOverviewProps) {
                       </p>
                       {question.options.length > 0 && (
                         <div className="text-xs text-muted-foreground">
-                          {question.options.length} option{question.options.length !== 1 ? 's' : ''} • 
-                          {question.options.filter((opt: any) => opt.isCorrect).length} correct answer{question.options.filter((opt: any) => opt.isCorrect).length !== 1 ? 's' : ''}
+                          {question.options.length} option
+                          {question.options.length !== 1 ? "s" : ""} •
+                          {
+                            question.options.filter((opt: any) => opt.isCorrect)
+                              .length
+                          }{" "}
+                          correct answer
+                          {question.options.filter((opt: any) => opt.isCorrect)
+                            .length !== 1
+                            ? "s"
+                            : ""}
                         </div>
                       )}
                     </div>
