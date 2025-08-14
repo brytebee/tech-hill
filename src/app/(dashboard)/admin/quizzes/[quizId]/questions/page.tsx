@@ -1,81 +1,78 @@
 // app/(dashboard)/admin/quizzes/[quizId]/questions/page.tsx
 import { AdminLayout } from "@/components/layout/AdminLayout";
-import { QuestionForm } from "@/components/forms/question-form";
+import { QuestionList } from "@/components/questions/question-list";
 import { prisma } from "@/lib/db";
 import { notFound, redirect } from "next/navigation";
 
-interface CreateQuestionPageProps {
+interface QuestionsPageProps {
   params: {
     quizId: string;
   };
 }
 
-export default async function CreateQuestionPage({
+export default async function QuestionsPage({
   params,
-}: CreateQuestionPageProps) {
+}: QuestionsPageProps) {
   const { quizId } = await params;
 
-  // Fetch all questions for a quiz
-  const questions = await prisma.question.findMany({
-    where: { quizId },
+  // Fetch quiz with questions and all related data
+  const quiz = await prisma.quiz.findUnique({
+    where: { 
+      id: quizId,
+      isActive: true 
+    },
     include: {
-      quiz: {
+      topic: {
         include: {
-          topic: {
+          module: {
             include: {
-              module: {
-                include: {
-                  course: true,
-                },
-              },
+              course: true,
             },
           },
         },
       },
-      // _count: {
-      //   select: {
-      //     questions: true
-      //   }
-      // }
+      questions: {
+        where: {
+          // Don't filter by isActive here - admin should see all questions
+        },
+        include: {
+          options: {
+            orderBy: { orderIndex: 'asc' }
+          },
+        },
+        orderBy: { orderIndex: 'asc' }
+      },
     },
   });
 
-  if (!questions) {
+  if (!quiz) {
     notFound();
   }
 
-  if (questions.length === 0) {
-    redirect(`/admin/quizzes${quizId}/builder`);
+  // If no questions exist, redirect to question builder/creator
+  if (quiz.questions.length === 0) {
+    redirect(`/admin/quizzes/${quizId}/questions/create`);
   }
+
+  // Format questions to match the component interface
+  const formattedQuestions = quiz.questions.map(question => ({
+    ...question,
+    quiz: {
+      id: quiz.id,
+      title: quiz.title,
+      topic: quiz.topic
+    }
+  }));
 
   return (
     <AdminLayout
-      title={`${questions[0].quiz.title} Questions`}
-      description={`All questions for "${questions[0].quiz.title}" quiz`}
-      // breadcrumbs={[
-      //   { label: "Courses", href: "/admin/courses" },
-      //   {
-      //     label: quiz.topic.module.course.title,
-      //     href: `/admin/courses/${quiz.topic.module.course.id}`
-      //   },
-      //   {
-      //     label: quiz.topic.module.title,
-      //     href: `/admin/courses/${quiz.topic.module.course.id}/modules/${quiz.topic.module.id}`
-      //   },
-      //   {
-      //     label: quiz.topic.title,
-      //     href: `/admin/topics/${quiz.topic.id}`
-      //   },
-      //   {
-      //     label: quiz.title,
-      //     href: `/admin/quizzes/${quiz.id}/questions`
-      //   },
-      //   { label: "Create Question" },
-      // ]}
+      title={`${quiz.title} Questions`}
+      description={`Manage questions for "${quiz.title}" quiz`}
     >
-      <p>Hi there!</p>
-      {/* TODO: Convert the QuestionForm below to a question list */}
-      {/* <QuestionForm quizId={quizId} quiz={quiz} /> */}
+      <QuestionList 
+        questions={formattedQuestions} 
+        quizId={quizId} 
+      />
     </AdminLayout>
   );
 }

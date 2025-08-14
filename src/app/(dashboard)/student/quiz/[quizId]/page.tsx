@@ -11,104 +11,31 @@ interface PageProps {
   searchParams: Promise<{ topicId?: string }>;
 }
 
-// Mock quiz data - in real app this would come from QuizService
-async function getQuizData(quizId: string, userId: string) {
+// Fetch quiz data from API
+async function getQuizData(quizId: string, topicId?: string) {
   try {
-    // Mock data structure
-    const quiz = {
-      id: quizId,
-      title: "Introduction to Computer Basics Quiz",
-      description: "Test your understanding of computer fundamentals",
-      passingScore: 80,
-      timeLimit: 30, // minutes
-      allowRetakes: true,
-      maxAttempts: 3,
-      shuffleQuestions: true,
-      showResults: true,
-      topic: {
-        id: "topic-1",
-        title: "Computer Fundamentals",
-        module: {
-          title: "Introduction Module",
-          course: {
-            id: "course-1",
-            title: "Computer Literacy Basics",
-          },
-        },
+    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const url = new URL(`/api/student/quiz/${quizId}`, baseUrl);
+    
+    if (topicId) {
+      url.searchParams.set('topicId', topicId);
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Cookie': '', // Session will be handled by getServerSession
       },
-      questions: [
-        {
-          id: "q1",
-          questionText: "What does CPU stand for?",
-          questionType: "MULTIPLE_CHOICE",
-          points: 5,
-          required: true,
-          options: [
-            { id: "opt1", text: "Central Processing Unit", isCorrect: true },
-            { id: "opt2", text: "Computer Personal Unit", isCorrect: false },
-            { id: "opt3", text: "Central Program Unit", isCorrect: false },
-            { id: "opt4", text: "Computer Processing Unit", isCorrect: false },
-          ],
-        },
-        {
-          id: "q2",
-          questionText:
-            "Which of the following are input devices? (Select all that apply)",
-          questionType: "MULTIPLE_SELECT",
-          points: 10,
-          required: true,
-          options: [
-            { id: "opt1", text: "Keyboard", isCorrect: true },
-            { id: "opt2", text: "Mouse", isCorrect: true },
-            { id: "opt3", text: "Monitor", isCorrect: false },
-            { id: "opt4", text: "Microphone", isCorrect: true },
-            { id: "opt5", text: "Printer", isCorrect: false },
-          ],
-        },
-        {
-          id: "q3",
-          questionText: "RAM stands for Random Access Memory.",
-          questionType: "TRUE_FALSE",
-          points: 5,
-          required: true,
-          options: [
-            { id: "opt1", text: "True", isCorrect: true },
-            { id: "opt2", text: "False", isCorrect: false },
-          ],
-        },
-        {
-          id: "q4",
-          questionText: "Explain the difference between hardware and software.",
-          questionType: "SHORT_ANSWER",
-          points: 15,
-          required: true,
-          sampleAnswer:
-            "Hardware refers to physical components of a computer system, while software refers to programs and applications that run on the hardware.",
-        },
-        {
-          id: "q5",
-          questionText:
-            "Write a brief essay about the importance of computer literacy in today's world (minimum 100 words).",
-          questionType: "ESSAY",
-          points: 25,
-          required: false,
-          minWords: 100,
-          maxWords: 500,
-        },
-      ],
-    };
+      cache: 'no-store' // Ensure fresh data
+    });
 
-    // Check if user has attempts left
-    const attempts = []; // Mock - would come from QuizAttempt service
-    const canTakeQuiz = quiz.maxAttempts
-      ? attempts.length < quiz.maxAttempts
-      : true;
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    return {
-      quiz,
-      attempts,
-      canTakeQuiz,
-    };
+    return await response.json();
   } catch (error) {
     console.error("Error fetching quiz data:", error);
     return null;
@@ -118,28 +45,198 @@ async function getQuizData(quizId: string, userId: string) {
 export default async function QuizPage({ params, searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  if (!session || session.user.role !== "STUDENT") {
     redirect("/login");
   }
 
   const { quizId } = await params;
   const { topicId } = await searchParams;
-  const data = await getQuizData(quizId, session.user.id);
 
-  if (!data || !data.canTakeQuiz) {
+  // For server-side data fetching, we'll use Prisma directly
+  // This is more efficient than making an API call to ourselves
+  const { prisma } = await import("@/lib/db");
+  
+  try {
+    // Fetch quiz with all related data
+    const quiz = await prisma.quiz.findUnique({
+      where: { 
+        id: quizId,
+        isActive: true 
+      },
+      include: {
+        topic: {
+          include: {
+            module: {
+              include: {
+                course: true,
+              },
+            },
+          },
+        },
+        questions: {
+          where: {
+            isActive: true
+          },
+          include: {
+            options: {
+              orderBy: { orderIndex: 'asc' }
+            },
+          },
+          orderBy: { orderIndex: 'asc' }
+        },
+      },
+    });
+
+    if (!quiz) {
+      notFound();
+    }
+
+    // Check if student is enrolled in the course
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId: session.user.id,
+          courseId: quiz.topic.module.course.id
+        },
+        status: "ACTIVE"
+      }
+    });
+
+    if (!enrollment) {
+      redirect("/student/courses");
+    }
+
+    // Get student's previous attempts
+    const attempts = await prisma.quizAttempt.findMany({
+      where: {
+        quizId,
+        userId: session.user.id,
+        isPractice: false
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        score: true,
+        passed: true,
+        startedAt: true,
+        completedAt: true,
+        timeSpent: true,
+        questionsCorrect: true,
+        questionsTotal: true
+      }
+    });
+
+    // Check if student can take the quiz
+    const canTakeQuiz = quiz.maxAttempts ? attempts.length < quiz.maxAttempts : true;
+    const hasPassedQuiz = attempts.some(attempt => attempt.passed);
+
+    if (!canTakeQuiz && !hasPassedQuiz) {
+      redirect(`/student/quiz/${quizId}/results`);
+    }
+
+    // Get topic progress to check prerequisites
+    let topicProgress = null;
+    if (topicId) {
+      topicProgress = await prisma.topicProgress.findUnique({
+        where: {
+          userId_topicId: {
+            userId: session.user.id,
+            topicId
+          }
+        }
+      });
+    }
+
+    // Format questions for frontend (hide correct answers)
+    const shuffleArray = <T>(array: T[]): T[] => {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    };
+
+    let formattedQuestions = quiz.questions.map(question => ({
+      id: question.id,
+      questionText: question.questionText,
+      questionType: question.questionType,
+      points: question.points,
+      hint: question.hint,
+      timeLimit: question.timeLimit,
+      allowPartialCredit: question.allowPartialCredit,
+      caseSensitive: question.caseSensitive,
+      orderIndex: question.orderIndex,
+      required: true, // Assume all questions are required for now
+      options: question.options?.map(option => ({
+        id: option.id,
+        text: option.text,
+        orderIndex: option.orderIndex
+        // Don't send isCorrect to frontend
+      })) || []
+    }));
+
+    // Shuffle questions if required
+    if (quiz.shuffleQuestions) {
+      formattedQuestions = shuffleArray(formattedQuestions);
+    }
+
+    // Shuffle options within each question if required
+    if (quiz.shuffleOptions) {
+      formattedQuestions.forEach(question => {
+        if (question.options.length > 0) {
+          question.options = shuffleArray(question.options);
+        }
+      });
+    }
+
+    const quizData = {
+      id: quiz.id,
+      title: quiz.title,
+      description: quiz.description,
+      passingScore: quiz.passingScore,
+      timeLimit: quiz.timeLimit,
+      allowRetakes: quiz.maxAttempts ? quiz.maxAttempts > 1 : true,
+      maxAttempts: quiz.maxAttempts,
+      shuffleQuestions: quiz.shuffleQuestions,
+      showResults: quiz.showFeedback,
+      topic: {
+        id: quiz.topic.id,
+        title: quiz.topic.title,
+        module: {
+          id: quiz.topic.module.id,
+          title: quiz.topic.module.title,
+          course: {
+            id: quiz.topic.module.course.id,
+            title: quiz.topic.module.course.title,
+          }
+        }
+      },
+      questions: formattedQuestions
+    };
+
+    const metadata = {
+      totalQuestions: quiz.questions.length,
+      totalPoints: quiz.questions.reduce((sum, q) => sum + q.points, 0),
+      attemptNumber: attempts.length + 1,
+      attemptsRemaining: quiz.maxAttempts ? quiz.maxAttempts - attempts.length : null,
+      hasPassedQuiz
+    };
+
+    return (
+      <StudentLayout>
+        <QuizInterface
+          quiz={quizData}
+          attempts={attempts}
+          userId={session.user.id}
+          topicId={topicId}
+          metadata={metadata}
+        />
+      </StudentLayout>
+    );
+
+  } catch (error) {
+    console.error("Error loading quiz:", error);
     notFound();
   }
-
-  const { quiz, attempts } = data;
-
-  return (
-    <StudentLayout>
-      <QuizInterface
-        quiz={quiz}
-        attempts={attempts}
-        userId={session.user.id}
-        topicId={topicId}
-      />
-    </StudentLayout>
-  );
 }
