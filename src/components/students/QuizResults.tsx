@@ -36,12 +36,14 @@ interface Question {
   questionText: string;
   questionType: string;
 }
+
 interface QuizAnswer {
   question: Question;
   questionId: string;
   points: number;
   earnedPoints: number;
-  textAnswer: string;
+  selectedOptions: string[]; // Now contains actual text values
+  textAnswer: string | null;
   isCorrect: boolean;
   feedback?: string;
 }
@@ -124,6 +126,62 @@ function QuestionReview({
     }
     return answerData;
   };
+
+  /**
+   * 
+   * 
+   const renderAnswer = (answerData: string[] | string | null) => {
+    if (Array.isArray(answerData)) {
+      return answerData.length > 0 ? answerData.join(", ") : "No answer selected";
+    }
+    if (typeof answerData === 'string') {
+      return answerData || "No answer provided";
+    }
+    return "No answer provided";
+  };
+
+  // Update the QuestionReview component's answer rendering
+  <div className="grid md:grid-cols-2 gap-4">
+    <div>
+      <h4 className="font-medium text-gray-900 mb-2">
+        Your Answer:
+      </h4>
+      <div
+        className={`p-3 rounded-lg border ${
+          answer.isCorrect
+            ? "bg-green-50 border-green-200"
+            : "bg-red-50 border-red-200"
+        }`}
+      >
+        <p className="text-sm">
+          {/* Use selectedOptions for multiple choice/select, textAnswer for text questions 
+
+          {answer.textAnswer 
+            ? renderAnswer(answer.textAnswer)
+            : renderAnswer(answer.selectedOptions)
+          }
+        </p>
+      </div>
+    </div>
+
+    {!answer.isCorrect && (
+      <div>
+        <h4 className="font-medium text-gray-900 mb-2">
+          Correct Answer:
+        </h4>
+        <div className="p-3 rounded-lg border bg-green-50 border-green-200">
+          <p className="text-sm">
+            {/* This would need to be fetched from the correct options */}
+            {/* You'll need to include correct answer texts in your API response 
+
+
+            Correct answer information
+          </p>
+        </div>
+      </div>
+    )}
+  </div>
+  **/
 
   return (
     <Card

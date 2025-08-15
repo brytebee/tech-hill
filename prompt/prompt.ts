@@ -1603,3 +1603,47 @@ export function QuizResults({
     </div>
   );
 }
+
+
+
+// In your results API endpoint, enhance the data fetching:
+const attemptWithAnswers = await prisma.quizAttempt.findUnique({
+  where: { id: attemptId },
+  include: {
+    answers: {
+      include: {
+        question: {
+          include: {
+            options: true // Include all options to show correct answers
+          }
+        }
+      }
+    },
+    quiz: {
+      include: {
+        questions: {
+          include: {
+            options: true
+          }
+        }
+      }
+    }
+  }
+});
+
+// Process the answers to include correct answer texts
+const processedAnswers = attemptWithAnswers.answers.map(answer => {
+  const question = answer.question;
+  const correctOptions = question.options.filter(opt => opt.isCorrect);
+  const correctAnswerTexts = correctOptions.map(opt => opt.text);
+
+  return {
+    ...answer,
+    question: {
+      ...question,
+      correctAnswers: correctAnswerTexts // Add correct answer texts
+    }
+  };
+});
+
+// Return the enhanced data structure

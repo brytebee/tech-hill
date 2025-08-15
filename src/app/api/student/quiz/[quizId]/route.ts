@@ -251,6 +251,101 @@ export async function POST(
     let questionsCorrect = 0;
     const detailedAnswers = [];
 
+    // for (const question of quiz.questions) {
+    //   totalPoints += question.points;
+    //   const studentAnswer = answers[question.id];
+
+    //   if (!studentAnswer) {
+    //     detailedAnswers.push({
+    //       questionId: question.id,
+    //       selectedOptions: [],
+    //       textAnswer: null,
+    //       isCorrect: false,
+    //       points: 0,
+    //       timeSpent: null,
+    //     });
+    //     continue;
+    //   }
+
+    //   let isCorrect = false;
+    //   let pointsEarned = 0;
+
+    //   // Grade based on question type
+    //   switch (question.questionType) {
+    //     case "MULTIPLE_CHOICE":
+    //     case "TRUE_FALSE":
+    //       const correctOption = question.options.find((opt) => opt.isCorrect);
+    //       isCorrect = studentAnswer === correctOption?.id;
+    //       pointsEarned = isCorrect ? question.points : 0;
+    //       break;
+
+    //     case "MULTIPLE_SELECT":
+    //       const correctOptionIds = question.options
+    //         .filter((opt) => opt.isCorrect)
+    //         .map((opt) => opt.id)
+    //         .sort();
+    //       const selectedIds = Array.isArray(studentAnswer)
+    //         ? studentAnswer.sort()
+    //         : [];
+    //       isCorrect =
+    //         JSON.stringify(correctOptionIds) === JSON.stringify(selectedIds);
+
+    //       if (question.allowPartialCredit && !isCorrect) {
+    //         const correctSelected = selectedIds.filter((id) =>
+    //           correctOptionIds.includes(id)
+    //         ).length;
+    //         const incorrectSelected = selectedIds.filter(
+    //           (id) => !correctOptionIds.includes(id)
+    //         ).length;
+    //         const missedCorrect = correctOptionIds.filter(
+    //           (id) => !selectedIds.includes(id)
+    //         ).length;
+
+    //         // Partial credit formula: (correct - incorrect) / total_correct
+    //         const partialScore = Math.max(
+    //           0,
+    //           (correctSelected - incorrectSelected) / correctOptionIds.length
+    //         );
+    //         pointsEarned = Math.round(partialScore * question.points);
+    //       } else {
+    //         pointsEarned = isCorrect ? question.points : 0;
+    //       }
+    //       break;
+
+    //     case "SHORT_ANSWER":
+    //     case "LONG_ANSWER":
+    //       // For text answers, we'll mark as correct for now (needs manual grading)
+    //       // In a real system, you might want to implement fuzzy matching or keyword checking
+    //       isCorrect = studentAnswer && studentAnswer.trim().length > 0;
+    //       pointsEarned = isCorrect ? question.points : 0;
+    //       break;
+    //   }
+
+    //   if (isCorrect) questionsCorrect++;
+    //   earnedPoints += pointsEarned;
+
+    //   detailedAnswers.push({
+    //     questionId: question.id,
+    //     selectedOptions: Array.isArray(studentAnswer)
+    //       ? studentAnswer
+    //       : [studentAnswer],
+    //     textAnswer: typeof studentAnswer === "string" ? studentAnswer : null,
+    //     isCorrect,
+    //     points: pointsEarned,
+    //     timeSpent: null, // Could be tracked per question
+    //   });
+    // }
+
+    // In the answer processing section, replace the detailedAnswers.push() calls:
+
+// Helper function to get option text from IDs
+    const getOptionTexts = (questionOptions: any[], selectedIds: string[]) => {
+      return questionOptions
+        .filter(opt => selectedIds.includes(opt.id))
+        .map(opt => opt.text);
+    };
+
+    // Replace the existing answer processing loop with this updated version:
     for (const question of quiz.questions) {
       totalPoints += question.points;
       const studentAnswer = answers[question.id];
@@ -269,6 +364,8 @@ export async function POST(
 
       let isCorrect = false;
       let pointsEarned = 0;
+      let selectedTexts: string[] = [];
+      let textAnswer: string | null = null;
 
       // Grade based on question type
       switch (question.questionType) {
@@ -277,6 +374,12 @@ export async function POST(
           const correctOption = question.options.find((opt) => opt.isCorrect);
           isCorrect = studentAnswer === correctOption?.id;
           pointsEarned = isCorrect ? question.points : 0;
+          
+          // Store the selected option text
+          const selectedOption = question.options.find(opt => opt.id === studentAnswer);
+          if (selectedOption) {
+            selectedTexts = [selectedOption.text];
+          }
           break;
 
         case "MULTIPLE_SELECT":
@@ -290,6 +393,9 @@ export async function POST(
           isCorrect =
             JSON.stringify(correctOptionIds) === JSON.stringify(selectedIds);
 
+          // Store the selected option texts
+          selectedTexts = getOptionTexts(question.options, selectedIds);
+
           if (question.allowPartialCredit && !isCorrect) {
             const correctSelected = selectedIds.filter((id) =>
               correctOptionIds.includes(id)
@@ -297,11 +403,7 @@ export async function POST(
             const incorrectSelected = selectedIds.filter(
               (id) => !correctOptionIds.includes(id)
             ).length;
-            const missedCorrect = correctOptionIds.filter(
-              (id) => !selectedIds.includes(id)
-            ).length;
 
-            // Partial credit formula: (correct - incorrect) / total_correct
             const partialScore = Math.max(
               0,
               (correctSelected - incorrectSelected) / correctOptionIds.length
@@ -314,10 +416,9 @@ export async function POST(
 
         case "SHORT_ANSWER":
         case "LONG_ANSWER":
-          // For text answers, we'll mark as correct for now (needs manual grading)
-          // In a real system, you might want to implement fuzzy matching or keyword checking
           isCorrect = studentAnswer && studentAnswer.trim().length > 0;
           pointsEarned = isCorrect ? question.points : 0;
+          textAnswer = studentAnswer as string;
           break;
       }
 
@@ -326,13 +427,11 @@ export async function POST(
 
       detailedAnswers.push({
         questionId: question.id,
-        selectedOptions: Array.isArray(studentAnswer)
-          ? studentAnswer
-          : [studentAnswer],
-        textAnswer: typeof studentAnswer === "string" ? studentAnswer : null,
+        selectedOptions: selectedTexts, // Now storing actual text values
+        textAnswer: textAnswer,
         isCorrect,
         points: pointsEarned,
-        timeSpent: null, // Could be tracked per question
+        timeSpent: null,
       });
     }
 

@@ -492,7 +492,8 @@ model Answer {
   
   // Answer Data
   selectedOption String? // For multiple choice (option ID)
-  selectedOptions String[] // For multiple select
+  selectedOptions String[] // Store actual option texts instead of IDs
+  selectedOptionIds String[] // Store option IDs for reference
   textAnswer    String? // For text answers
   
   // Performance Data
