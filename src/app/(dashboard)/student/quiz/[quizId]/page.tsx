@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { QuizInterface } from "@/components/students/QuizInterface";
+import { shuffleArray } from "@/lib/common/shuffler";
 
 interface PageProps {
   params: Promise<{ quizId: string }>;
@@ -14,18 +15,18 @@ interface PageProps {
 // Fetch quiz data from API
 async function getQuizData(quizId: string, topicId?: string) {
   try {
-    const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     const url = new URL(`/api/student/quiz/${quizId}`, baseUrl);
-    
+
     if (topicId) {
-      url.searchParams.set('topicId', topicId);
+      url.searchParams.set("topicId", topicId);
     }
 
     const response = await fetch(url.toString(), {
       headers: {
-        'Cookie': '', // Session will be handled by getServerSession
+        Cookie: "", // Session will be handled by getServerSession
       },
-      cache: 'no-store' // Ensure fresh data
+      cache: "no-store", // Ensure fresh data
     });
 
     if (!response.ok) {
@@ -55,13 +56,13 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
   // For server-side data fetching, we'll use Prisma directly
   // This is more efficient than making an API call to ourselves
   const { prisma } = await import("@/lib/db");
-  
+
   try {
     // Fetch quiz with all related data
     const quiz = await prisma.quiz.findUnique({
-      where: { 
+      where: {
         id: quizId,
-        isActive: true 
+        isActive: true,
       },
       include: {
         topic: {
@@ -75,14 +76,14 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
         },
         questions: {
           where: {
-            isActive: true
+            isActive: true,
           },
           include: {
             options: {
-              orderBy: { orderIndex: 'asc' }
+              orderBy: { orderIndex: "asc" },
             },
           },
-          orderBy: { orderIndex: 'asc' }
+          orderBy: { orderIndex: "asc" },
         },
       },
     });
@@ -96,10 +97,10 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
       where: {
         userId_courseId: {
           userId: session.user.id,
-          courseId: quiz.topic.module.course.id
+          courseId: quiz.topic.module.course.id,
         },
-        status: "ACTIVE"
-      }
+        status: "ACTIVE",
+      },
     });
 
     if (!enrollment) {
@@ -111,9 +112,9 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
       where: {
         quizId,
         userId: session.user.id,
-        isPractice: false
+        isPractice: false,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         score: true,
@@ -122,13 +123,15 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
         completedAt: true,
         timeSpent: true,
         questionsCorrect: true,
-        questionsTotal: true
-      }
+        questionsTotal: true,
+      },
     });
 
     // Check if student can take the quiz
-    const canTakeQuiz = quiz.maxAttempts ? attempts.length < quiz.maxAttempts : true;
-    const hasPassedQuiz = attempts.some(attempt => attempt.passed);
+    const canTakeQuiz = quiz.maxAttempts
+      ? attempts.length < quiz.maxAttempts
+      : true;
+    const hasPassedQuiz = attempts.some((attempt) => attempt.passed);
 
     if (!canTakeQuiz && !hasPassedQuiz) {
       redirect(`/student/quiz/${quizId}/results`);
@@ -141,23 +144,14 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
         where: {
           userId_topicId: {
             userId: session.user.id,
-            topicId
-          }
-        }
+            topicId,
+          },
+        },
       });
     }
 
     // Format questions for frontend (hide correct answers)
-    const shuffleArray = <T>(array: T[]): T[] => {
-      const shuffled = [...array];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      return shuffled;
-    };
-
-    let formattedQuestions = quiz.questions.map(question => ({
+    let formattedQuestions = quiz.questions.map((question) => ({
       id: question.id,
       questionText: question.questionText,
       questionType: question.questionType,
@@ -168,12 +162,13 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
       caseSensitive: question.caseSensitive,
       orderIndex: question.orderIndex,
       required: true, // Assume all questions are required for now
-      options: question.options?.map(option => ({
-        id: option.id,
-        text: option.text,
-        orderIndex: option.orderIndex
-        // Don't send isCorrect to frontend
-      })) || []
+      options:
+        question.options?.map((option) => ({
+          id: option.id,
+          text: option.text,
+          orderIndex: option.orderIndex,
+          // Don't send isCorrect to frontend
+        })) || [],
     }));
 
     // Shuffle questions if required
@@ -181,9 +176,9 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
       formattedQuestions = shuffleArray(formattedQuestions);
     }
 
-    // Shuffle options within each question if required
+    // // Shuffle options within each question if required
     if (quiz.shuffleOptions) {
-      formattedQuestions.forEach(question => {
+      formattedQuestions.forEach((question) => {
         if (question.options.length > 0) {
           question.options = shuffleArray(question.options);
         }
@@ -209,18 +204,20 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
           course: {
             id: quiz.topic.module.course.id,
             title: quiz.topic.module.course.title,
-          }
-        }
+          },
+        },
       },
-      questions: formattedQuestions
+      questions: formattedQuestions,
     };
 
     const metadata = {
       totalQuestions: quiz.questions.length,
       totalPoints: quiz.questions.reduce((sum, q) => sum + q.points, 0),
       attemptNumber: attempts.length + 1,
-      attemptsRemaining: quiz.maxAttempts ? quiz.maxAttempts - attempts.length : null,
-      hasPassedQuiz
+      attemptsRemaining: quiz.maxAttempts
+        ? quiz.maxAttempts - attempts.length
+        : null,
+      hasPassedQuiz,
     };
 
     return (
@@ -234,7 +231,6 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
         />
       </StudentLayout>
     );
-
   } catch (error) {
     console.error("Error loading quiz:", error);
     notFound();

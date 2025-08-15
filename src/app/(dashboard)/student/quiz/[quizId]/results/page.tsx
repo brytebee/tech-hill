@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { QuizResults } from "@/components/students/QuizResults";
+import { prisma } from "@/lib/db";
 
 interface PageProps {
   params: Promise<{ quizId: string }>;
@@ -12,7 +13,11 @@ interface PageProps {
 }
 
 // Mock quiz results data
-async function getQuizResultsData(quizId: string, userId: string, attemptId?: string) {
+async function getQuizResultsData(
+  quizId: string,
+  userId: string,
+  attemptId?: string
+) {
   try {
     // Mock data - in real app this would come from QuizAttempt service
     const attempt = {
@@ -33,7 +38,7 @@ async function getQuizResultsData(quizId: string, userId: string, attemptId?: st
           userAnswer: "opt1",
           correctAnswer: "opt1",
           isCorrect: true,
-          feedback: "Correct! CPU stands for Central Processing Unit."
+          feedback: "Correct! CPU stands for Central Processing Unit.",
         },
         {
           questionId: "q2",
@@ -44,7 +49,8 @@ async function getQuizResultsData(quizId: string, userId: string, attemptId?: st
           userAnswer: ["opt1", "opt2"], // Keyboard, Mouse (missed Microphone)
           correctAnswer: ["opt1", "opt2", "opt4"],
           isCorrect: false,
-          feedback: "Partially correct. You missed Microphone, which is also an input device."
+          feedback:
+            "Partially correct. You missed Microphone, which is also an input device.",
         },
         {
           questionId: "q3",
@@ -55,7 +61,7 @@ async function getQuizResultsData(quizId: string, userId: string, attemptId?: st
           userAnswer: "opt1",
           correctAnswer: "opt1",
           isCorrect: true,
-          feedback: "Correct! RAM does stand for Random Access Memory."
+          feedback: "Correct! RAM does stand for Random Access Memory.",
         },
         {
           questionId: "q4",
@@ -64,22 +70,27 @@ async function getQuizResultsData(quizId: string, userId: string, attemptId?: st
           points: 15,
           earnedPoints: 12,
           userAnswer: "Hardware is physical parts and software is programs.",
-          correctAnswer: "Hardware refers to physical components of a computer system, while software refers to programs and applications that run on the hardware.",
+          correctAnswer:
+            "Hardware refers to physical components of a computer system, while software refers to programs and applications that run on the hardware.",
           isCorrect: true,
-          feedback: "Good answer! You could have been more detailed about the definitions."
+          feedback:
+            "Good answer! You could have been more detailed about the definitions.",
         },
         {
           questionId: "q5",
-          questionText: "Write a brief essay about the importance of computer literacy.",
+          questionText:
+            "Write a brief essay about the importance of computer literacy.",
           questionType: "ESSAY",
           points: 25,
           earnedPoints: 22,
-          userAnswer: "Computer literacy is very important in today's world because almost everything uses computers now. People need to know how to use computers for work, school, and personal tasks. Without computer skills, it's hard to get good jobs or do many daily activities. Schools should teach more computer skills to help students succeed in the future.",
+          userAnswer:
+            "Computer literacy is very important in today's world because almost everything uses computers now. People need to know how to use computers for work, school, and personal tasks. Without computer skills, it's hard to get good jobs or do many daily activities. Schools should teach more computer skills to help students succeed in the future.",
           correctAnswer: null,
           isCorrect: true,
-          feedback: "Well-written essay that covers the key points about computer literacy importance. Consider adding specific examples of how computer literacy impacts different industries."
-        }
-      ]
+          feedback:
+            "Well-written essay that covers the key points about computer literacy importance. Consider adding specific examples of how computer literacy impacts different industries.",
+        },
+      ],
     };
 
     const quiz = {
@@ -96,18 +107,77 @@ async function getQuizResultsData(quizId: string, userId: string, attemptId?: st
           title: "Introduction Module",
           course: {
             id: "course-1",
-            title: "Computer Literacy Basics"
-          }
-        }
-      }
+            title: "Computer Literacy Basics",
+          },
+        },
+      },
     };
 
     const allAttempts = [attempt]; // In real app, get all attempts for this quiz
 
+    const realQuiz = await prisma.quiz.findUnique({
+      where: { id: quizId },
+      include: {
+        // questions: true,
+        attempts: {
+          include: {
+            answers: {
+              include: {
+                question: {
+                  select: {
+                    id: true,
+                    questionText: true,
+                    questionType: true,
+                    options: true,
+                  },
+                },
+                // attempt: {
+                //   include: {
+                //     answers: {
+                //       // select: {},
+                //     },
+                //   },
+                // },
+              },
+            },
+          },
+        },
+        topic: {
+          include: {
+            module: {
+              include: {
+                course: {
+                  select: {
+                    id: true,
+                    title: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!realQuiz) {
+      return null;
+    }
+
+    const currentAttempt = realQuiz.attempts.filter(
+      (att) => att.id === attemptId
+    )[0];
+
+    console.log({ ans: currentAttempt?.answers });
+
     return {
-      attempt,
-      quiz,
-      allAttempts,
+      attempt: currentAttempt,
+      quiz: realQuiz,
+      allAttempts: realQuiz.attempts,
+    };
+    return {
+      attempt: currentAttempt,
+      quiz: realQuiz,
+      allAttempts: realQuiz.attempts,
     };
   } catch (error) {
     console.error("Error fetching quiz results:", error);
@@ -115,7 +185,10 @@ async function getQuizResultsData(quizId: string, userId: string, attemptId?: st
   }
 }
 
-export default async function QuizResultsPage({ params, searchParams }: PageProps) {
+export default async function QuizResultsPage({
+  params,
+  searchParams,
+}: PageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -124,7 +197,7 @@ export default async function QuizResultsPage({ params, searchParams }: PageProp
 
   const { quizId } = await params;
   const { attempt: attemptParam, topicId } = await searchParams;
-  
+
   const data = await getQuizResultsData(quizId, session.user.id, attemptParam);
 
   if (!data) {
@@ -143,5 +216,5 @@ export default async function QuizResultsPage({ params, searchParams }: PageProp
         topicId={topicId}
       />
     </StudentLayout>
-  )
+  );
 }

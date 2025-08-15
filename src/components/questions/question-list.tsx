@@ -23,23 +23,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
-  Plus, 
+import {
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Plus,
   FileText,
   CheckCircle,
   XCircle,
   Clock,
   Eye,
-  Copy
+  Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type QuestionType = 
+type QuestionType =
   | "MULTIPLE_CHOICE"
-  | "MULTIPLE_SELECT" 
+  | "MULTIPLE_SELECT"
   | "TRUE_FALSE"
   | "SHORT_ANSWER"
   | "LONG_ANSWER"
@@ -102,22 +102,26 @@ const questionTypeLabels: Record<QuestionType, string> = {
   SHORT_ANSWER: "Short Answer",
   LONG_ANSWER: "Long Answer",
   MATCHING: "Matching",
-  ORDERING: "Ordering"
+  ORDERING: "Ordering",
 };
 
 const difficultyColors = {
   EASY: "bg-green-100 text-green-800",
-  MEDIUM: "bg-yellow-100 text-yellow-800", 
-  HARD: "bg-red-100 text-red-800"
+  MEDIUM: "bg-yellow-100 text-yellow-800",
+  HARD: "bg-red-100 text-red-800",
 };
 
 export function QuestionList({ questions, quizId }: QuestionListProps) {
   const router = useRouter();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(null);
+  const [selectedQuestion, setSelectedQuestion] = useState<Question | null>(
+    null
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const sortedQuestions = [...questions].sort((a, b) => a.orderIndex - b.orderIndex);
+  const sortedQuestions = [...questions].sort(
+    (a, b) => a.orderIndex - b.orderIndex
+  );
 
   const handleDeleteQuestion = async (question: Question) => {
     setSelectedQuestion(question);
@@ -126,22 +130,25 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
 
   const confirmDelete = async () => {
     if (!selectedQuestion) return;
-    
+
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/admin/questions/${selectedQuestion.id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/admin/questions/${selectedQuestion.id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to delete question');
+        throw new Error("Failed to delete question");
       }
 
-      toast.success('Question deleted successfully');
+      toast.success("Question deleted successfully");
       router.refresh();
     } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Failed to delete question');
+      console.error("Delete error:", error);
+      toast.error("Failed to delete question");
     } finally {
       setIsDeleting(false);
       setDeleteDialogOpen(false);
@@ -151,54 +158,65 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
 
   const handleDuplicateQuestion = async (question: Question) => {
     try {
-      const response = await fetch(`/api/admin/questions/${question.id}/duplicate`, {
-        method: 'POST',
-      });
+      const response = await fetch(
+        `/api/admin/questions/${question.id}/duplicate`,
+        {
+          method: "POST",
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to duplicate question');
+        throw new Error("Failed to duplicate question");
       }
 
-      toast.success('Question duplicated successfully');
+      toast.success("Question duplicated successfully");
       router.refresh();
     } catch (error) {
-      console.error('Duplicate error:', error);
-      toast.error('Failed to duplicate question');
+      console.error("Duplicate error:", error);
+      toast.error("Failed to duplicate question");
     }
   };
 
   const toggleQuestionStatus = async (question: Question) => {
     try {
       const response = await fetch(`/api/admin/questions/${question.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !question.isActive }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update question status');
+        throw new Error("Failed to update question status");
       }
 
-      toast.success(`Question ${question.isActive ? 'deactivated' : 'activated'} successfully`);
+      toast.success(
+        `Question ${
+          question.isActive ? "deactivated" : "activated"
+        } successfully`
+      );
       router.refresh();
     } catch (error) {
-      console.error('Status update error:', error);
-      toast.error('Failed to update question status');
+      console.error("Status update error:", error);
+      toast.error("Failed to update question status");
     }
   };
 
   const getCorrectAnswersCount = (question: Question) => {
-    if (question.questionType === 'SHORT_ANSWER' || question.questionType === 'LONG_ANSWER') {
-      return 'Text Answer';
+    if (
+      question.questionType === "SHORT_ANSWER" ||
+      question.questionType === "LONG_ANSWER"
+    ) {
+      return "Text Answer";
     }
-    return question.options.filter(opt => opt.isCorrect).length;
+    return question.options.filter((opt) => opt.isCorrect).length;
   };
 
   const renderQuestionPreview = (question: Question) => {
-    const preview = question.questionText.length > 100 
-      ? question.questionText.substring(0, 100) + "..."
-      : question.questionText;
-    
+    const preview =
+      question.questionText.length > 100
+        ? question.questionText.substring(0, 100) + "..."
+        : question.questionText;
+
     return <p className="text-sm text-gray-600 mt-1">{preview}</p>;
   };
 
@@ -206,11 +224,13 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
     return (
       <div className="text-center py-12">
         <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">No questions yet</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          No questions yet
+        </h3>
         <p className="text-gray-500 mb-4">
           Get started by creating your first question for this quiz.
         </p>
-        <Button onClick={() => router.push(`/admin/quizzes/${quizId}/questions/create`)}>
+        <Button onClick={() => router.push(`/admin/quizzes/${quizId}/builder`)}>
           <Plus className="h-4 w-4 mr-2" />
           Create First Question
         </Button>
@@ -230,7 +250,7 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
             Manage questions for "{questions[0]?.quiz.title}"
           </p>
         </div>
-        <Button onClick={() => router.push(`/admin/quizzes/${quizId}/questions/create`)}>
+        <Button onClick={() => router.push(`/admin/quizzes/${quizId}/builder`)}>
           <Plus className="h-4 w-4 mr-2" />
           Add Question
         </Button>
@@ -243,7 +263,9 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
             <div>
               <h3 className="font-medium">{questions[0]?.quiz.title}</h3>
               <p className="text-sm text-gray-600">
-                {questions[0]?.quiz.topic.module.course.title} • {questions[0]?.quiz.topic.module.title} • {questions[0]?.quiz.topic.title}
+                {questions[0]?.quiz.topic.module.course.title} •{" "}
+                {questions[0]?.quiz.topic.module.title} •{" "}
+                {questions[0]?.quiz.topic.title}
               </p>
             </div>
             <div className="text-right">
@@ -251,7 +273,7 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
                 Total Points: {questions.reduce((sum, q) => sum + q.points, 0)}
               </p>
               <p className="text-sm text-gray-600">
-                Active Questions: {questions.filter(q => q.isActive).length}
+                Active Questions: {questions.filter((q) => q.isActive).length}
               </p>
             </div>
           </div>
@@ -261,7 +283,10 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
       {/* Questions List */}
       <div className="grid gap-4">
         {sortedQuestions.map((question, index) => (
-          <Card key={question.id} className={!question.isActive ? "opacity-60" : ""}>
+          <Card
+            key={question.id}
+            className={!question.isActive ? "opacity-60" : ""}
+          >
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
@@ -275,9 +300,7 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
                     <Badge className={difficultyColors[question.difficulty]}>
                       {question.difficulty}
                     </Badge>
-                    <Badge variant="outline">
-                      {question.points} pts
-                    </Badge>
+                    <Badge variant="outline">{question.points} pts</Badge>
                     {!question.isActive && (
                       <Badge variant="destructive">
                         <XCircle className="h-3 w-3 mr-1" />
@@ -291,11 +314,11 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
                       </Badge>
                     )}
                   </div>
-                  
+
                   <CardTitle className="text-lg leading-relaxed">
                     {question.questionText}
                   </CardTitle>
-                  
+
                   <div className="mt-3 flex items-center gap-4 text-sm text-gray-600">
                     <span>Options: {question.options.length}</span>
                     <span>Correct: {getCorrectAnswersCount(question)}</span>
@@ -328,24 +351,36 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      onClick={() => router.push(`/admin/quizzes/${quizId}/questions/${question.id}`)}
+                    <DropdownMenuItem
+                      onClick={() =>
+                        router.push(
+                          `/admin/quizzes/${quizId}/questions/${question.id}`
+                        )
+                      }
                     >
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => router.push(`/admin/quizzes/${quizId}/questions/${question.id}/edit`)}
+                    <DropdownMenuItem
+                      onClick={() =>
+                        router.push(
+                          `/admin/quizzes/${quizId}/questions/${question.id}/edit`
+                        )
+                      }
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Question
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleDuplicateQuestion(question)}>
+                    <DropdownMenuItem
+                      onClick={() => handleDuplicateQuestion(question)}
+                    >
                       <Copy className="h-4 w-4 mr-2" />
                       Duplicate
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => toggleQuestionStatus(question)}>
+                    <DropdownMenuItem
+                      onClick={() => toggleQuestionStatus(question)}
+                    >
                       {question.isActive ? (
                         <>
                           <XCircle className="h-4 w-4 mr-2" />
@@ -359,7 +394,7 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={() => handleDeleteQuestion(question)}
                       className="text-red-600"
                     >
@@ -372,19 +407,28 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
             </CardHeader>
 
             {/* Show options preview for multiple choice */}
-            {(question.questionType === 'MULTIPLE_CHOICE' || 
-              question.questionType === 'MULTIPLE_SELECT' ||
-              question.questionType === 'TRUE_FALSE') && (
+            {(question.questionType === "MULTIPLE_CHOICE" ||
+              question.questionType === "MULTIPLE_SELECT" ||
+              question.questionType === "TRUE_FALSE") && (
               <CardContent>
                 <div className="space-y-2">
                   {question.options.slice(0, 3).map((option) => (
-                    <div key={option.id} className="flex items-center gap-2 text-sm">
+                    <div
+                      key={option.id}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       {option.isCorrect ? (
                         <CheckCircle className="h-4 w-4 text-green-500" />
                       ) : (
                         <XCircle className="h-4 w-4 text-gray-400" />
                       )}
-                      <span className={option.isCorrect ? "font-medium text-green-700" : "text-gray-600"}>
+                      <span
+                        className={
+                          option.isCorrect
+                            ? "font-medium text-green-700"
+                            : "text-gray-600"
+                        }
+                      >
                         {option.text}
                       </span>
                     </div>
@@ -407,7 +451,8 @@ export function QuestionList({ questions, quizId }: QuestionListProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Question</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this question? This action cannot be undone.
+              Are you sure you want to delete this question? This action cannot
+              be undone.
               <br />
               <br />
               <strong>"{selectedQuestion?.questionText}"</strong>

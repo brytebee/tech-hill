@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { shuffleArray } from "@/lib/common/shuffler";
 
 // GET /api/student/quiz/[quizId] - Get quiz data for student
 export async function GET(
@@ -18,13 +19,13 @@ export async function GET(
 
     const { quizId } = await params;
     const url = new URL(request.url);
-    const topicId = url.searchParams.get('topicId');
+    const topicId = url.searchParams.get("topicId");
 
     // Fetch quiz with all related data
     const quiz = await prisma.quiz.findUnique({
-      where: { 
+      where: {
         id: quizId,
-        isActive: true 
+        isActive: true,
       },
       include: {
         topic: {
@@ -38,14 +39,14 @@ export async function GET(
         },
         questions: {
           where: {
-            isActive: true
+            isActive: true,
           },
           include: {
             options: {
-              orderBy: { orderIndex: 'asc' }
+              orderBy: { orderIndex: "asc" },
             },
           },
-          orderBy: { orderIndex: 'asc' }
+          orderBy: { orderIndex: "asc" },
         },
       },
     });
@@ -59,14 +60,17 @@ export async function GET(
       where: {
         userId_courseId: {
           userId: session.user.id,
-          courseId: quiz.topic.module.course.id
+          courseId: quiz.topic.module.course.id,
         },
-        status: "ACTIVE"
-      }
+        status: "ACTIVE",
+      },
     });
 
     if (!enrollment) {
-      return NextResponse.json({ error: "Not enrolled in this course" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Not enrolled in this course" },
+        { status: 403 }
+      );
     }
 
     // Get student's previous attempts
@@ -74,14 +78,16 @@ export async function GET(
       where: {
         quizId,
         userId: session.user.id,
-        isPractice: false
+        isPractice: false,
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: "desc" },
     });
 
     // Check if student can take the quiz
-    const canTakeQuiz = quiz.maxAttempts ? attempts.length < quiz.maxAttempts : true;
-    const hasPassedQuiz = attempts.some(attempt => attempt.passed);
+    const canTakeQuiz = quiz.maxAttempts
+      ? attempts.length < quiz.maxAttempts
+      : true;
+    const hasPassedQuiz = attempts.some((attempt) => attempt.passed);
 
     // Get topic progress to check prerequisites
     let topicProgress = null;
@@ -90,14 +96,14 @@ export async function GET(
         where: {
           userId_topicId: {
             userId: session.user.id,
-            topicId
-          }
-        }
+            topicId,
+          },
+        },
       });
     }
 
     // Format questions for frontend (hide correct answers)
-    const formattedQuestions = quiz.questions.map(question => ({
+    const formattedQuestions = quiz.questions.map((question) => ({
       id: question.id,
       questionText: question.questionText,
       questionType: question.questionType,
@@ -108,22 +114,22 @@ export async function GET(
       caseSensitive: question.caseSensitive,
       orderIndex: question.orderIndex,
       tags: question.tags,
-      options: question.options.map(option => ({
+      options: question.options.map((option) => ({
         id: option.id,
         text: option.text,
-        orderIndex: option.orderIndex
+        orderIndex: option.orderIndex,
         // Don't send isCorrect to frontend
-      }))
+      })),
     }));
 
     // Shuffle questions if required
-    const questionsToSend = quiz.shuffleQuestions 
+    const questionsToSend = quiz.shuffleQuestions
       ? shuffleArray(formattedQuestions)
       : formattedQuestions;
 
     // Shuffle options within each question if required
     if (quiz.shuffleOptions) {
-      questionsToSend.forEach(question => {
+      questionsToSend.forEach((question) => {
         if (question.options) {
           question.options = shuffleArray(question.options);
         }
@@ -151,18 +157,18 @@ export async function GET(
             course: {
               id: quiz.topic.module.course.id,
               title: quiz.topic.module.course.title,
-            }
-          }
+            },
+          },
         },
-        questions: questionsToSend
+        questions: questionsToSend,
       },
-      attempts: attempts.map(attempt => ({
+      attempts: attempts.map((attempt) => ({
         id: attempt.id,
         score: attempt.score,
         passed: attempt.passed,
         startedAt: attempt.startedAt,
         completedAt: attempt.completedAt,
-        timeSpent: attempt.timeSpent
+        timeSpent: attempt.timeSpent,
       })),
       canTakeQuiz,
       hasPassedQuiz,
@@ -171,8 +177,10 @@ export async function GET(
         totalQuestions: quiz.questions.length,
         totalPoints: quiz.questions.reduce((sum, q) => sum + q.points, 0),
         attemptNumber: attempts.length + 1,
-        attemptsRemaining: quiz.maxAttempts ? quiz.maxAttempts - attempts.length : null
-      }
+        attemptsRemaining: quiz.maxAttempts
+          ? quiz.maxAttempts - attempts.length
+          : null,
+      },
     };
 
     return NextResponse.json(response);
@@ -203,18 +211,18 @@ export async function POST(
 
     // Fetch quiz with questions and correct answers
     const quiz = await prisma.quiz.findUnique({
-      where: { 
+      where: {
         id: quizId,
-        isActive: true 
+        isActive: true,
       },
       include: {
         questions: {
           where: { isActive: true },
           include: {
-            options: true
-          }
-        }
-      }
+            options: true,
+          },
+        },
+      },
     });
 
     if (!quiz) {
@@ -226,12 +234,15 @@ export async function POST(
       where: {
         quizId,
         userId: session.user.id,
-        isPractice: false
-      }
+        isPractice: false,
+      },
     });
 
     if (quiz.maxAttempts && existingAttempts >= quiz.maxAttempts) {
-      return NextResponse.json({ error: "Maximum attempts exceeded" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Maximum attempts exceeded" },
+        { status: 403 }
+      );
     }
 
     // Calculate score
@@ -243,7 +254,7 @@ export async function POST(
     for (const question of quiz.questions) {
       totalPoints += question.points;
       const studentAnswer = answers[question.id];
-      
+
       if (!studentAnswer) {
         detailedAnswers.push({
           questionId: question.id,
@@ -251,7 +262,7 @@ export async function POST(
           textAnswer: null,
           isCorrect: false,
           points: 0,
-          timeSpent: null
+          timeSpent: null,
         });
         continue;
       }
@@ -261,36 +272,48 @@ export async function POST(
 
       // Grade based on question type
       switch (question.questionType) {
-        case 'MULTIPLE_CHOICE':
-        case 'TRUE_FALSE':
-          const correctOption = question.options.find(opt => opt.isCorrect);
+        case "MULTIPLE_CHOICE":
+        case "TRUE_FALSE":
+          const correctOption = question.options.find((opt) => opt.isCorrect);
           isCorrect = studentAnswer === correctOption?.id;
           pointsEarned = isCorrect ? question.points : 0;
           break;
 
-        case 'MULTIPLE_SELECT':
+        case "MULTIPLE_SELECT":
           const correctOptionIds = question.options
-            .filter(opt => opt.isCorrect)
-            .map(opt => opt.id)
+            .filter((opt) => opt.isCorrect)
+            .map((opt) => opt.id)
             .sort();
-          const selectedIds = Array.isArray(studentAnswer) ? studentAnswer.sort() : [];
-          isCorrect = JSON.stringify(correctOptionIds) === JSON.stringify(selectedIds);
-          
+          const selectedIds = Array.isArray(studentAnswer)
+            ? studentAnswer.sort()
+            : [];
+          isCorrect =
+            JSON.stringify(correctOptionIds) === JSON.stringify(selectedIds);
+
           if (question.allowPartialCredit && !isCorrect) {
-            const correctSelected = selectedIds.filter(id => correctOptionIds.includes(id)).length;
-            const incorrectSelected = selectedIds.filter(id => !correctOptionIds.includes(id)).length;
-            const missedCorrect = correctOptionIds.filter(id => !selectedIds.includes(id)).length;
-            
+            const correctSelected = selectedIds.filter((id) =>
+              correctOptionIds.includes(id)
+            ).length;
+            const incorrectSelected = selectedIds.filter(
+              (id) => !correctOptionIds.includes(id)
+            ).length;
+            const missedCorrect = correctOptionIds.filter(
+              (id) => !selectedIds.includes(id)
+            ).length;
+
             // Partial credit formula: (correct - incorrect) / total_correct
-            const partialScore = Math.max(0, (correctSelected - incorrectSelected) / correctOptionIds.length);
+            const partialScore = Math.max(
+              0,
+              (correctSelected - incorrectSelected) / correctOptionIds.length
+            );
             pointsEarned = Math.round(partialScore * question.points);
           } else {
             pointsEarned = isCorrect ? question.points : 0;
           }
           break;
 
-        case 'SHORT_ANSWER':
-        case 'LONG_ANSWER':
+        case "SHORT_ANSWER":
+        case "LONG_ANSWER":
           // For text answers, we'll mark as correct for now (needs manual grading)
           // In a real system, you might want to implement fuzzy matching or keyword checking
           isCorrect = studentAnswer && studentAnswer.trim().length > 0;
@@ -303,15 +326,18 @@ export async function POST(
 
       detailedAnswers.push({
         questionId: question.id,
-        selectedOptions: Array.isArray(studentAnswer) ? studentAnswer : [studentAnswer],
-        textAnswer: typeof studentAnswer === 'string' ? studentAnswer : null,
+        selectedOptions: Array.isArray(studentAnswer)
+          ? studentAnswer
+          : [studentAnswer],
+        textAnswer: typeof studentAnswer === "string" ? studentAnswer : null,
         isCorrect,
         points: pointsEarned,
-        timeSpent: null // Could be tracked per question
+        timeSpent: null, // Could be tracked per question
       });
     }
 
-    const scorePercentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+    const scorePercentage =
+      totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
     const passed = scorePercentage >= quiz.passingScore;
 
     // Create quiz attempt record
@@ -327,22 +353,22 @@ export async function POST(
         questionsSkipped: quiz.questions.length - Object.keys(answers).length,
         isPractice: false,
         completedAt: new Date(),
-      }
+      },
     });
 
     // Create answer records
-    const answerRecords = detailedAnswers.map(answer => ({
+    const answerRecords = detailedAnswers.map((answer) => ({
       attemptId: quizAttempt.id,
       questionId: answer.questionId,
       selectedOptions: answer.selectedOptions,
       textAnswer: answer.textAnswer,
       isCorrect: answer.isCorrect,
       points: answer.points,
-      timeSpent: answer.timeSpent
+      timeSpent: answer.timeSpent,
     }));
 
     await prisma.answer.createMany({
-      data: answerRecords
+      data: answerRecords,
     });
 
     // Update topic progress if topicId provided
@@ -351,31 +377,31 @@ export async function POST(
         where: {
           userId_topicId: {
             userId: session.user.id,
-            topicId
-          }
+            topicId,
+          },
         },
         create: {
           userId: session.user.id,
           topicId,
-          status: 'COMPLETED',
+          status: "COMPLETED",
           bestScore: scorePercentage,
           averageScore: scorePercentage,
           attemptCount: 1,
           completedAt: new Date(),
-          masteryAchieved: scorePercentage >= 90
+          masteryAchieved: scorePercentage >= 90,
         },
         update: {
-          status: 'COMPLETED',
+          status: "COMPLETED",
           bestScore: {
-            set: Math.max(scorePercentage, 0) // Will be updated by DB if current bestScore is higher
+            set: Math.max(scorePercentage, 0), // Will be updated by DB if current bestScore is higher
           },
           attemptCount: {
-            increment: 1
+            increment: 1,
           },
           completedAt: new Date(),
           masteryAchieved: scorePercentage >= 90,
-          lastAccessAt: new Date()
-        }
+          lastAccessAt: new Date(),
+        },
       });
     }
 
@@ -390,8 +416,8 @@ export async function POST(
         questionsCorrect,
         questionsTotal: quiz.questions.length,
         timeSpent,
-        completedAt: quizAttempt.completedAt
-      }
+        completedAt: quizAttempt.completedAt,
+      },
     });
   } catch (error) {
     console.error("POST /api/student/quiz/[quizId] error:", error);
@@ -400,14 +426,4 @@ export async function POST(
       { status: 500 }
     );
   }
-}
-
-// Utility function to shuffle array
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
 }

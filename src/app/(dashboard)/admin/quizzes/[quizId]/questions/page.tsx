@@ -10,16 +10,14 @@ interface QuestionsPageProps {
   };
 }
 
-export default async function QuestionsPage({
-  params,
-}: QuestionsPageProps) {
+export default async function QuestionsPage({ params }: QuestionsPageProps) {
   const { quizId } = await params;
 
   // Fetch quiz with questions and all related data
   const quiz = await prisma.quiz.findUnique({
-    where: { 
+    where: {
       id: quizId,
-      isActive: true 
+      isActive: true,
     },
     include: {
       topic: {
@@ -37,10 +35,10 @@ export default async function QuestionsPage({
         },
         include: {
           options: {
-            orderBy: { orderIndex: 'asc' }
+            orderBy: { orderIndex: "asc" },
           },
         },
-        orderBy: { orderIndex: 'asc' }
+        orderBy: { orderIndex: "asc" },
       },
     },
   });
@@ -51,17 +49,17 @@ export default async function QuestionsPage({
 
   // If no questions exist, redirect to question builder/creator
   if (quiz.questions.length === 0) {
-    redirect(`/admin/quizzes/${quizId}/questions/create`);
+    redirect(`/admin/quizzes/${quizId}/builder`);
   }
 
   // Format questions to match the component interface
-  const formattedQuestions = quiz.questions.map(question => ({
+  const formattedQuestions = quiz.questions.map((question) => ({
     ...question,
     quiz: {
       id: quiz.id,
       title: quiz.title,
-      topic: quiz.topic
-    }
+      topic: quiz.topic,
+    },
   }));
 
   return (
@@ -69,10 +67,7 @@ export default async function QuestionsPage({
       title={`${quiz.title} Questions`}
       description={`Manage questions for "${quiz.title}" quiz`}
     >
-      <QuestionList 
-        questions={formattedQuestions} 
-        quizId={quizId} 
-      />
+      <QuestionList questions={formattedQuestions} quizId={quizId} />
     </AdminLayout>
   );
 }

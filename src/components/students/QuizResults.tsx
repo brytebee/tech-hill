@@ -31,14 +31,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-interface QuizAnswer {
-  questionId: string;
+interface Question {
+  id: string;
   questionText: string;
   questionType: string;
+}
+interface QuizAnswer {
+  question: Question;
+  questionId: string;
   points: number;
   earnedPoints: number;
-  userAnswer: string | string[];
-  correctAnswer: string | string[];
+  textAnswer: string;
   isCorrect: boolean;
   feedback?: string;
 }
@@ -46,8 +49,8 @@ interface QuizAnswer {
 interface QuizAttempt {
   id: string;
   score: number;
-  totalPoints: number;
-  earnedPoints: number;
+  questionsTotal: number;
+  questionsCorrect: number;
   passed: boolean;
   completedAt: Date;
   timeSpent: number;
@@ -115,7 +118,7 @@ function QuestionReview({
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const renderAnswer = (answerData: string | string[], type: string) => {
+  const renderAnswer = (answerData: string | string[]) => {
     if (Array.isArray(answerData)) {
       return answerData.join(", ");
     }
@@ -145,9 +148,9 @@ function QuestionReview({
                     Question {index + 1}
                   </CardTitle>
                   <p className="text-sm text-gray-600 mt-1">
-                    {answer.questionText.length > 80
-                      ? `${answer.questionText.substring(0, 80)}...`
-                      : answer.questionText}
+                    {answer.question.questionText.length > 80
+                      ? `${answer.question.questionText.substring(0, 80)}...`
+                      : answer.question.questionText}
                   </p>
                 </div>
               </div>
@@ -157,7 +160,9 @@ function QuestionReview({
                     {answer.earnedPoints}/{answer.points} pts
                   </div>
                   <Badge variant="outline" className="text-xs">
-                    {answer.questionType.toLowerCase().replace("_", " ")}
+                    {answer.question.questionType
+                      .toLowerCase()
+                      .replace("_", " ")}
                   </Badge>
                 </div>
                 {isExpanded ? (
@@ -175,7 +180,7 @@ function QuestionReview({
             <div className="space-y-4">
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Question:</h4>
-                <p className="text-gray-700">{answer.questionText}</p>
+                <p className="text-gray-700">{answer.question.questionText}</p>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
@@ -190,23 +195,18 @@ function QuestionReview({
                         : "bg-red-50 border-red-200"
                     }`}
                   >
-                    <p className="text-sm">
-                      {renderAnswer(answer.userAnswer, answer.questionType)}
-                    </p>
+                    <p className="text-sm">{renderAnswer(answer.textAnswer)}</p>
                   </div>
                 </div>
 
-                {answer.correctAnswer && (
+                {!answer.isCorrect && (
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">
                       Correct Answer:
                     </h4>
                     <div className="p-3 rounded-lg border bg-green-50 border-green-200">
                       <p className="text-sm">
-                        {renderAnswer(
-                          answer.correctAnswer,
-                          answer.questionType
-                        )}
+                        {renderAnswer(answer.textAnswer)}
                       </p>
                     </div>
                   </div>
@@ -315,7 +315,7 @@ export function QuizResults({
 
             <div className="text-center">
               <div className="text-3xl font-bold text-gray-700">
-                {attempt.earnedPoints}/{attempt.totalPoints}
+                {attempt.questionsCorrect}/{attempt.questionsTotal}
               </div>
               <p className="text-sm text-gray-600">Points Earned</p>
             </div>

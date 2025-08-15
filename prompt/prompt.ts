@@ -1,133 +1,5 @@
 Note: The system is built with NextJS 15 
 
-// Course Structure
-enum CourseStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-enum DifficultyLevel {
-  BEGINNER
-  INTERMEDIATE
-  ADVANCED
-}
-
-model Course {
-  id            String         @id @default(cuid())
-  title         String
-  description   String         @db.Text
-  shortDescription String?
-  thumbnail     String?
-  status        CourseStatus   @default(DRAFT)
-  difficulty    DifficultyLevel @default(BEGINNER)
-  duration      Int            // Duration in hours
-  price         Decimal        @default(0) @db.Decimal(10, 2)
-  tags          String[]
-  prerequisites String[]
-  
-  // Content
-  syllabus      String?        @db.Text
-  learningOutcomes String[]
-  
-  // Assessment Requirements
-  passingScore  Int            @default(80) // Overall course passing percentage
-  requireSequentialCompletion Boolean @default(true) // Must complete modules in order
-  allowRetakes  Boolean        @default(true)
-  maxAttempts   Int?           // Null = unlimited attempts
-  
-  // Timestamps
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  publishedAt   DateTime?
-  
-  // Relations
-  creatorId     String
-  creator       User           @relation("CourseCreator", fields: [creatorId], references: [id])
-  modules       Module[]
-  enrollments   Enrollment[]
-  certificates  Certificate[]
-  
-  @@map("courses")
-}
-
-// Enhanced Module with Assessment Requirements
-model Module {
-  id          String   @id @default(cuid())
-  title       String
-  description String?  @db.Text
-  order       Int
-  duration    Int      // Duration in minutes
-  
-  // Assessment Requirements
-  passingScore Int     @default(80) // Module passing percentage
-  prerequisiteModuleId String? // Must complete this module first
-  isRequired   Boolean @default(true) // Can skip if false
-  unlockDelay  Int?    // Hours to wait before unlock (for spaced learning)
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  prerequisiteModule Module? @relation("ModulePrerequisites", fields: [prerequisiteModuleId], references: [id])
-  dependentModules Module[] @relation("ModulePrerequisites")
-  topics      Topic[]
-  progress    ModuleProgress[]
-  
-  @@map("modules")
-}
-
-// Topics (Individual learning units within modules)
-model Topic {
-  id          String     @id @default(cuid())
-  title       String
-  slug        String     @unique // URL-friendly identifier
-  description String?    @db.Text
-  content     String     @db.Text // Rich text content
-  orderIndex  Int        // Sequence within module
-  duration    Int?       // Duration in minutes
-  
-  // Topic Type & Content
-  topicType   TopicType  @default(LESSON)
-  videoUrl    String?    // For video topics
-  attachments String[]   // File URLs for resources
-  
-  // Assessment Requirements
-  passingScore Int       @default(80) // Topic passing percentage
-  maxAttempts  Int?      // Per topic attempt limit
-  isRequired   Boolean   @default(true)
-  allowSkip    Boolean   @default(false) // Can skip if struggling
-  
-  // Prerequisites within module
-  prerequisiteTopicId String?
-  
-  // Timestamps
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  
-  // Relations
-  moduleId    String
-  module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  prerequisiteTopic Topic? @relation("TopicPrerequisites", fields: [prerequisiteTopicId], references: [id])
-  dependentTopics Topic[] @relation("TopicPrerequisites")
-  
-  quizzes     Quiz[]
-  progress    TopicProgress[]
-  submissions Submission[]
-  
-  @@map("topics")
-}
-
-enum TopicType {
-  LESSON       // Text/video content
-  PRACTICE     // Interactive exercises
-  ASSESSMENT   // Graded quiz/test
-  RESOURCE     // Downloadable materials
-}
-
 // Enhanced Quiz System
 model Quiz {
   id          String   @id @default(cuid())
@@ -227,78 +99,6 @@ enum ProgressStatus {
   COMPLETED
   NEEDS_REVIEW
   FAILED
-}
-
-model ModuleProgress {
-  id            String         @id @default(cuid())
-  userId        String
-  moduleId      String
-  status        ProgressStatus @default(NOT_STARTED)
-  
-  // Progress Metrics
-  progressPercentage Int         @default(0)
-  currentScore  Int?            // Current average score
-  bestScore     Int?            // Best attempt score
-  attemptsUsed  Int            @default(0)
-  timeSpent     Int            @default(0) // Minutes spent
-  
-  // Status Tracking
-  startedAt     DateTime?
-  completedAt   DateTime?
-  lastAccessAt  DateTime?
-  unlockedAt    DateTime?       // When module became available
-  
-  // Mastery Tracking
-  masteryLevel  MasteryLevel   @default(NOVICE)
-  strugglingAreas String[]      // Topics where student is struggling
-  strongAreas   String[]       // Topics where student excels
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, moduleId])
-  @@map("module_progress")
-}
-
-// Granular Topic Progress
-model TopicProgress {
-  id            String         @id @default(cuid())
-  userId        String
-  topicId       String
-  status        ProgressStatus @default(NOT_STARTED)
-  
-  // Detailed Analytics
-  attemptCount  Int            @default(0)
-  bestScore     Int?           // Best quiz score as percentage
-  averageScore  Int?           // Average across all attempts
-  timeSpent     Int            @default(0) // Minutes spent on topic
-  
-  // Learning Analytics
-  viewCount     Int            @default(0) // How many times viewed
-  completionRate Int           @default(0) // Percentage of topic completed
-  strugglingIndicator Boolean  @default(false) // Algorithm sets this
-  masteryAchieved Boolean     @default(false)
-  
-  // Timestamps
-  startedAt     DateTime?
-  completedAt   DateTime?
-  lastAccessAt  DateTime?
-  
-  // Spaced Repetition
-  nextReviewAt  DateTime?      // When to review this topic again
-  reviewCount   Int            @default(0)
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, topicId])
-  @@map("topic_progress")
 }
 
 enum MasteryLevel {
@@ -420,81 +220,19 @@ model Submission {
   @@map("submissions")
 }
 
+NOTE: DO NOT responde with the full Code, just code changes.
 
-http://localhost:3000/admin/quizzes/cme9tre2x0005pp1fo6www1lc/questions
-All questions of the quiz should be fetched and rendered. I added a component so you can take design cues from it, thank you.
+Please pay special attention to the attributes of each table in solving this:
 
-// app/(dashboard)/admin/quizzes/[quizId]/questions/page.tsx
-import { AdminLayout } from "@/components/layout/AdminLayout";
-// example. import { QuestionList } from "@/components/questions/question-list";
-import { prisma } from "@/lib/db";
-import { notFound, redirect } from "next/navigation";
+Notice how the quiz is setup. Some question could have multiselect answer which is an array of answers. ATM, the storage saves the id of the selected option which is rendered to the user instead of the actual answer(s) the selected.
+I want you to use an efficient way to fix the storage of the answers text so that they can be easily rendered in the results page.I will provide the quiz page, the storage API and the result page.
 
-interface CreateQuestionPageProps {
-  params: {
-    quizId: string;
-  };
-}
+Please show only code changes to solve this as I have the bulk of the code already.
 
-export default async function CreateQuestionPage({
-  params,
-}: CreateQuestionPageProps) {
-  const { quizId } = await params;
-
-  // Fetch all questions for a quiz
-  const questions = await prisma.question.findMany({
-    where: { quizId },
-    include: {
-      quiz: {
-        include: {
-          topic: {
-            include: {
-              module: {
-                include: {
-                  course: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
-  });
-
-  if (!questions) {
-    notFound();
-  }
-
-  if (questions.length === 0) {
-    redirect(`/admin/quizzes${quizId}/builder`);
-  }
-
-  return (
-    <AdminLayout
-      title={`${questions[0].quiz.title} Questions`}
-      description={`All questions for "${questions[0].quiz.title}" quiz`}
-    >
-      <p>Hi there!</p>
-      {/* TODO: Convert the QuestionForm below to a question list */}
-      {/* List should be rendered here */}
-    </AdminLayout>
-  );
-}
-
-
-http://localhost:3000/student/quiz/[quidId]?topicId=[topicId]
-create an endpoint for this and replace the page with real data.I have provided the current mark complete endpoint but feel free to suggest a more efficient approach.
-
-// app/api/student/topics/[topicId]/mark-complete/route.ts
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { StudentCourseService } from "@/lib/services/student/courseService";
-
-// POST /api/student/topics/[topicId]/mark-complete - Mark topic complete
+// POST /api/student/quiz/[quizId]/route.ts - Submit quiz attempt
 export async function POST(
   request: NextRequest,
-  { params }: { params: { topicId: string } }
+  { params }: { params: { quizId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -503,171 +241,227 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { topicId } = await params;
+    const { quizId } = await params;
+    const body = await request.json();
+    const { answers, timeSpent, topicId } = body;
 
-    const complete = await StudentCourseService.completeTopic(
-      session.user.id,
-      topicId
-    );
+    // Fetch quiz with questions and correct answers
+    const quiz = await prisma.quiz.findUnique({
+      where: {
+        id: quizId,
+        isActive: true,
+      },
+      include: {
+        questions: {
+          where: { isActive: true },
+          include: {
+            options: true,
+          },
+        },
+      },
+    });
 
-    return NextResponse.json({ complete });
+    if (!quiz) {
+      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
+    }
+
+    // Check if student can still take this quiz
+    const existingAttempts = await prisma.quizAttempt.count({
+      where: {
+        quizId,
+        userId: session.user.id,
+        isPractice: false,
+      },
+    });
+
+    if (quiz.maxAttempts && existingAttempts >= quiz.maxAttempts) {
+      return NextResponse.json(
+        { error: "Maximum attempts exceeded" },
+        { status: 403 }
+      );
+    }
+
+    // Calculate score
+    let totalPoints = 0;
+    let earnedPoints = 0;
+    let questionsCorrect = 0;
+    const detailedAnswers = [];
+
+    for (const question of quiz.questions) {
+      totalPoints += question.points;
+      const studentAnswer = answers[question.id];
+
+      if (!studentAnswer) {
+        detailedAnswers.push({
+          questionId: question.id,
+          selectedOptions: [],
+          textAnswer: null,
+          isCorrect: false,
+          points: 0,
+          timeSpent: null,
+        });
+        continue;
+      }
+
+      let isCorrect = false;
+      let pointsEarned = 0;
+
+      // Grade based on question type
+      switch (question.questionType) {
+        case "MULTIPLE_CHOICE":
+        case "TRUE_FALSE":
+          const correctOption = question.options.find((opt) => opt.isCorrect);
+          isCorrect = studentAnswer === correctOption?.id;
+          pointsEarned = isCorrect ? question.points : 0;
+          break;
+
+        case "MULTIPLE_SELECT":
+          const correctOptionIds = question.options
+            .filter((opt) => opt.isCorrect)
+            .map((opt) => opt.id)
+            .sort();
+          const selectedIds = Array.isArray(studentAnswer)
+            ? studentAnswer.sort()
+            : [];
+          isCorrect =
+            JSON.stringify(correctOptionIds) === JSON.stringify(selectedIds);
+
+          if (question.allowPartialCredit && !isCorrect) {
+            const correctSelected = selectedIds.filter((id) =>
+              correctOptionIds.includes(id)
+            ).length;
+            const incorrectSelected = selectedIds.filter(
+              (id) => !correctOptionIds.includes(id)
+            ).length;
+            const missedCorrect = correctOptionIds.filter(
+              (id) => !selectedIds.includes(id)
+            ).length;
+
+            // Partial credit formula: (correct - incorrect) / total_correct
+            const partialScore = Math.max(
+              0,
+              (correctSelected - incorrectSelected) / correctOptionIds.length
+            );
+            pointsEarned = Math.round(partialScore * question.points);
+          } else {
+            pointsEarned = isCorrect ? question.points : 0;
+          }
+          break;
+
+        case "SHORT_ANSWER":
+        case "LONG_ANSWER":
+          // For text answers, we'll mark as correct for now (needs manual grading)
+          // In a real system, you might want to implement fuzzy matching or keyword checking
+          isCorrect = studentAnswer && studentAnswer.trim().length > 0;
+          pointsEarned = isCorrect ? question.points : 0;
+          break;
+      }
+
+      if (isCorrect) questionsCorrect++;
+      earnedPoints += pointsEarned;
+
+      detailedAnswers.push({
+        questionId: question.id,
+        selectedOptions: Array.isArray(studentAnswer)
+          ? studentAnswer
+          : [studentAnswer],
+        textAnswer: typeof studentAnswer === "string" ? studentAnswer : null,
+        isCorrect,
+        points: pointsEarned,
+        timeSpent: null, // Could be tracked per question
+      });
+    }
+
+    const scorePercentage =
+      totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+    const passed = scorePercentage >= quiz.passingScore;
+
+    // Create quiz attempt record
+    const quizAttempt = await prisma.quizAttempt.create({
+      data: {
+        userId: session.user.id,
+        quizId,
+        score: scorePercentage,
+        passed,
+        timeSpent,
+        questionsCorrect,
+        questionsTotal: quiz.questions.length,
+        questionsSkipped: quiz.questions.length - Object.keys(answers).length,
+        isPractice: false,
+        completedAt: new Date(),
+      },
+    });
+
+    // Create answer records
+    const answerRecords = detailedAnswers.map((answer) => ({
+      attemptId: quizAttempt.id,
+      questionId: answer.questionId,
+      selectedOptions: answer.selectedOptions,
+      textAnswer: answer.textAnswer,
+      isCorrect: answer.isCorrect,
+      points: answer.points,
+      timeSpent: answer.timeSpent,
+    }));
+
+    await prisma.answer.createMany({
+      data: answerRecords,
+    });
+
+    // Update topic progress if topicId provided
+    if (topicId && passed) {
+      await prisma.topicProgress.upsert({
+        where: {
+          userId_topicId: {
+            userId: session.user.id,
+            topicId,
+          },
+        },
+        create: {
+          userId: session.user.id,
+          topicId,
+          status: "COMPLETED",
+          bestScore: scorePercentage,
+          averageScore: scorePercentage,
+          attemptCount: 1,
+          completedAt: new Date(),
+          masteryAchieved: scorePercentage >= 90,
+        },
+        update: {
+          status: "COMPLETED",
+          bestScore: {
+            set: Math.max(scorePercentage, 0), // Will be updated by DB if current bestScore is higher
+          },
+          attemptCount: {
+            increment: 1,
+          },
+          completedAt: new Date(),
+          masteryAchieved: scorePercentage >= 90,
+          lastAccessAt: new Date(),
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      attempt: {
+        id: quizAttempt.id,
+        score: scorePercentage,
+        passed,
+        earnedPoints,
+        totalPoints,
+        questionsCorrect,
+        questionsTotal: quiz.questions.length,
+        timeSpent,
+        completedAt: quizAttempt.completedAt,
+      },
+    });
   } catch (error) {
-    console.error(
-      "POST /api/student/topics/[topicId]/mark-complete error:",
-      error
-    );
+    console.error("POST /api/student/quiz/[quizId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
   }
-}
-
-
-// app/(dashboard)/student/quiz/[quizId]/page.tsx
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { notFound } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { StudentLayout } from "@/components/layout/StudentLayout";
-import { QuizInterface } from "@/components/students/QuizInterface";
-
-interface PageProps {
-  params: Promise<{ quizId: string }>;
-  searchParams: Promise<{ topicId?: string }>;
-}
-
-// Mock quiz data - replace this with real data
-async function getQuizData(quizId: string, userId: string) {
-  try {
-    // Mock data structure
-    const quiz = {
-      id: quizId,
-      title: "Introduction to Computer Basics Quiz",
-      description: "Test your understanding of computer fundamentals",
-      passingScore: 80,
-      timeLimit: 30, // minutes
-      allowRetakes: true,
-      maxAttempts: 3,
-      shuffleQuestions: true,
-      showResults: true,
-      topic: {
-        id: "topic-1",
-        title: "Computer Fundamentals",
-        module: {
-          title: "Introduction Module",
-          course: {
-            id: "course-1",
-            title: "Computer Literacy Basics",
-          },
-        },
-      },
-      questions: [
-        {
-          id: "q1",
-          questionText: "What does CPU stand for?",
-          questionType: "MULTIPLE_CHOICE",
-          points: 5,
-          required: true,
-          options: [
-            { id: "opt1", text: "Central Processing Unit", isCorrect: true },
-            { id: "opt2", text: "Computer Personal Unit", isCorrect: false },
-            { id: "opt3", text: "Central Program Unit", isCorrect: false },
-            { id: "opt4", text: "Computer Processing Unit", isCorrect: false },
-          ],
-        },
-        {
-          id: "q2",
-          questionText:
-            "Which of the following are input devices? (Select all that apply)",
-          questionType: "MULTIPLE_SELECT",
-          points: 10,
-          required: true,
-          options: [
-            { id: "opt1", text: "Keyboard", isCorrect: true },
-            { id: "opt2", text: "Mouse", isCorrect: true },
-            { id: "opt3", text: "Monitor", isCorrect: false },
-            { id: "opt4", text: "Microphone", isCorrect: true },
-            { id: "opt5", text: "Printer", isCorrect: false },
-          ],
-        },
-        {
-          id: "q3",
-          questionText: "RAM stands for Random Access Memory.",
-          questionType: "TRUE_FALSE",
-          points: 5,
-          required: true,
-          options: [
-            { id: "opt1", text: "True", isCorrect: true },
-            { id: "opt2", text: "False", isCorrect: false },
-          ],
-        },
-        {
-          id: "q4",
-          questionText: "Explain the difference between hardware and software.",
-          questionType: "SHORT_ANSWER",
-          points: 15,
-          required: true,
-          sampleAnswer:
-            "Hardware refers to physical components of a computer system, while software refers to programs and applications that run on the hardware.",
-        },
-        {
-          id: "q5",
-          questionText:
-            "Write a brief essay about the importance of computer literacy in today's world (minimum 100 words).",
-          questionType: "ESSAY",
-          points: 25,
-          required: false,
-          minWords: 100,
-          maxWords: 500,
-        },
-      ],
-    };
-
-    // Check if user has attempts left
-    const attempts = []; // Mock - would come from QuizAttempt service
-    const canTakeQuiz = quiz.maxAttempts
-      ? attempts.length < quiz.maxAttempts
-      : true;
-
-    return {
-      quiz,
-      attempts,
-      canTakeQuiz,
-    };
-  } catch (error) {
-    console.error("Error fetching quiz data:", error);
-    return null;
-  }
-}
-
-export default async function QuizPage({ params, searchParams }: PageProps) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  const { quizId } = await params;
-  const { topicId } = await searchParams;
-  const data = await getQuizData(quizId, session.user.id);
-
-  if (!data || !data.canTakeQuiz) {
-    notFound();
-  }
-
-  const { quiz, attempts } = data;
-
-  return (
-    <StudentLayout>
-      <QuizInterface
-        quiz={quiz}
-        attempts={attempts}
-        userId={session.user.id}
-        topicId={topicId}
-      />
-    </StudentLayout>
-  );
 }
 
 // components/students/QuizInterface.tsx
@@ -705,12 +499,14 @@ import {
   Save,
   Send,
   Timer,
+  Clock,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface QuizOption {
   id: string;
   text: string;
-  isCorrect: boolean;
+  orderIndex: number;
 }
 
 interface QuizQuestion {
@@ -721,13 +517,17 @@ interface QuizQuestion {
     | "MULTIPLE_SELECT"
     | "TRUE_FALSE"
     | "SHORT_ANSWER"
-    | "ESSAY";
+    | "LONG_ANSWER"
+    | "MATCHING"
+    | "ORDERING";
   points: number;
   required: boolean;
-  options?: QuizOption[];
-  sampleAnswer?: string;
-  minWords?: number;
-  maxWords?: number;
+  options: QuizOption[];
+  hint?: string;
+  timeLimit?: number;
+  allowPartialCredit?: boolean;
+  caseSensitive?: boolean;
+  orderIndex: number;
 }
 
 interface Quiz {
@@ -744,6 +544,7 @@ interface Quiz {
     id: string;
     title: string;
     module: {
+      id: string;
       title: string;
       course: {
         id: string;
@@ -754,11 +555,31 @@ interface Quiz {
   questions: QuizQuestion[];
 }
 
+interface AttemptData {
+  id: string;
+  score: number;
+  passed: boolean;
+  startedAt: Date;
+  completedAt: Date | null;
+  timeSpent: number | null;
+  questionsCorrect: number;
+  questionsTotal: number;
+}
+
+interface QuizMetadata {
+  totalQuestions: number;
+  totalPoints: number;
+  attemptNumber: number;
+  attemptsRemaining: number | null;
+  hasPassedQuiz: boolean;
+}
+
 interface QuizInterfaceProps {
   quiz: Quiz;
-  attempts: any[];
+  attempts: AttemptData[];
   userId: string;
   topicId?: string;
+  metadata: QuizMetadata;
 }
 
 type Answer = string | string[];
@@ -768,6 +589,7 @@ export function QuizInterface({
   attempts,
   userId,
   topicId,
+  metadata,
 }: QuizInterfaceProps) {
   const router = useRouter();
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -777,6 +599,7 @@ export function QuizInterface({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [quizStartTime] = useState(Date.now());
 
   // Timer effect
   useEffect(() => {
@@ -795,6 +618,18 @@ export function QuizInterface({
 
     return () => clearInterval(timer);
   }, [timeLeft]);
+
+  // Auto-save answers periodically
+  useEffect(() => {
+    const saveInterval = setInterval(() => {
+      if (Object.keys(answers).length > 0) {
+        // Auto-save logic could be implemented here
+        console.log("Auto-saving answers...", answers);
+      }
+    }, 30000); // Save every 30 seconds
+
+    return () => clearInterval(saveInterval);
+  }, [answers]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -822,26 +657,40 @@ export function QuizInterface({
   const handleSubmitQuiz = async () => {
     setIsSubmitting(true);
     try {
-      // In real app: submit answers to API
+      const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000); // Convert to seconds
+
       const submitData = {
-        quizId: quiz.id,
-        userId,
-        topicId,
         answers,
-        timeSpent: quiz.timeLimit
-          ? quiz.timeLimit * 60 - (timeLeft || 0)
-          : null,
+        timeSpent,
+        topicId,
       };
 
-      console.log("Submitting quiz:", submitData);
+      const response = await fetch(`/api/student/quiz/${quiz.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submitData),
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit quiz");
+      }
+
+      const result = await response.json();
+
+      toast.success("Quiz submitted successfully!");
 
       // Redirect to results page
-      router.push(`/student/quiz/${quiz.id}/results?attempt=latest`);
+      router.push(
+        `/student/quiz/${quiz.id}/results?attempt=${result.attempt.id}`
+      );
     } catch (error) {
       console.error("Failed to submit quiz:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit quiz"
+      );
       setIsSubmitting(false);
     }
   };
@@ -849,7 +698,11 @@ export function QuizInterface({
   const canSubmit = () => {
     const requiredQuestions = quiz.questions.filter((q) => q.required);
     const answeredRequired = requiredQuestions.filter(
-      (q) => answers[q.id]
+      (q) =>
+        answers[q.id] &&
+        (typeof answers[q.id] === "string"
+          ? answers[q.id].trim() !== ""
+          : Array.isArray(answers[q.id]) && answers[q.id].length > 0)
     ).length;
     return answeredRequired === requiredQuestions.length;
   };
@@ -861,27 +714,33 @@ export function QuizInterface({
       case "MULTIPLE_CHOICE":
       case "TRUE_FALSE":
         return (
-          <RadioGroup
-            value={(answer as string) || ""}
-            onValueChange={(value) => handleAnswerChange(question.id, value)}
-          >
-            {question.options?.map((option) => (
-              <div key={option.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={option.id} id={option.id} />
-                <Label htmlFor={option.id} className="flex-1 cursor-pointer">
-                  {option.text}
-                </Label>
-              </div>
-            ))}
-          </RadioGroup>
+          <div className="space-y-3">
+            <RadioGroup
+              value={(answer as string) || ""}
+              onValueChange={(value) => handleAnswerChange(question.id, value)}
+            >
+              {question.options.map((option) => (
+                <div key={option.id} className="flex items-center space-x-3">
+                  <RadioGroupItem value={option.id} id={option.id} />
+                  <Label
+                    htmlFor={option.id}
+                    className="flex-1 cursor-pointer py-2"
+                  >
+                    {option.text}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
         );
 
       case "MULTIPLE_SELECT":
         const selectedOptions = (answer as string[]) || [];
         return (
           <div className="space-y-3">
-            {question.options?.map((option) => (
-              <div key={option.id} className="flex items-center space-x-2">
+            <p className="text-sm text-gray-600 mb-3">Select all that apply:</p>
+            {question.options.map((option) => (
+              <div key={option.id} className="flex items-center space-x-3">
                 <Checkbox
                   id={option.id}
                   checked={selectedOptions.includes(option.id)}
@@ -899,7 +758,10 @@ export function QuizInterface({
                     }
                   }}
                 />
-                <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                <Label
+                  htmlFor={option.id}
+                  className="flex-1 cursor-pointer py-2"
+                >
                   {option.text}
                 </Label>
               </div>
@@ -909,44 +771,47 @@ export function QuizInterface({
 
       case "SHORT_ANSWER":
         return (
-          <Textarea
-            placeholder="Enter your answer..."
-            value={(answer as string) || ""}
-            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-            className="min-h-[100px]"
-          />
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Enter your answer..."
+              value={(answer as string) || ""}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              className="min-h-[100px]"
+            />
+            {question.caseSensitive && (
+              <p className="text-xs text-amber-600">
+                Note: This answer is case-sensitive
+              </p>
+            )}
+          </div>
         );
 
-      case "ESSAY":
+      case "LONG_ANSWER":
         const wordCount = (((answer as string) || "").match(/\S+/g) || [])
           .length;
         return (
           <div className="space-y-2">
             <Textarea
-              placeholder="Write your essay here..."
+              placeholder="Write your detailed answer here..."
               value={(answer as string) || ""}
               onChange={(e) => handleAnswerChange(question.id, e.target.value)}
               className="min-h-[200px]"
             />
             <div className="flex justify-between text-sm text-gray-500">
               <span>Word count: {wordCount}</span>
-              {question.minWords && (
-                <span
-                  className={
-                    wordCount >= question.minWords
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }
-                >
-                  Minimum: {question.minWords} words
-                </span>
-              )}
+              <span className="text-blue-600">
+                Detailed answers may be manually graded
+              </span>
             </div>
           </div>
         );
 
       default:
-        return <div>Unsupported question type</div>;
+        return (
+          <div className="text-red-500">
+            Unsupported question type: {question.questionType}
+          </div>
+        );
     }
   };
 
@@ -973,6 +838,12 @@ export function QuizInterface({
                   <Award className="h-3 w-3" />
                   {quiz.passingScore}% to pass
                 </span>
+                {metadata.totalPoints && (
+                  <span className="flex items-center gap-1">
+                    <Award className="h-3 w-3" />
+                    {metadata.totalPoints} points
+                  </span>
+                )}
               </div>
             </div>
 
@@ -980,20 +851,36 @@ export function QuizInterface({
               {timeLeft !== null && (
                 <div
                   className={`flex items-center gap-2 text-lg font-mono ${
-                    timeLeft < 300 ? "text-red-600" : "text-gray-700"
+                    timeLeft < 300
+                      ? "text-red-600 animate-pulse"
+                      : "text-gray-700"
                   }`}
                 >
                   <Timer className="h-5 w-5" />
                   {formatTime(timeLeft)}
+                  {timeLeft < 300 && (
+                    <span className="text-xs text-red-600 ml-2">
+                      TIME RUNNING OUT!
+                    </span>
+                  )}
                 </div>
               )}
               {attempts.length > 0 && (
                 <p className="text-sm text-gray-500 mt-1">
-                  Attempt {attempts.length + 1} of {quiz.maxAttempts || "∞"}
+                  Attempt {metadata.attemptNumber} of {quiz.maxAttempts || "∞"}
+                </p>
+              )}
+              {metadata.attemptsRemaining !== null && (
+                <p className="text-sm text-amber-600 mt-1">
+                  {metadata.attemptsRemaining} attempts remaining
                 </p>
               )}
             </div>
           </div>
+
+          {quiz.description && (
+            <p className="text-gray-600 mt-3">{quiz.description}</p>
+          )}
         </CardHeader>
       </Card>
 
@@ -1022,6 +909,12 @@ export function QuizInterface({
                 {currentQ.points} points
               </Badge>
               {currentQ.required && <Badge variant="secondary">Required</Badge>}
+              {currentQ.timeLimit && (
+                <Badge variant="outline">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {currentQ.timeLimit}s
+                </Badge>
+              )}
             </div>
 
             <div className="flex items-center gap-2">
@@ -1034,6 +927,14 @@ export function QuizInterface({
           <CardTitle className="text-lg leading-relaxed mt-4">
             {currentQ.questionText}
           </CardTitle>
+
+          {currentQ.hint && (
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <span className="font-medium">Hint:</span> {currentQ.hint}
+              </p>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent>{renderQuestion(currentQ, currentQuestion)}</CardContent>
@@ -1111,16 +1012,31 @@ export function QuizInterface({
                     Once submitted, you cannot change your answers. Are you sure
                     you want to submit?
                   </p>
+                  {timeLeft !== null && timeLeft < 60 && (
+                    <div className="text-amber-600 flex items-center gap-2">
+                      <Timer className="h-4 w-4" />
+                      Less than 1 minute remaining!
+                    </div>
+                  )}
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Review Answers</AlertDialogCancel>
+                <AlertDialogCancel disabled={isSubmitting}>
+                  Review Answers
+                </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleSubmitQuiz}
                   disabled={!canSubmit() || isSubmitting}
                   className="bg-green-600 hover:bg-green-700"
                 >
-                  {isSubmitting ? "Submitting..." : "Submit Quiz"}
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Quiz"
+                  )}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
@@ -1132,10 +1048,558 @@ export function QuizInterface({
       <div className="text-center">
         <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
           <Save className="h-3 w-3" />
-          Answers are saved automatically
+          Answers are saved automatically as you type
         </p>
       </div>
+
+      {/* Quiz Stats */}
+      {attempts.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="font-medium mb-3">Previous Attempts</h3>
+            <div className="space-y-2">
+              {attempts.slice(0, 3).map((attempt, index) => (
+                <div
+                  key={attempt.id}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span>Attempt {attempts.length - index}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={attempt.passed ? "default" : "destructive"}>
+                      {attempt.score}%
+                    </Badge>
+                    <span className="text-gray-500">
+                      {attempt.questionsCorrect}/{attempt.questionsTotal}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
+// students/QuizResults.tsx
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  Award,
+  BookOpen,
+  RotateCcw,
+  ArrowLeft,
+  ChevronDown,
+  ChevronRight,
+  Trophy,
+  AlertCircle,
+  Target,
+  Calendar,
+  BarChart3,
+} from "lucide-react";
+import Link from "next/link";
+
+interface Question {
+  id: string;
+  questionText: string;
+  questionType: string;
+}
+interface QuizAnswer {
+  question: Question;
+  questionId: string;
+  points: number;
+  earnedPoints: number;
+  textAnswer: string;
+  isCorrect: boolean;
+  feedback?: string;
+}
+
+interface QuizAttempt {
+  id: string;
+  score: number;
+  questionsTotal: number;
+  questionsCorrect: number;
+  passed: boolean;
+  completedAt: Date;
+  timeSpent: number;
+  answers: QuizAnswer[];
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  passingScore: number;
+  allowRetakes: boolean;
+  maxAttempts?: number;
+  topic: {
+    id: string;
+    title: string;
+    module: {
+      id: string;
+      title: string;
+      course: {
+        id: string;
+        title: string;
+      };
+    };
+  };
+}
+
+interface QuizResultsProps {
+  attempt: QuizAttempt;
+  quiz: Quiz;
+  allAttempts: QuizAttempt[];
+  userId: string;
+  topicId?: string;
+}
+
+function formatTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}m ${remainingSeconds}s`;
+}
+
+function getScoreColor(score: number, passingScore: number) {
+  if (score >= passingScore) {
+    return "text-green-600";
+  } else if (score >= passingScore * 0.7) {
+    return "text-yellow-600";
+  } else {
+    return "text-red-600";
+  }
+}
+
+function getScoreBadgeStyle(passed: boolean) {
+  if (passed) {
+    return "bg-green-100 text-green-800 border-green-200";
+  } else {
+    return "bg-red-100 text-red-800 border-red-200";
+  }
+}
+
+function QuestionReview({
+  answer,
+  index,
+}: {
+  answer: QuizAnswer;
+  index: number;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const renderAnswer = (answerData: string | string[]) => {
+    if (Array.isArray(answerData)) {
+      return answerData.join(", ");
+    }
+    return answerData;
+  };
+
+  return (
+    <Card
+      className={`border-l-4 ${
+        answer.isCorrect ? "border-l-green-500" : "border-l-red-500"
+      }`}
+    >
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        <CollapsibleTrigger>
+          <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  {answer.isCorrect ? (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-red-500" />
+                  )}
+                </div>
+                <div>
+                  <CardTitle className="text-base">
+                    Question {index + 1}
+                  </CardTitle>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {answer.question.questionText.length > 80
+                      ? `${answer.question.questionText.substring(0, 80)}...`
+                      : answer.question.questionText}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-sm font-medium">
+                    {answer.earnedPoints}/{answer.points} pts
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    {answer.question.questionType
+                      .toLowerCase()
+                      .replace("_", " ")}
+                  </Badge>
+                </div>
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </div>
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <CardContent className="pt-0">
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Question:</h4>
+                <p className="text-gray-700">{answer.question.questionText}</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Your Answer:
+                  </h4>
+                  <div
+                    className={`p-3 rounded-lg border ${
+                      answer.isCorrect
+                        ? "bg-green-50 border-green-200"
+                        : "bg-red-50 border-red-200"
+                    }`}
+                  >
+                    <p className="text-sm">{renderAnswer(answer.textAnswer)}</p>
+                  </div>
+                </div>
+
+                {!answer.isCorrect && (
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">
+                      Correct Answer:
+                    </h4>
+                    <div className="p-3 rounded-lg border bg-green-50 border-green-200">
+                      <p className="text-sm">
+                        {renderAnswer(answer.textAnswer)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {answer.feedback && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Feedback:</h4>
+                  <div className="p-3 rounded-lg border bg-blue-50 border-blue-200">
+                    <p className="text-sm text-blue-800">{answer.feedback}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
+
+export function QuizResults({
+  attempt,
+  quiz,
+  allAttempts,
+  userId,
+  topicId,
+}: QuizResultsProps) {
+  const router = useRouter();
+  const [showAllQuestions, setShowAllQuestions] = useState(false);
+
+  const handleRetakeQuiz = () => {
+    router.push(
+      `/student/quiz/${quiz.id}${topicId ? `?topicId=${topicId}` : ""}`
+    );
+  };
+
+  const canRetake =
+    quiz.allowRetakes &&
+    (!quiz.maxAttempts || allAttempts.length < quiz.maxAttempts);
+
+  const correctAnswers = attempt.answers.filter((a) => a.isCorrect).length;
+  const incorrectAnswers = attempt.answers.length - correctAnswers;
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Breadcrumb */}
+      <nav className="flex items-center space-x-2 text-sm text-gray-500">
+        <Link
+          href={`/student/courses/${quiz.topic.module.course.id}`}
+          className="hover:text-gray-700"
+        >
+          {quiz.topic.module.course.title}
+        </Link>
+        <span>/</span>
+        <Link
+          href={`/student/topics/${quiz.topic.id}`}
+          className="hover:text-gray-700"
+        >
+          {quiz.topic.title}
+        </Link>
+        <span>/</span>
+        <span className="text-gray-900 font-medium">Quiz Results</span>
+      </nav>
+
+      {/* Results Header */}
+      <Card
+        className={`border-t-4 ${
+          attempt.passed ? "border-t-green-500" : "border-t-red-500"
+        }`}
+      >
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl flex items-center gap-3">
+                {attempt.passed ? (
+                  <Trophy className="h-6 w-6 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-6 w-6 text-red-500" />
+                )}
+                Quiz {attempt.passed ? "Passed!" : "Not Passed"}
+              </CardTitle>
+              <p className="text-gray-600 mt-1">{quiz.title}</p>
+            </div>
+            <Badge className={getScoreBadgeStyle(attempt.passed)}>
+              {attempt.passed ? "PASSED" : "FAILED"}
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {/* Score Overview */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
+            <div className="text-center">
+              <div
+                className={`text-3xl font-bold ${getScoreColor(
+                  attempt.score,
+                  quiz.passingScore
+                )}`}
+              >
+                {attempt.score}%
+              </div>
+              <p className="text-sm text-gray-600">Final Score</p>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-700">
+                {attempt.questionsCorrect}/{attempt.questionsTotal}
+              </div>
+              <p className="text-sm text-gray-600">Points Earned</p>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600">
+                {correctAnswers}/{attempt.answers.length}
+              </div>
+              <p className="text-sm text-gray-600">Correct Answers</p>
+            </div>
+
+            <div className="text-center">
+              <div className="text-3xl font-bold text-gray-700">
+                {formatTime(attempt.timeSpent)}
+              </div>
+              <p className="text-sm text-gray-600">Time Spent</p>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium">Score Breakdown</span>
+              <span className="text-sm text-gray-600">
+                Passing Score: {quiz.passingScore}%
+              </span>
+            </div>
+            <div className="relative">
+              <Progress value={attempt.score} className="h-3" />
+              <div
+                className="absolute top-0 h-3 w-0.5 bg-red-500 rounded"
+                style={{ left: `${quiz.passingScore}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0%</span>
+              <span className="text-red-600">
+                ← {quiz.passingScore}% required
+              </span>
+              <span>100%</span>
+            </div>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="font-medium">Correct: {correctAnswers}</span>
+              </div>
+            </div>
+
+            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+              <div className="flex items-center gap-2">
+                <XCircle className="h-5 w-5 text-red-500" />
+                <span className="font-medium">
+                  Incorrect: {incorrectAnswers}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-500" />
+                <span className="font-medium">
+                  Completed: {attempt.completedAt.toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Buttons */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              {!attempt.passed ? (
+                <p className="text-sm text-gray-600 mb-2">
+                  Don't worry! You can review your answers and try again.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-600 mb-2">
+                  Congratulations! You've successfully completed this quiz.
+                </p>
+              )}
+              {allAttempts.length > 0 && (
+                <p className="text-xs text-gray-500">
+                  Attempt {allAttempts.length} of {quiz.maxAttempts || "∞"}
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              {canRetake && (
+                <Button onClick={handleRetakeQuiz} variant="outline">
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Retake Quiz
+                </Button>
+              )}
+
+              <Link
+                href={
+                  topicId
+                    ? `/student/topics/${topicId}`
+                    : `/student/courses/${quiz.topic.module.course.id}`
+                }
+              >
+                <Button>
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  {topicId ? "Back to Topic" : "Back to Course"}
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Question Review */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Question Review
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAllQuestions(!showAllQuestions)}
+            >
+              {showAllQuestions ? "Hide" : "Show"} All Questions
+            </Button>
+          </CardTitle>
+        </CardHeader>
+
+        {showAllQuestions && (
+          <CardContent>
+            <div className="space-y-4">
+              {attempt.answers.map((answer, index) => (
+                <QuestionReview
+                  key={answer.questionId}
+                  answer={answer}
+                  index={index}
+                />
+              ))}
+            </div>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* Previous Attempts (if any) */}
+      {allAttempts.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Attempt History
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {allAttempts.map((pastAttempt, index) => (
+                <div
+                  key={pastAttempt.id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    pastAttempt.id === attempt.id
+                      ? "bg-blue-50 border-blue-200"
+                      : "bg-gray-50"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline">Attempt {index + 1}</Badge>
+                    <span className="text-sm">
+                      {pastAttempt.completedAt.toLocaleDateString()}
+                    </span>
+                    {pastAttempt.id === attempt.id && (
+                      <Badge variant="secondary">Current</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`font-medium ${getScoreColor(
+                        pastAttempt.score,
+                        quiz.passingScore
+                      )}`}
+                    >
+                      {pastAttempt.score}%
+                    </span>
+                    <Badge className={getScoreBadgeStyle(pastAttempt.passed)}>
+                      {pastAttempt.passed ? "PASSED" : "FAILED"}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
