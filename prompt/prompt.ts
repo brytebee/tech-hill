@@ -1,4 +1,118 @@
-Note: The system is built with NextJS 15 
+
+model Course {
+  id            String         @id @default(cuid())
+  title         String
+  description   String         @db.Text
+  shortDescription String?
+  thumbnail     String?
+  status        CourseStatus   @default(DRAFT)
+  difficulty    DifficultyLevel @default(BEGINNER)
+  duration      Int            // Duration in hours
+  price         Decimal        @default(0) @db.Decimal(10, 2)
+  tags          String[]
+  prerequisites String[]
+  
+  // Content
+  syllabus      String?        @db.Text
+  learningOutcomes String[]
+  
+  // Assessment Requirements
+  passingScore  Int            @default(80) // Overall course passing percentage
+  requireSequentialCompletion Boolean @default(true) // Must complete modules in order
+  allowRetakes  Boolean        @default(true)
+  maxAttempts   Int?           // Null = unlimited attempts
+  
+  // Timestamps
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+  
+  // Relations
+  creatorId     String
+  creator       User           @relation("CourseCreator", fields: [creatorId], references: [id])
+  modules       Module[]
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  
+  @@map("courses")
+}
+
+// Enhanced Module with Assessment Requirements
+model Module {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  @db.Text
+  order       Int
+  duration    Int      // Duration in minutes
+  
+  // Assessment Requirements
+  passingScore Int     @default(80) // Module passing percentage
+  prerequisiteModuleId String? // Must complete this module first
+  isRequired   Boolean @default(true) // Can skip if false
+  unlockDelay  Int?    // Hours to wait before unlock (for spaced learning)
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  prerequisiteModule Module? @relation("ModulePrerequisites", fields: [prerequisiteModuleId], references: [id])
+  dependentModules Module[] @relation("ModulePrerequisites")
+  topics      Topic[]
+  progress    ModuleProgress[]
+  
+  @@map("modules")
+}
+
+// Topics (Individual learning units within modules)
+model Topic {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique // URL-friendly identifier
+  description String?    @db.Text
+  content     String     @db.Text // Rich text content
+  orderIndex  Int        // Sequence within module
+  duration    Int?       // Duration in minutes
+  
+  // Topic Type & Content
+  topicType   TopicType  @default(LESSON)
+  videoUrl    String?    // For video topics
+  attachments String[]   // File URLs for resources
+  
+  // Assessment Requirements
+  passingScore Int       @default(80) // Topic passing percentage
+  maxAttempts  Int?      // Per topic attempt limit
+  isRequired   Boolean   @default(true)
+  allowSkip    Boolean   @default(false) // Can skip if struggling
+  
+  // Prerequisites within module
+  prerequisiteTopicId String?
+  
+  // Timestamps
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Relations
+  moduleId    String
+  module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  prerequisiteTopic Topic? @relation("TopicPrerequisites", fields: [prerequisiteTopicId], references: [id])
+  dependentTopics Topic[] @relation("TopicPrerequisites")
+  
+  quizzes     Quiz[]
+  progress    TopicProgress[]
+  submissions Submission[]
+  
+  @@map("topics")
+}
+
+enum TopicType {
+  LESSON       // Text/video content
+  PRACTICE     // Interactive exercises
+  ASSESSMENT   // Graded quiz/test
+  RESOURCE     // Downloadable materials
+}
 
 // Enhanced Quiz System
 model Quiz {
@@ -32,64 +146,44 @@ model Quiz {
   @@map("quizzes")
 }
 
-// Enhanced Question System
-model Question {
-  id            String       @id @default(cuid())
-  quizId        String
-  questionText  String       @db.Text
-  questionType  QuestionType @default(MULTIPLE_CHOICE)
-  orderIndex    Int
-  points        Int          @default(1)
-  explanation   String?      @db.Text // Detailed explanation shown after answering
-  hint          String?      // Optional hint for students
-  difficulty    QuestionDifficulty @default(MEDIUM)
-  tags          String[]     // For categorization and analytics
+// Enhanced Enrollment with Progress Tracking
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+  SUSPENDED
+  ON_HOLD
+}
+
+model Enrollment {
+  id              String           @id @default(cuid())
+  status          EnrollmentStatus @default(ACTIVE)
+  overallProgress Int              @default(0) // Overall course progress percentage
   
-  // Advanced Question Features
-  timeLimit     Int?         // Seconds for this question
-  allowPartialCredit Boolean @default(false)
-  caseSensitive Boolean     @default(false) // For text answers
+  // Completion & Performance
+  completedAt     DateTime?
+  certificateIssued Boolean        @default(false)
+  finalGrade      Int?             // Final course grade percentage
+  totalTimeSpent  Int              @default(0) // Total minutes spent
   
-  isActive      Boolean      @default(true)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  options Option[]
-  answers Answer[]
-
-  @@map("questions")
-}
-
-enum QuestionType {
-  MULTIPLE_CHOICE
-  MULTIPLE_SELECT  // Multiple correct answers
-  TRUE_FALSE
-  SHORT_ANSWER
-  LONG_ANSWER
-  MATCHING
-  ORDERING
-}
-
-enum QuestionDifficulty {
-  EASY
-  MEDIUM
-  HARD
-}
-
-// Enhanced Answer Options
-model Option {
-  id         String  @id @default(cuid())
-  questionId String
-  text       String  @db.Text
-  isCorrect  Boolean @default(false)
-  orderIndex Int
-  explanation String? // Why this option is right/wrong
-
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  answers  Answer[]
-
-  @@map("options")
+  // Attempts & Retakes
+  attemptNumber   Int              @default(1)
+  canRetake       Boolean          @default(true)
+  nextRetakeAt    DateTime?        // When they can retake if failed
+  
+  // Timestamps
+  enrolledAt      DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  lastAccessAt    DateTime?
+  
+  // Relations
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, courseId])
+  @@map("enrollments")
 }
 
 // Detailed Module Progress Tracking
@@ -99,6 +193,78 @@ enum ProgressStatus {
   COMPLETED
   NEEDS_REVIEW
   FAILED
+}
+
+model ModuleProgress {
+  id            String         @id @default(cuid())
+  userId        String
+  moduleId      String
+  status        ProgressStatus @default(NOT_STARTED)
+  
+  // Progress Metrics
+  progressPercentage Int         @default(0)
+  currentScore  Int?            // Current average score
+  bestScore     Int?            // Best attempt score
+  attemptsUsed  Int            @default(0)
+  timeSpent     Int            @default(0) // Minutes spent
+  
+  // Status Tracking
+  startedAt     DateTime?
+  completedAt   DateTime?
+  lastAccessAt  DateTime?
+  unlockedAt    DateTime?       // When module became available
+  
+  // Mastery Tracking
+  masteryLevel  MasteryLevel   @default(NOVICE)
+  strugglingAreas String[]      // Topics where student is struggling
+  strongAreas   String[]       // Topics where student excels
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@map("module_progress")
+}
+
+// Granular Topic Progress
+model TopicProgress {
+  id            String         @id @default(cuid())
+  userId        String
+  topicId       String
+  status        ProgressStatus @default(NOT_STARTED)
+  
+  // Detailed Analytics
+  attemptCount  Int            @default(0)
+  bestScore     Int?           // Best quiz score as percentage
+  averageScore  Int?           // Average across all attempts
+  timeSpent     Int            @default(0) // Minutes spent on topic
+  
+  // Learning Analytics
+  viewCount     Int            @default(0) // How many times viewed
+  completionRate Int           @default(0) // Percentage of topic completed
+  strugglingIndicator Boolean  @default(false) // Algorithm sets this
+  masteryAchieved Boolean     @default(false)
+  
+  // Timestamps
+  startedAt     DateTime?
+  completedAt   DateTime?
+  lastAccessAt  DateTime?
+  
+  // Spaced Repetition
+  nextReviewAt  DateTime?      // When to review this topic again
+  reviewCount   Int            @default(0)
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, topicId])
+  @@map("topic_progress")
 }
 
 enum MasteryLevel {
@@ -149,1111 +315,382 @@ model QuizAttempt {
   @@map("quiz_attempts")
 }
 
-// Enhanced Answer Tracking
-model Answer {
-  id            String  @id @default(cuid())
-  attemptId     String
-  questionId    String
-  
-  // Answer Data
-  selectedOption String? // For multiple choice (option ID)
-  selectedOptions String[] // For multiple select
-  textAnswer    String? // For text answers
-  
-  // Performance Data
-  isCorrect     Boolean @default(false)
-  points        Int     @default(0)
-  partialCredit Int?    // Partial points awarded
-  
-  // Timing & Behavior
-  timeSpent     Int?    // Seconds on this question
-  attemptCount  Int     @default(1) // How many times they changed answer
-  usedHint      Boolean @default(false)
-  flaggedForReview Boolean @default(false)
-  
-  createdAt     DateTime @default(now())
+How can I progressively globally update progress in the following components.Such that students can see their progress of course, module, and topic. Please just provide suggested code changes, I have bulk of the code already. It would be unnecessary to provide the codes I already possess. More so on the topic details page i.e. topics/[topicId]/ if students have exhausted their attempts they should be unable to see the start quiz button in the assessment section. If a module, course, topic possess an assessment student can only mark them complete if the required assessments have been passed.
 
-  attempt  QuizAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
-  question Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  option   Option?     @relation(fields: [selectedOption], references: [id])
-
-  @@map("answers")
-}
-
-// Enhanced Submissions for Assignments
-enum SubmissionStatus {
-  DRAFT
-  SUBMITTED
-  UNDER_REVIEW
-  GRADED
-  RETURNED
-  RESUBMITTED
-}
-
-model Submission {
-  id          String           @id @default(cuid())
-  userId      String
-  topicId     String
-  
-  content     String           @db.Text
-  attachments String[]         // File URLs
-  
-  // Grading
-  score       Int?
-  maxScore    Int              @default(100)
-  feedback    String?          @db.Text
-  rubricScores Json?           // Detailed rubric scoring
-  
-  status      SubmissionStatus @default(DRAFT)
-  attemptNumber Int            @default(1)
-  
-  // Timestamps
-  submittedAt DateTime?
-  gradedAt    DateTime?
-  returnedAt  DateTime?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@map("submissions")
-}
-
-NOTE: DO NOT responde with the full Code, just code changes.
-
-Please pay special attention to the attributes of each table in solving this:
-
-Notice how the quiz is setup. Some question could have multiselect answer which is an array of answers. ATM, the storage saves the id of the selected option which is rendered to the user instead of the actual answer(s) the selected.
-I want you to use an efficient way to fix the storage of the answers text so that they can be easily rendered in the results page.I will provide the quiz page, the storage API and the result page.
-
-Please show only code changes to solve this as I have the bulk of the code already.
-
-// POST /api/student/quiz/[quizId]/route.ts - Submit quiz attempt
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { quizId: string } }
+// app/(dashboard)/student/courses/page.tsx
+async function getCoursesData(
+  userId: string,
+  searchParams: {
+    search?: string;
+    difficulty?: string;
+    page?: string;
+  }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const page = parseInt(searchParams.page || "1");
+    const limit = 12;
 
-    if (!session || session.user.role !== "STUDENT") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { quizId } = await params;
-    const body = await request.json();
-    const { answers, timeSpent, topicId } = body;
-
-    // Fetch quiz with questions and correct answers
-    const quiz = await prisma.quiz.findUnique({
-      where: {
-        id: quizId,
-        isActive: true,
-      },
-      include: {
-        questions: {
-          where: { isActive: true },
-          include: {
-            options: true,
-          },
+    const [coursesResult, enrollments] = await Promise.all([
+      CourseService.getCourses(
+        {
+          status: "PUBLISHED",
+          search: searchParams.search,
+          difficulty:
+            searchParams.difficulty === "none"
+              ? undefined
+              : (searchParams.difficulty as any),
         },
-      },
-    });
+        page,
+        limit
+      ),
+      EnrollmentService.getUserEnrollments(userId),
+    ]);
 
-    if (!quiz) {
-      return NextResponse.json({ error: "Quiz not found" }, { status: 404 });
-    }
+    // Create a map of enrolled course IDs for quick lookup
+    const enrolledCourseIds = new Set(
+      enrollments
+        .filter((e) => e.status === "ACTIVE" || e.status === "COMPLETED")
+        .map((e) => e.courseId)
+    );
 
-    // Check if student can still take this quiz
-    const existingAttempts = await prisma.quizAttempt.count({
-      where: {
-        quizId,
-        userId: session.user.id,
-        isPractice: false,
-      },
-    });
-
-    if (quiz.maxAttempts && existingAttempts >= quiz.maxAttempts) {
-      return NextResponse.json(
-        { error: "Maximum attempts exceeded" },
-        { status: 403 }
-      );
-    }
-
-    // Calculate score
-    let totalPoints = 0;
-    let earnedPoints = 0;
-    let questionsCorrect = 0;
-    const detailedAnswers = [];
-
-    for (const question of quiz.questions) {
-      totalPoints += question.points;
-      const studentAnswer = answers[question.id];
-
-      if (!studentAnswer) {
-        detailedAnswers.push({
-          questionId: question.id,
-          selectedOptions: [],
-          textAnswer: null,
-          isCorrect: false,
-          points: 0,
-          timeSpent: null,
-        });
-        continue;
-      }
-
-      let isCorrect = false;
-      let pointsEarned = 0;
-
-      // Grade based on question type
-      switch (question.questionType) {
-        case "MULTIPLE_CHOICE":
-        case "TRUE_FALSE":
-          const correctOption = question.options.find((opt) => opt.isCorrect);
-          isCorrect = studentAnswer === correctOption?.id;
-          pointsEarned = isCorrect ? question.points : 0;
-          break;
-
-        case "MULTIPLE_SELECT":
-          const correctOptionIds = question.options
-            .filter((opt) => opt.isCorrect)
-            .map((opt) => opt.id)
-            .sort();
-          const selectedIds = Array.isArray(studentAnswer)
-            ? studentAnswer.sort()
-            : [];
-          isCorrect =
-            JSON.stringify(correctOptionIds) === JSON.stringify(selectedIds);
-
-          if (question.allowPartialCredit && !isCorrect) {
-            const correctSelected = selectedIds.filter((id) =>
-              correctOptionIds.includes(id)
-            ).length;
-            const incorrectSelected = selectedIds.filter(
-              (id) => !correctOptionIds.includes(id)
-            ).length;
-            const missedCorrect = correctOptionIds.filter(
-              (id) => !selectedIds.includes(id)
-            ).length;
-
-            // Partial credit formula: (correct - incorrect) / total_correct
-            const partialScore = Math.max(
-              0,
-              (correctSelected - incorrectSelected) / correctOptionIds.length
-            );
-            pointsEarned = Math.round(partialScore * question.points);
-          } else {
-            pointsEarned = isCorrect ? question.points : 0;
-          }
-          break;
-
-        case "SHORT_ANSWER":
-        case "LONG_ANSWER":
-          // For text answers, we'll mark as correct for now (needs manual grading)
-          // In a real system, you might want to implement fuzzy matching or keyword checking
-          isCorrect = studentAnswer && studentAnswer.trim().length > 0;
-          pointsEarned = isCorrect ? question.points : 0;
-          break;
-      }
-
-      if (isCorrect) questionsCorrect++;
-      earnedPoints += pointsEarned;
-
-      detailedAnswers.push({
-        questionId: question.id,
-        selectedOptions: Array.isArray(studentAnswer)
-          ? studentAnswer
-          : [studentAnswer],
-        textAnswer: typeof studentAnswer === "string" ? studentAnswer : null,
-        isCorrect,
-        points: pointsEarned,
-        timeSpent: null, // Could be tracked per question
-      });
-    }
-
-    const scorePercentage =
-      totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-    const passed = scorePercentage >= quiz.passingScore;
-
-    // Create quiz attempt record
-    const quizAttempt = await prisma.quizAttempt.create({
-      data: {
-        userId: session.user.id,
-        quizId,
-        score: scorePercentage,
-        passed,
-        timeSpent,
-        questionsCorrect,
-        questionsTotal: quiz.questions.length,
-        questionsSkipped: quiz.questions.length - Object.keys(answers).length,
-        isPractice: false,
-        completedAt: new Date(),
-      },
-    });
-
-    // Create answer records
-    const answerRecords = detailedAnswers.map((answer) => ({
-      attemptId: quizAttempt.id,
-      questionId: answer.questionId,
-      selectedOptions: answer.selectedOptions,
-      textAnswer: answer.textAnswer,
-      isCorrect: answer.isCorrect,
-      points: answer.points,
-      timeSpent: answer.timeSpent,
+    // Add enrollment status to courses
+    const coursesWithEnrollment = coursesResult.courses.map((course) => ({
+      ...course,
+      isEnrolled: enrolledCourseIds.has(course.id),
+      enrollment: enrollments.find((e) => e.courseId === course.id),
     }));
 
-    await prisma.answer.createMany({
-      data: answerRecords,
-    });
+    return {
+      courses: coursesWithEnrollment,
+      totalPages: coursesResult.totalPages,
+      totalCourses: coursesResult.totalCourses,
+      currentPage: page,
+      enrollments,
+    };
+  } catch (error) {
+    console.error("Error fetching courses data:", error);
+    return {
+      courses: [],
+      totalPages: 1,
+      totalCourses: 0,
+      currentPage: 1,
+      enrollments: [],
+    };
+  }
+}
+function CourseCard({ course, userId }: { course: any; userId: string }) {
+  return (
+    <Card className="h-full flex flex-col">
+          {course.isEnrolled && course.enrollment && (
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Progress</span>
+                <span className="font-medium">
+                  {course.enrollment.overallProgress}%
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  style={{ width: `${course.enrollment.overallProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
+      
 
-    // Update topic progress if topicId provided
-    if (topicId && passed) {
-      await prisma.topicProgress.upsert({
-        where: {
-          userId_topicId: {
-            userId: session.user.id,
-            topicId,
-          },
-        },
-        create: {
-          userId: session.user.id,
-          topicId,
-          status: "COMPLETED",
-          bestScore: scorePercentage,
-          averageScore: scorePercentage,
-          attemptCount: 1,
-          completedAt: new Date(),
-          masteryAchieved: scorePercentage >= 90,
-        },
-        update: {
-          status: "COMPLETED",
-          bestScore: {
-            set: Math.max(scorePercentage, 0), // Will be updated by DB if current bestScore is higher
-          },
-          attemptCount: {
-            increment: 1,
-          },
-          completedAt: new Date(),
-          masteryAchieved: scorePercentage >= 90,
-          lastAccessAt: new Date(),
-        },
-      });
+// app/(dashboard)/student/courses/[courseId]/page.tsx
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { StudentLayout } from "@/components/layout/StudentLayout";
+import { CourseService } from "@/lib/services/courseService";
+import { EnrollmentService } from "@/lib/services/enrollmentService";
+import { StudentCourseOverview } from "@/components/students/StudentCourseOverview";
+
+interface PageProps {
+  params: Promise<{ courseId: string }>;
+}
+
+async function getCourseData(courseId: string, userId: string) {
+  try {
+    const [course, enrollment] = await Promise.all([
+      CourseService.getCourseById(courseId),
+      EnrollmentService.getEnrollment(userId, courseId),
+    ]);
+
+    if (!course) {
+      return null;
     }
 
-    return NextResponse.json({
-      success: true,
-      attempt: {
-        id: quizAttempt.id,
-        score: scorePercentage,
-        passed,
-        earnedPoints,
-        totalPoints,
-        questionsCorrect,
-        questionsTotal: quiz.questions.length,
-        timeSpent,
-        completedAt: quizAttempt.completedAt,
-      },
-    });
+    // Only allow access to published courses for students
+    if (course.status !== "PUBLISHED") {
+      return null;
+    }
+
+    return {
+      course,
+      enrollment,
+    };
   } catch (error) {
-    console.error("POST /api/student/quiz/[quizId] error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error("Error fetching course data:", error);
+    return null;
   }
 }
 
-// components/students/QuizInterface.tsx
-"use client";
+export default async function StudentCourseDetailsPage({ params }: PageProps) {
+  const session = await getServerSession(authOptions);
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
-  User,
-  FileText,
-  Award,
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle,
-  AlertTriangle,
-  Save,
-  Send,
-  Timer,
-  Clock,
-} from "lucide-react";
-import { toast } from "sonner";
+  if (!session) {
+    redirect("/login");
+  }
 
-interface QuizOption {
-  id: string;
-  text: string;
-  orderIndex: number;
-}
+  const { courseId } = await params;
+  const data = await getCourseData(courseId, session.user.id);
 
-interface QuizQuestion {
-  id: string;
-  questionText: string;
-  questionType:
-    | "MULTIPLE_CHOICE"
-    | "MULTIPLE_SELECT"
-    | "TRUE_FALSE"
-    | "SHORT_ANSWER"
-    | "LONG_ANSWER"
-    | "MATCHING"
-    | "ORDERING";
-  points: number;
-  required: boolean;
-  options: QuizOption[];
-  hint?: string;
-  timeLimit?: number;
-  allowPartialCredit?: boolean;
-  caseSensitive?: boolean;
-  orderIndex: number;
-}
+  if (!data) {
+    notFound();
+  }
 
-interface Quiz {
-  id: string;
-  title: string;
-  description?: string;
-  passingScore: number;
-  timeLimit?: number;
-  allowRetakes: boolean;
-  maxAttempts?: number;
-  shuffleQuestions: boolean;
-  showResults: boolean;
-  topic: {
-    id: string;
-    title: string;
-    module: {
-      id: string;
-      title: string;
-      course: {
-        id: string;
-        title: string;
-      };
-    };
-  };
-  questions: QuizQuestion[];
-}
+  const { course, enrollment } = data;
 
-interface AttemptData {
-  id: string;
-  score: number;
-  passed: boolean;
-  startedAt: Date;
-  completedAt: Date | null;
-  timeSpent: number | null;
-  questionsCorrect: number;
-  questionsTotal: number;
-}
+  if (!course) {
+    redirect("/student");
+  }
+  // Check if user is enrolled
+  if (!enrollment || enrollment.status !== "ACTIVE") {
+    redirect(`/student/courses?enroll=${courseId}`);
+  }
 
-interface QuizMetadata {
-  totalQuestions: number;
-  totalPoints: number;
-  attemptNumber: number;
-  attemptsRemaining: number | null;
-  hasPassedQuiz: boolean;
-}
-
-interface QuizInterfaceProps {
-  quiz: Quiz;
-  attempts: AttemptData[];
-  userId: string;
-  topicId?: string;
-  metadata: QuizMetadata;
-}
-
-type Answer = string | string[];
-
-export function QuizInterface({
-  quiz,
-  attempts,
-  userId,
-  topicId,
-  metadata,
-}: QuizInterfaceProps) {
-  const router = useRouter();
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
-  const [timeLeft, setTimeLeft] = useState(
-    quiz.timeLimit ? quiz.timeLimit * 60 : null
-  );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
-  const [quizStartTime] = useState(Date.now());
-
-  // Timer effect
-  useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev === null || prev <= 1) {
-          // Auto-submit when time runs out
-          handleSubmitQuiz();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
-  // Auto-save answers periodically
-  useEffect(() => {
-    const saveInterval = setInterval(() => {
-      if (Object.keys(answers).length > 0) {
-        // Auto-save logic could be implemented here
-        console.log("Auto-saving answers...", answers);
-      }
-    }, 30000); // Save every 30 seconds
-
-    return () => clearInterval(saveInterval);
-  }, [answers]);
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
-      .toString()
-      .padStart(2, "0")}`;
+  // Serialize the course data to handle Decimal and Date objects
+  const serializedCourse = {
+    ...course,
+    createdAt: course.createdAt?.toISOString(),
+    updatedAt: course.updatedAt?.toISOString(),
+    publishedAt: course.publishedAt?.toISOString(),
   };
 
-  const handleAnswerChange = (questionId: string, answer: Answer) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }));
+  // Serialize the enrollment data
+  const serializedEnrollment = {
+    ...enrollment,
+    enrolledAt: enrollment.enrolledAt.toISOString(),
+    completedAt: enrollment.completedAt?.toISOString(),
+    lastAccessAt: enrollment.lastAccessAt?.toISOString(),
   };
-
-  const getAnsweredCount = () => {
-    return Object.keys(answers).length;
-  };
-
-  const getProgressPercentage = () => {
-    return Math.round((getAnsweredCount() / quiz.questions.length) * 100);
-  };
-
-  const handleSubmitQuiz = async () => {
-    setIsSubmitting(true);
-    try {
-      const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000); // Convert to seconds
-
-      const submitData = {
-        answers,
-        timeSpent,
-        topicId,
-      };
-
-      const response = await fetch(`/api/student/quiz/${quiz.id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submitData),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to submit quiz");
-      }
-
-      const result = await response.json();
-
-      toast.success("Quiz submitted successfully!");
-
-      // Redirect to results page
-      router.push(
-        `/student/quiz/${quiz.id}/results?attempt=${result.attempt.id}`
-      );
-    } catch (error) {
-      console.error("Failed to submit quiz:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Failed to submit quiz"
-      );
-      setIsSubmitting(false);
-    }
-  };
-
-  const canSubmit = () => {
-    const requiredQuestions = quiz.questions.filter((q) => q.required);
-    const answeredRequired = requiredQuestions.filter(
-      (q) =>
-        answers[q.id] &&
-        (typeof answers[q.id] === "string"
-          ? answers[q.id].trim() !== ""
-          : Array.isArray(answers[q.id]) && answers[q.id].length > 0)
-    ).length;
-    return answeredRequired === requiredQuestions.length;
-  };
-
-  const renderQuestion = (question: QuizQuestion, index: number) => {
-    const answer = answers[question.id];
-
-    switch (question.questionType) {
-      case "MULTIPLE_CHOICE":
-      case "TRUE_FALSE":
-        return (
-          <div className="space-y-3">
-            <RadioGroup
-              value={(answer as string) || ""}
-              onValueChange={(value) => handleAnswerChange(question.id, value)}
-            >
-              {question.options.map((option) => (
-                <div key={option.id} className="flex items-center space-x-3">
-                  <RadioGroupItem value={option.id} id={option.id} />
-                  <Label
-                    htmlFor={option.id}
-                    className="flex-1 cursor-pointer py-2"
-                  >
-                    {option.text}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
-          </div>
-        );
-
-      case "MULTIPLE_SELECT":
-        const selectedOptions = (answer as string[]) || [];
-        return (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600 mb-3">Select all that apply:</p>
-            {question.options.map((option) => (
-              <div key={option.id} className="flex items-center space-x-3">
-                <Checkbox
-                  id={option.id}
-                  checked={selectedOptions.includes(option.id)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      handleAnswerChange(question.id, [
-                        ...selectedOptions,
-                        option.id,
-                      ]);
-                    } else {
-                      handleAnswerChange(
-                        question.id,
-                        selectedOptions.filter((id) => id !== option.id)
-                      );
-                    }
-                  }}
-                />
-                <Label
-                  htmlFor={option.id}
-                  className="flex-1 cursor-pointer py-2"
-                >
-                  {option.text}
-                </Label>
-              </div>
-            ))}
-          </div>
-        );
-
-      case "SHORT_ANSWER":
-        return (
-          <div className="space-y-2">
-            <Textarea
-              placeholder="Enter your answer..."
-              value={(answer as string) || ""}
-              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-              className="min-h-[100px]"
-            />
-            {question.caseSensitive && (
-              <p className="text-xs text-amber-600">
-                Note: This answer is case-sensitive
-              </p>
-            )}
-          </div>
-        );
-
-      case "LONG_ANSWER":
-        const wordCount = (((answer as string) || "").match(/\S+/g) || [])
-          .length;
-        return (
-          <div className="space-y-2">
-            <Textarea
-              placeholder="Write your detailed answer here..."
-              value={(answer as string) || ""}
-              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-              className="min-h-[200px]"
-            />
-            <div className="flex justify-between text-sm text-gray-500">
-              <span>Word count: {wordCount}</span>
-              <span className="text-blue-600">
-                Detailed answers may be manually graded
-              </span>
-            </div>
-          </div>
-        );
-
-      default:
-        return (
-          <div className="text-red-500">
-            Unsupported question type: {question.questionType}
-          </div>
-        );
-    }
-  };
-
-  const currentQ = quiz.questions[currentQuestion];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Quiz Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">{quiz.title}</CardTitle>
-              <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
-                <span className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  {quiz.topic.module.course.title}
-                </span>
-                <span className="flex items-center gap-1">
-                  <FileText className="h-3 w-3" />
-                  {quiz.questions.length} questions
-                </span>
-                <span className="flex items-center gap-1">
-                  <Award className="h-3 w-3" />
-                  {quiz.passingScore}% to pass
-                </span>
-                {metadata.totalPoints && (
-                  <span className="flex items-center gap-1">
-                    <Award className="h-3 w-3" />
-                    {metadata.totalPoints} points
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <div className="text-right">
-              {timeLeft !== null && (
-                <div
-                  className={`flex items-center gap-2 text-lg font-mono ${
-                    timeLeft < 300
-                      ? "text-red-600 animate-pulse"
-                      : "text-gray-700"
-                  }`}
-                >
-                  <Timer className="h-5 w-5" />
-                  {formatTime(timeLeft)}
-                  {timeLeft < 300 && (
-                    <span className="text-xs text-red-600 ml-2">
-                      TIME RUNNING OUT!
-                    </span>
-                  )}
-                </div>
-              )}
-              {attempts.length > 0 && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Attempt {metadata.attemptNumber} of {quiz.maxAttempts || "∞"}
-                </p>
-              )}
-              {metadata.attemptsRemaining !== null && (
-                <p className="text-sm text-amber-600 mt-1">
-                  {metadata.attemptsRemaining} attempts remaining
-                </p>
-              )}
-            </div>
-          </div>
-
-          {quiz.description && (
-            <p className="text-gray-600 mt-3">{quiz.description}</p>
-          )}
-        </CardHeader>
-      </Card>
-
-      {/* Progress Bar */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium">Quiz Progress</span>
-            <span className="text-sm text-gray-600">
-              {getAnsweredCount()} of {quiz.questions.length} answered
-            </span>
-          </div>
-          <Progress value={getProgressPercentage()} className="h-2" />
-        </CardContent>
-      </Card>
-
-      {/* Question Card */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Badge variant="outline">
-                Question {currentQuestion + 1} of {quiz.questions.length}
-              </Badge>
-              <Badge className="bg-blue-100 text-blue-800">
-                {currentQ.points} points
-              </Badge>
-              {currentQ.required && <Badge variant="secondary">Required</Badge>}
-              {currentQ.timeLimit && (
-                <Badge variant="outline">
-                  <Clock className="h-3 w-3 mr-1" />
-                  {currentQ.timeLimit}s
-                </Badge>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              {answers[currentQ.id] && (
-                <CheckCircle className="h-4 w-4 text-green-500" />
-              )}
-            </div>
-          </div>
-
-          <CardTitle className="text-lg leading-relaxed mt-4">
-            {currentQ.questionText}
-          </CardTitle>
-
-          {currentQ.hint && (
-            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-700">
-                <span className="font-medium">Hint:</span> {currentQ.hint}
-              </p>
-            </div>
-          )}
-        </CardHeader>
-
-        <CardContent>{renderQuestion(currentQ, currentQuestion)}</CardContent>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={() => setCurrentQuestion((prev) => Math.max(0, prev - 1))}
-          disabled={currentQuestion === 0}
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Previous
-        </Button>
-
-        <div className="flex items-center gap-2">
-          {quiz.questions.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentQuestion(index)}
-              className={`w-8 h-8 rounded-full text-sm font-medium transition-colors ${
-                index === currentQuestion
-                  ? "bg-blue-600 text-white"
-                  : answers[quiz.questions[index].id]
-                  ? "bg-green-100 text-green-800 border border-green-200"
-                  : "bg-gray-100 text-gray-600 border border-gray-200"
-              }`}
-            >
-              {index + 1}
-            </button>
-          ))}
-        </div>
-
-        {currentQuestion < quiz.questions.length - 1 ? (
-          <Button
-            onClick={() =>
-              setCurrentQuestion((prev) =>
-                Math.min(quiz.questions.length - 1, prev + 1)
-              )
-            }
-          >
-            Next
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        ) : (
-          <AlertDialog
-            open={showSubmitDialog}
-            onOpenChange={setShowSubmitDialog}
-          >
-            <AlertDialogTrigger asChild>
-              <Button
-                className="bg-green-600 hover:bg-green-700"
-                disabled={!canSubmit()}
-              >
-                <Send className="h-4 w-4 mr-2" />
-                Submit Quiz
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Submit Quiz?</AlertDialogTitle>
-                <AlertDialogDescription className="space-y-2">
-                  <p>
-                    You have answered {getAnsweredCount()} out of{" "}
-                    {quiz.questions.length} questions.
-                  </p>
-                  {!canSubmit() && (
-                    <div className="text-red-600 flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4" />
-                      Please answer all required questions before submitting.
-                    </div>
-                  )}
-                  <p>
-                    Once submitted, you cannot change your answers. Are you sure
-                    you want to submit?
-                  </p>
-                  {timeLeft !== null && timeLeft < 60 && (
-                    <div className="text-amber-600 flex items-center gap-2">
-                      <Timer className="h-4 w-4" />
-                      Less than 1 minute remaining!
-                    </div>
-                  )}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isSubmitting}>
-                  Review Answers
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleSubmitQuiz}
-                  disabled={!canSubmit() || isSubmitting}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Submitting...
-                    </>
-                  ) : (
-                    "Submit Quiz"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-      </div>
-
-      {/* Auto-save indicator */}
-      <div className="text-center">
-        <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
-          <Save className="h-3 w-3" />
-          Answers are saved automatically as you type
-        </p>
-      </div>
-
-      {/* Quiz Stats */}
-      {attempts.length > 0 && (
-        <Card>
-          <CardContent className="pt-6">
-            <h3 className="font-medium mb-3">Previous Attempts</h3>
-            <div className="space-y-2">
-              {attempts.slice(0, 3).map((attempt, index) => (
-                <div
-                  key={attempt.id}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span>Attempt {attempts.length - index}</span>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={attempt.passed ? "default" : "destructive"}>
-                      {attempt.score}%
-                    </Badge>
-                    <span className="text-gray-500">
-                      {attempt.questionsCorrect}/{attempt.questionsTotal}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    <StudentLayout
+      title={serializedCourse.title}
+      description={serializedCourse.shortDescription as string}
+    >
+      <StudentCourseOverview
+        course={serializedCourse}
+        enrollment={serializedEnrollment}
+        userId={session.user.id}
+      />
+    </StudentLayout>
   );
 }
 
-// students/QuizResults.tsx
+// components/students/StudentCourseOverview.tsx
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  Award,
   BookOpen,
-  RotateCcw,
-  ArrowLeft,
+  Clock,
   ChevronDown,
   ChevronRight,
-  Trophy,
-  AlertCircle,
-  Target,
+  Play,
+  CheckCircle,
+  Lock,
+  FileText,
+  Video,
+  Award,
+  Users,
   Calendar,
+  Target,
   BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 
-interface Question {
-  id: string;
-  questionText: string;
-  questionType: string;
-}
-interface QuizAnswer {
-  question: Question;
-  questionId: string;
-  points: number;
-  earnedPoints: number;
-  textAnswer: string;
-  isCorrect: boolean;
-  feedback?: string;
-}
-
-interface QuizAttempt {
-  id: string;
-  score: number;
-  questionsTotal: number;
-  questionsCorrect: number;
-  passed: boolean;
-  completedAt: Date;
-  timeSpent: number;
-  answers: QuizAnswer[];
-}
-
-interface Quiz {
+interface Topic {
   id: string;
   title: string;
+  duration?: number;
+  topicType: string;
+  isRequired: boolean;
+}
+
+interface Module {
+  id: string;
+  title: string;
+  description?: string;
+  order: number;
+  duration: number;
   passingScore: number;
-  allowRetakes: boolean;
-  maxAttempts?: number;
-  topic: {
-    id: string;
-    title: string;
-    module: {
-      id: string;
-      title: string;
-      course: {
-        id: string;
-        title: string;
-      };
-    };
+  prerequisiteModuleId?: string;
+  isRequired: boolean;
+  topics: Topic[];
+  _count: {
+    topics: number;
   };
 }
 
-interface QuizResultsProps {
-  attempt: QuizAttempt;
-  quiz: Quiz;
-  allAttempts: QuizAttempt[];
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  shortDescription?: string;
+  thumbnail?: string;
+  difficulty: string;
+  duration: number;
+  passingScore: number;
+  tags: string[];
+  prerequisites: string[];
+  learningOutcomes: string[];
+  creator: {
+    firstName: string;
+    lastName: string;
+  };
+  modules: Module[];
+  _count: {
+    enrollments: number;
+  };
+}
+
+interface Enrollment {
+  id: string;
+  status: string;
+  overallProgress: number;
+  enrolledAt: string;
+  completedAt?: string;
+}
+
+interface StudentCourseOverviewProps {
+  course: Course;
+  enrollment: Enrollment;
   userId: string;
-  topicId?: string;
 }
 
-function formatTime(seconds: number) {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
-}
-
-function getScoreColor(score: number, passingScore: number) {
-  if (score >= passingScore) {
-    return "text-green-600";
-  } else if (score >= passingScore * 0.7) {
-    return "text-yellow-600";
-  } else {
-    return "text-red-600";
+function getDifficultyColor(difficulty: string) {
+  switch (difficulty) {
+    case "BEGINNER":
+      return "bg-green-100 text-green-800 border-green-200";
+    case "INTERMEDIATE":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    case "ADVANCED":
+      return "bg-red-100 text-red-800 border-red-200";
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200";
   }
 }
 
-function getScoreBadgeStyle(passed: boolean) {
-  if (passed) {
-    return "bg-green-100 text-green-800 border-green-200";
-  } else {
-    return "bg-red-100 text-red-800 border-red-200";
+function getTopicIcon(type: string) {
+  switch (type) {
+    case "VIDEO":
+      return <Video className="h-4 w-4" />;
+    case "PRACTICE":
+      return <Target className="h-4 w-4" />;
+    case "ASSESSMENT":
+      return <Award className="h-4 w-4" />;
+    case "RESOURCE":
+      return <FileText className="h-4 w-4" />;
+    default:
+      return <BookOpen className="h-4 w-4" />;
   }
 }
 
-function QuestionReview({
-  answer,
-  index,
+function ModuleCard({
+  module,
+  isLocked,
+  isExpanded,
+  onToggle,
+  courseId,
 }: {
-  answer: QuizAnswer;
-  index: number;
+  module: Module;
+  isLocked: boolean;
+  isExpanded: boolean;
+  onToggle: () => void;
+  courseId: string;
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const renderAnswer = (answerData: string | string[]) => {
-    if (Array.isArray(answerData)) {
-      return answerData.join(", ");
-    }
-    return answerData;
-  };
+  // Mock progress data - in real app, this would come from TopicProgress
+  const completedTopics = Math.floor(module.topics.length * 0.3); // 30% completion mock
+  const progressPercentage =
+    module.topics.length > 0
+      ? Math.round((completedTopics / module.topics.length) * 100)
+      : 0;
 
   return (
     <Card
-      className={`border-l-4 ${
-        answer.isCorrect ? "border-l-green-500" : "border-l-red-500"
-      }`}
+      className={`transition-all duration-200 ${isLocked ? "opacity-60" : ""}`}
     >
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <Collapsible open={isExpanded && !isLocked} onOpenChange={onToggle}>
         <CollapsibleTrigger>
           <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  {answer.isCorrect ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : (
-                    <XCircle className="h-5 w-5 text-red-500" />
-                  )}
+                  {
+                    isLocked ? (
+                      <Lock className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      progressPercentage === 100 && (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      )
+                    )
+                  }
                 </div>
-                <div>
-                  <CardTitle className="text-base">
-                    Question {index + 1}
+                <div className="flex-grow">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    Module {module.order}: {module.title}
+                    {module.isRequired && (
+                      <Badge variant="secondary" className="text-xs">
+                        Required
+                      </Badge>
+                    )}
                   </CardTitle>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {answer.question.questionText.length > 80
-                      ? `${answer.question.questionText.substring(0, 80)}...`
-                      : answer.question.questionText}
-                  </p>
+                  <CardDescription className="flex items-center gap-4 mt-1">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      {module.duration} min
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <BookOpen className="h-3 w-3" />
+                      {module.topics.length} topics
+                    </span>
+                    <span className="text-xs">
+                      Passing: {module.passingScore}%
+                    </span>
+                  </CardDescription>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="text-sm font-medium">
-                    {answer.earnedPoints}/{answer.points} pts
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {answer.question.questionType
-                      .toLowerCase()
-                      .replace("_", " ")}
-                  </Badge>
+              <div className="text-right">
+                <div className="text-sm font-medium text-gray-900">
+                  {progressPercentage}%
                 </div>
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
+                <div className="w-20 h-2 bg-gray-200 rounded-full mt-1">
+                  <div
+                    className="h-2 bg-blue-600 rounded-full transition-all"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
@@ -1261,50 +698,82 @@ function QuestionReview({
 
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Question:</h4>
-                <p className="text-gray-700">{answer.question.questionText}</p>
-              </div>
+            {module.description && (
+              <p className="text-sm text-gray-600 mb-4">{module.description}</p>
+            )}
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">
-                    Your Answer:
-                  </h4>
+            <div className="space-y-2">
+              {module.topics.map((topic, index) => {
+                const isTopicCompleted = index < completedTopics;
+                const isTopicCurrent = index === completedTopics && !isLocked;
+
+                return (
                   <div
-                    className={`p-3 rounded-lg border ${
-                      answer.isCorrect
+                    key={topic.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                      isTopicCompleted
                         ? "bg-green-50 border-green-200"
-                        : "bg-red-50 border-red-200"
+                        : isTopicCurrent
+                        ? "bg-blue-50 border-blue-200"
+                        : "bg-gray-50 border-gray-200"
                     }`}
                   >
-                    <p className="text-sm">{renderAnswer(answer.textAnswer)}</p>
-                  </div>
-                </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        {isTopicCompleted ? (
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                        ) : (
+                          getTopicIcon(topic.topicType)
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{topic.title}</div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          {topic.duration && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {topic.duration} min
+                            </span>
+                          )}
+                          <Badge
+                            variant="outline"
+                            className="text-xs px-1 py-0"
+                          >
+                            {topic.topicType.toLowerCase()}
+                          </Badge>
+                          {topic.isRequired && (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs px-1 py-0"
+                            >
+                              Required
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-                {!answer.isCorrect && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">
-                      Correct Answer:
-                    </h4>
-                    <div className="p-3 rounded-lg border bg-green-50 border-green-200">
-                      <p className="text-sm">
-                        {renderAnswer(answer.textAnswer)}
-                      </p>
+                    <div className="flex-shrink-0">
+                      {isTopicCompleted || isTopicCurrent ? (
+                        <Link href={`/student/topics/${topic.id}`}>
+                          <Button
+                            size="sm"
+                            variant={isTopicCompleted ? "outline" : "default"}
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            {isTopicCompleted ? "Review" : "Start"}
+                          </Button>
+                        </Link>
+                      ) : (
+                        <Button size="sm" variant="ghost" disabled>
+                          <Lock className="h-3 w-3 mr-1" />
+                          Locked
+                        </Button>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-
-              {answer.feedback && (
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Feedback:</h4>
-                  <div className="p-3 rounded-lg border bg-blue-50 border-blue-200">
-                    <p className="text-sm text-blue-800">{answer.feedback}</p>
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </div>
           </CardContent>
         </CollapsibleContent>
@@ -1313,288 +782,167 @@ function QuestionReview({
   );
 }
 
-export function QuizResults({
-  attempt,
-  quiz,
-  allAttempts,
+export function StudentCourseOverview({
+  course,
+  enrollment,
   userId,
-  topicId,
-}: QuizResultsProps) {
-  const router = useRouter();
-  const [showAllQuestions, setShowAllQuestions] = useState(false);
+}: StudentCourseOverviewProps) {
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(
+    new Set()
+  );
 
-  const handleRetakeQuiz = () => {
-    router.push(
-      `/student/quiz/${quiz.id}${topicId ? `?topicId=${topicId}` : ""}`
-    );
+  const toggleModule = (moduleId: string) => {
+    const newExpanded = new Set(expandedModules);
+    if (newExpanded.has(moduleId)) {
+      newExpanded.delete(moduleId);
+    } else {
+      newExpanded.add(moduleId);
+    }
+    setExpandedModules(newExpanded);
   };
 
-  const canRetake =
-    quiz.allowRetakes &&
-    (!quiz.maxAttempts || allAttempts.length < quiz.maxAttempts);
+  // Determine which modules are locked based on prerequisites
+  const getLockedModules = () => {
+    const completed = new Set<string>(); // Mock - would come from ModuleProgress
+    const locked = new Set<string>();
 
-  const correctAnswers = attempt.answers.filter((a) => a.isCorrect).length;
-  const incorrectAnswers = attempt.answers.length - correctAnswers;
+    course.modules.forEach((module) => {
+      if (
+        module.prerequisiteModuleId &&
+        !completed.has(module.prerequisiteModuleId)
+      ) {
+        locked.add(module.id);
+      }
+    });
+
+    return locked;
+  };
+
+  const lockedModules = getLockedModules();
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center space-x-2 text-sm text-gray-500">
-        <Link
-          href={`/student/courses/${quiz.topic.module.course.id}`}
-          className="hover:text-gray-700"
-        >
-          {quiz.topic.module.course.title}
-        </Link>
-        <span>/</span>
-        <Link
-          href={`/student/topics/${quiz.topic.id}`}
-          className="hover:text-gray-700"
-        >
-          {quiz.topic.title}
-        </Link>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">Quiz Results</span>
-      </nav>
-
-      {/* Results Header */}
-      <Card
-        className={`border-t-4 ${
-          attempt.passed ? "border-t-green-500" : "border-t-red-500"
-        }`}
-      >
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl flex items-center gap-3">
-                {attempt.passed ? (
-                  <Trophy className="h-6 w-6 text-green-500" />
-                ) : (
-                  <AlertCircle className="h-6 w-6 text-red-500" />
-                )}
-                Quiz {attempt.passed ? "Passed!" : "Not Passed"}
-              </CardTitle>
-              <p className="text-gray-600 mt-1">{quiz.title}</p>
-            </div>
-            <Badge className={getScoreBadgeStyle(attempt.passed)}>
-              {attempt.passed ? "PASSED" : "FAILED"}
-            </Badge>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {/* Score Overview */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
-            <div className="text-center">
-              <div
-                className={`text-3xl font-bold ${getScoreColor(
-                  attempt.score,
-                  quiz.passingScore
-                )}`}
-              >
-                {attempt.score}%
+    <div className="space-y-6">
+      {/* Course Header */}
+      <div className="bg-white rounded-lg border">
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge className={getDifficultyColor(course.difficulty)}>
+                  {course.difficulty}
+                </Badge>
+                <Badge
+                  variant="secondary"
+                  className="bg-blue-100 text-blue-800"
+                >
+                  Enrolled
+                </Badge>
               </div>
-              <p className="text-sm text-gray-600">Final Score</p>
-            </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                {course.title}
+              </h1>
+              <p className="text-gray-600 mb-4">
+                {course.shortDescription || course.description}
+              </p>
 
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-700">
-                {attempt.questionsCorrect}/{attempt.questionsTotal}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <span>{course.duration} hours</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-gray-400" />
+                  <span>{course.modules.length} modules</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-gray-400" />
+                  <span>{course._count.enrollments} students</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-gray-400" />
+                  <span>{course.passingScore}% to pass</span>
+                </div>
               </div>
-              <p className="text-sm text-gray-600">Points Earned</p>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">
-                {correctAnswers}/{attempt.answers.length}
-              </div>
-              <p className="text-sm text-gray-600">Correct Answers</p>
-            </div>
-
-            <div className="text-center">
-              <div className="text-3xl font-bold text-gray-700">
-                {formatTime(attempt.timeSpent)}
-              </div>
-              <p className="text-sm text-gray-600">Time Spent</p>
             </div>
           </div>
 
-          {/* Progress Bar */}
-          <div className="mb-6">
+          {/* Progress Overview */}
+          <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Score Breakdown</span>
-              <span className="text-sm text-gray-600">
-                Passing Score: {quiz.passingScore}%
+              <h3 className="font-medium">Course Progress</h3>
+              <span className="text-sm font-medium">
+                {enrollment.overallProgress}%
               </span>
             </div>
-            <div className="relative">
-              <Progress value={attempt.score} className="h-3" />
-              <div
-                className="absolute top-0 h-3 w-0.5 bg-red-500 rounded"
-                style={{ left: `${quiz.passingScore}%` }}
-              />
-            </div>
+            <Progress value={enrollment.overallProgress} className="h-2" />
             <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0%</span>
-              <span className="text-red-600">
-                ← {quiz.passingScore}% required
+              <span>
+                Started {new Date(enrollment.enrolledAt).toLocaleDateString()}
               </span>
-              <span>100%</span>
+              <span>
+                {enrollment.completedAt
+                  ? `Completed ${new Date(
+                      enrollment.completedAt
+                    ).toLocaleDateString()}`
+                  : `${course.modules.length - lockedModules.size} of ${
+                      course.modules.length
+                    } modules available`}
+              </span>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="font-medium">Correct: {correctAnswers}</span>
-              </div>
-            </div>
-
-            <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-              <div className="flex items-center gap-2">
-                <XCircle className="h-5 w-5 text-red-500" />
-                <span className="font-medium">
-                  Incorrect: {incorrectAnswers}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-blue-500" />
-                <span className="font-medium">
-                  Completed: {attempt.completedAt.toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Action Buttons */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              {!attempt.passed ? (
-                <p className="text-sm text-gray-600 mb-2">
-                  Don't worry! You can review your answers and try again.
-                </p>
-              ) : (
-                <p className="text-sm text-gray-600 mb-2">
-                  Congratulations! You've successfully completed this quiz.
-                </p>
-              )}
-              {allAttempts.length > 0 && (
-                <p className="text-xs text-gray-500">
-                  Attempt {allAttempts.length} of {quiz.maxAttempts || "∞"}
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-3">
-              {canRetake && (
-                <Button onClick={handleRetakeQuiz} variant="outline">
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Retake Quiz
-                </Button>
-              )}
-
-              <Link
-                href={
-                  topicId
-                    ? `/student/topics/${topicId}`
-                    : `/student/courses/${quiz.topic.module.course.id}`
-                }
-              >
-                <Button>
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  {topicId ? "Back to Topic" : "Back to Course"}
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Question Review */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Question Review
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowAllQuestions(!showAllQuestions)}
-            >
-              {showAllQuestions ? "Hide" : "Show"} All Questions
-            </Button>
-          </CardTitle>
-        </CardHeader>
-
-        {showAllQuestions && (
-          <CardContent>
-            <div className="space-y-4">
-              {attempt.answers.map((answer, index) => (
-                <QuestionReview
-                  key={answer.questionId}
-                  answer={answer}
-                  index={index}
-                />
-              ))}
-            </div>
-          </CardContent>
-        )}
-      </Card>
-
-      {/* Previous Attempts (if any) */}
-      {allAttempts.length > 1 && (
+      {/* Learning Outcomes */}
+      {course.learningOutcomes && course.learningOutcomes.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Attempt History
+              <Target className="h-5 w-5" />
+              Learning Outcomes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {allAttempts.map((pastAttempt, index) => (
-                <div
-                  key={pastAttempt.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${
-                    pastAttempt.id === attempt.id
-                      ? "bg-blue-50 border-blue-200"
-                      : "bg-gray-50"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline">Attempt {index + 1}</Badge>
-                    <span className="text-sm">
-                      {pastAttempt.completedAt.toLocaleDateString()}
-                    </span>
-                    {pastAttempt.id === attempt.id && (
-                      <Badge variant="secondary">Current</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`font-medium ${getScoreColor(
-                        pastAttempt.score,
-                        quiz.passingScore
-                      )}`}
-                    >
-                      {pastAttempt.score}%
-                    </span>
-                    <Badge className={getScoreBadgeStyle(pastAttempt.passed)}>
-                      {pastAttempt.passed ? "PASSED" : "FAILED"}
-                    </Badge>
-                  </div>
-                </div>
+            <ul className="space-y-2">
+              {course.learningOutcomes.map((outcome, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm">{outcome}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Course Modules */}
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold">Course Content</h2>
+
+        {course.modules.map((module) => (
+          <ModuleCard
+            key={module.id}
+            module={module}
+            isLocked={lockedModules.has(module.id)}
+            isExpanded={expandedModules.has(module.id)}
+            onToggle={() => toggleModule(module.id)}
+            courseId={course.id}
+          />
+        ))}
+      </div>
+
+      {/* Course Tags */}
+      {course.tags && course.tags.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Topics Covered</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {course.tags.map((tag) => (
+                <Badge key={tag} variant="outline">
+                  {tag}
+                </Badge>
               ))}
             </div>
           </CardContent>
@@ -1604,46 +952,484 @@ export function QuizResults({
   );
 }
 
+// app/(dashboard)/student/topics/[topicId]/page.tsx
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { StudentLayout } from "@/components/layout/StudentLayout";
+import { TopicService } from "@/lib/services/topicService";
+import { EnrollmentService } from "@/lib/services/enrollmentService";
+import { StudentTopicViewer } from "@/components/students/StudentTopicViewer";
 
+interface PageProps {
+  params: Promise<{ topicId: string }>;
+}
 
-// In your results API endpoint, enhance the data fetching:
-const attemptWithAnswers = await prisma.quizAttempt.findUnique({
-  where: { id: attemptId },
-  include: {
-    answers: {
-      include: {
-        question: {
-          include: {
-            options: true // Include all options to show correct answers
-          }
-        }
-      }
-    },
-    quiz: {
-      include: {
-        questions: {
-          include: {
-            options: true
-          }
-        }
-      }
+async function getTopicData(topicId: string, userId: string) {
+  try {
+    const topic = await TopicService.getTopicById(topicId);
+
+    if (!topic) {
+      return null;
     }
+
+    // Check if user is enrolled in the course
+    const enrollment = await EnrollmentService.getEnrollment(
+      userId,
+      topic.module.course.id
+    );
+
+    if (!enrollment || enrollment.status !== "ACTIVE") {
+      return null;
+    }
+
+    // Check if topic is accessible (prerequisites met)
+    // In real app, this would check TopicProgress for prerequisite completion
+    const canAccess = true; // Simplified for now
+
+    return {
+      topic,
+      enrollment,
+      canAccess,
+    };
+  } catch (error) {
+    console.error("Error fetching topic data:", error);
+    return null;
   }
-});
+}
 
-// Process the answers to include correct answer texts
-const processedAnswers = attemptWithAnswers.answers.map(answer => {
-  const question = answer.question;
-  const correctOptions = question.options.filter(opt => opt.isCorrect);
-  const correctAnswerTexts = correctOptions.map(opt => opt.text);
+export default async function StudentTopicDetailsPage({ params }: PageProps) {
+  const session = await getServerSession(authOptions);
 
-  return {
-    ...answer,
-    question: {
-      ...question,
-      correctAnswers: correctAnswerTexts // Add correct answer texts
+  if (!session) {
+    redirect("/login");
+  }
+
+  const { topicId } = await params;
+  const data = await getTopicData(topicId, session.user.id);
+
+  if (!data || !data.canAccess) {
+    notFound();
+  }
+
+  const { topic, enrollment } = data;
+
+  return (
+    <StudentLayout title={topic.title} description={`${topic.description}`}>
+      <StudentTopicViewer
+        topic={topic}
+        enrollment={enrollment}
+        userId={session.user.id}
+      />
+    </StudentLayout>
+  );
+}
+
+// components/students/StudentTopicViewer.tsx
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import {
+  BookOpen,
+  Clock,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Play,
+  FileText,
+  Video,
+  Award,
+  Target,
+  AlertTriangle,
+  User,
+  Calendar,
+} from "lucide-react";
+import Link from "next/link";
+import { StudentCourseService } from "@/lib/services/student/courseService";
+
+interface Quiz {
+  id: string;
+  title: string;
+  passingScore: number;
+  questions: Array<{
+    id: string;
+    questionType: string;
+    points: number;
+  }>;
+}
+
+interface Topic {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  content: string;
+  orderIndex: number;
+  duration?: number;
+  topicType: string;
+  videoUrl?: string;
+  attachments: string[];
+  passingScore: number;
+  maxAttempts?: number;
+  isRequired: boolean;
+  allowSkip: boolean;
+  prerequisiteTopic?: {
+    id: string;
+    title: string;
+  };
+  module: {
+    id: string;
+    title: string;
+    course: {
+      id: string;
+      title: string;
+      creator: {
+        firstName: string;
+        lastName: string;
+      };
+    };
+  };
+  quizzes: Quiz[];
+}
+
+interface Enrollment {
+  id: string;
+  status: string;
+  overallProgress: number;
+}
+
+interface StudentTopicViewerProps {
+  topic: Topic;
+  enrollment: Enrollment;
+  userId: string;
+}
+
+function getTopicIcon(type: string) {
+  switch (type) {
+    case "VIDEO":
+      return <Video className="h-5 w-5" />;
+    case "PRACTICE":
+      return <Target className="h-5 w-5" />;
+    case "ASSESSMENT":
+      return <Award className="h-5 w-5" />;
+    case "RESOURCE":
+      return <FileText className="h-5 w-5" />;
+    default:
+      return <BookOpen className="h-5 w-5" />;
+  }
+}
+
+function getTopicTypeColor(type: string) {
+  switch (type) {
+    case "VIDEO":
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    case "PRACTICE":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "ASSESSMENT":
+      return "bg-orange-100 text-orange-800 border-orange-200";
+    case "RESOURCE":
+      return "bg-green-100 text-green-800 border-green-200";
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200";
+  }
+}
+
+export function StudentTopicViewer({
+  topic,
+  enrollment,
+  userId,
+}: StudentTopicViewerProps) {
+  const router = useRouter();
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [progressStarted, setProgressStarted] = useState(false);
+
+  // Mock progress tracking - in real app this would sync with TopicProgress
+  useEffect(() => {
+    // Mark as started when component mounts
+    if (!progressStarted) {
+      setProgressStarted(true);
+      // In real app: call API to update TopicProgress status to IN_PROGRESS
+      console.log("Marking topic as started:", topic.id);
+    }
+  }, [topic.id, progressStarted]);
+
+  const handleMarkComplete = async () => {
+    try {
+      const res = await fetch(`/api/student/topics/${topic.id}/mark-complete`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Marking topic as completed:", topic.id);
+        setIsCompleted(true);
+      } else {
+        if (!res.ok) throw new Error("Failed to fetch users");
+      }
+    } catch (error) {
+      console.error("Failed to mark topic as completed:", error);
     }
   };
-});
 
-// Return the enhanced data structure
+  const handleStartQuiz = (quizId: string) => {
+    router.push(`/student/quiz/${quizId}?topicId=${topic.id}`);
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Breadcrumb Navigation */}
+      <nav className="flex items-center space-x-2 text-sm text-gray-500">
+        <Link
+          href={`/student/courses/${topic.module.course.id}`}
+          className="hover:text-gray-700 flex items-center gap-1"
+        >
+          <ArrowLeft className="h-3 w-3" />
+          {topic.module.course.title}
+        </Link>
+        <span>/</span>
+        <span>{topic.module.title}</span>
+        <span>/</span>
+        <span className="text-gray-900 font-medium">{topic.title}</span>
+      </nav>
+
+      {/* Topic Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-3">
+                <Badge className={getTopicTypeColor(topic.topicType)}>
+                  {getTopicIcon(topic.topicType)}
+                  <span className="ml-1">{topic.topicType}</span>
+                </Badge>
+                {topic.isRequired && (
+                  <Badge variant="secondary">Required</Badge>
+                )}
+                {isCompleted && (
+                  <Badge className="bg-green-100 text-green-800 border-green-200">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Completed
+                  </Badge>
+                )}
+              </div>
+
+              <CardTitle className="text-2xl mb-2">{topic.title}</CardTitle>
+
+              {topic.description && (
+                <p className="text-gray-600 mb-4">{topic.description}</p>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                {topic.duration && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-gray-400" />
+                    <span>{topic.duration} minutes</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-gray-400" />
+                  <span>{topic.passingScore}% to pass</span>
+                </div>
+                {topic.maxAttempts && (
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-gray-400" />
+                    <span>{topic.maxAttempts} attempts max</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-400" />
+                  <span>
+                    {topic.module.course.creator.firstName}{" "}
+                    {topic.module.course.creator.lastName}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Prerequisite Warning */}
+      {topic.prerequisiteTopic && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-orange-800">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="font-medium">Prerequisite Required</span>
+            </div>
+            <p className="text-orange-700 mt-1">
+              Complete "{topic.prerequisiteTopic.title}" before accessing this
+              topic.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Video Content */}
+      {topic.videoUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Video className="h-5 w-5" />
+              Video Content
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+              <div className="text-center">
+                <Video className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500">Video Player</p>
+                <p className="text-sm text-gray-400">URL: {topic.videoUrl}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Main Content */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Content
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: topic.content }}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Attachments */}
+      {topic.attachments && topic.attachments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Resources & Attachments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3">
+              {topic.attachments.map((attachment, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">Resource {index + 1}</span>
+                    <span className="text-sm text-gray-500">{attachment}</span>
+                  </div>
+                  <Button variant="outline" size="sm">
+                    Download
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quizzes */}
+      {topic.quizzes && topic.quizzes.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="h-5 w-5" />
+              Assessments
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {topic.quizzes.map((quiz) => (
+                <div
+                  key={quiz.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                >
+                  <div>
+                    <h4 className="font-medium">{quiz.title}</h4>
+                    <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                      <span>{quiz.questions.length} questions</span>
+                      <span>Passing: {quiz.passingScore}%</span>
+                      <span>
+                        Total:{" "}
+                        {quiz.questions.reduce((sum, q) => sum + q.points, 0)}{" "}
+                        points
+                      </span>
+                    </div>
+                  </div>
+                  <Button onClick={() => handleStartQuiz(quiz.id)}>
+                    <Play className="h-4 w-4 mr-2" />
+                    Start Quiz
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Action Buttons */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div>
+              {!isCompleted && (
+                <p className="text-sm text-gray-600 mb-2">
+                  Mark this topic as complete when you're done studying the
+                  material.
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              {topic.allowSkip && !topic.isRequired && (
+                <Button variant="outline">Skip Topic</Button>
+              )}
+              {!isCompleted ? (
+                <Button onClick={handleMarkComplete}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Mark Complete
+                </Button>
+              ) : (
+                <Button variant="outline">
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Completed
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex justify-between pt-6">
+        <Link href={`/student/courses/${topic.module.course.id}`}>
+          <Button variant="outline">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Course
+          </Button>
+        </Link>
+
+        <div className="text-center">
+          <p className="text-sm text-gray-500">
+            Topic {topic.orderIndex} in {topic.module.title}
+          </p>
+        </div>
+
+        <Button variant="outline" disabled>
+          Next Topic
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
+    </div>
+  );
+}

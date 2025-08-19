@@ -152,24 +152,13 @@ function ModuleCard({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="flex-shrink-0">
-                  {
-                    isLocked ? (
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      progressPercentage === 100 && (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )
+                  {isLocked ? (
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    progressPercentage === 100 && (
+                      <CheckCircle className="h-5 w-5 text-green-500" />
                     )
-                    // : (
-                    //   <div className="relative">
-                    //     {isExpanded ? (
-                    //       <ChevronDown className="h-5 w-5 text-gray-600" />
-                    //     ) : (
-                    //       <ChevronRight className="h-5 w-5 text-gray-600" />
-                    //     )}
-                    //   </div>
-                    // )
-                  }
+                  )}
                 </div>
                 <div className="flex-grow">
                   <CardTitle className="text-lg flex items-center gap-2">
