@@ -315,7 +315,7 @@ model QuizAttempt {
   @@map("quiz_attempts")
 }
 
-How can I progressively globally update progress in the following components.Such that students can see their progress of course, module, and topic. Please just provide suggested code changes, I have bulk of the code already. It would be unnecessary to provide the codes I already possess. More so on the topic details page i.e. topics/[topicId]/ if students have exhausted their attempts they should be unable to see the start quiz button in the assessment section. If a module, course, topic possess an assessment student can only mark them complete if the required assessments have been passed.
+How can I progressively globally update progress in the following components.Such that students can see their progress of course, module, and topic. Please just provide suggested code changes, I have bulk of the code already. It would be unnecessary to provide the codes I already possess. More so on the topic details page i.e. topics/[topicId]/ if students have exhausted their attempts they should be unable to see the start quiz button in the assessment section. If a module, course, topic possess an assessment student can only mark them complete if the required assessments have been passed. If you required more details, please request, avoid hallucinating.
 
 // app/(dashboard)/student/courses/page.tsx
 async function getCoursesData(
@@ -1433,3 +1433,251 @@ export function StudentTopicViewer({
     </div>
   );
 }
+
+
+// lib/utils/progressUtils.ts - Utility functions for progress calculations
+export class ProgressUtils {
+  // Calculate module completion percentage based on required topics
+  static calculateModuleProgress(
+    moduleTopics: any[],
+    topicProgresses: any[]
+  ): {
+    percentage: number;
+    completed: number;
+    total: number;
+    passed: boolean;
+  } {
+    const requiredTopics = moduleTopics.filter(topic => topic.isRequired);
+    const completedTopics = requiredTopics.filter(topic => {
+      const progress = topicProgresses.find(p => p.topicId === topic.id);
+      return progress && progress.status === 'COMPLETED';
+    });
+
+    const percentage = requiredTopics.length > 0 
+      ? Math.round((completedTopics.length / requiredTopics.length) * 100)
+      : 0;
+
+    return {
+      percentage,
+      completed: completedTopics.length,
+      total: requiredTopics.length,
+      passed: percentage === 100,
+    };
+  }
+
+  // Calculate course completion percentage based on required modules
+  static calculateCourseProgress(
+    courseModules: any[],
+    moduleProgresses: any[]
+  ): {
+    percentage: number;
+    completed: number;
+    total: number;
+    passed: boolean;
+  } {
+    const requiredModules = courseModules.filter(module => module.isRequired);
+    const completedModules = requiredModules.filter(module => {
+      const progress = moduleProgresses.find(p => p.moduleId === module.id);
+      return progress && progress.status === 'COMPLETED';
+    });
+
+    const percentage = requiredModules.length > 0 
+      ? Math.round((completedModules.length / requiredModules.length) * 100)
+      : 0;
+
+    return {
+      percentage,
+      completed: completedModules.length,
+      total: requiredModules.length,
+      passed: percentage === 100,
+    };
+  }
+
+  // Get next available topic for a user in a module
+  static getNextAvailableTopic(
+    moduleTopics: any[],
+    topicProgresses: any[]
+  ): any | null {
+    const sortedTopics = moduleTopics.sort((a, b) => a.orderIndex - b.orderIndex);
+    
+    for (const topic of sortedTopics) {
+      const progress = topicProgresses.find(p => p.topicId === topic.id);
+      
+      // If topic is not started or in progress, check prerequisites
+      if (!progress || progress.status !== 'COMPLETED') {
+        if (topic.prerequisiteTopicId) {
+          const prereqProgress = topicProgresses.find(
+            p => p.topicId === topic.prerequisiteTopicId
+          );
+          if (!prereqProgress || prereqProgress.status !== 'COMPLETED') {
+            continue; // Skip this topic, prerequisite not met
+          }
+        }
+        
+        return topic; // This is the next available topic
+      }
+    }
+    
+    return null; // All topics completed
+  }
+
+  // Check if a student can mark a topic as complete
+  static canCompleteTopicValue(
+    topic: any,
+    topicProgress: any,
+    remainingAttempts: { [quizId: string]: number }
+  ): {
+    canComplete: boolean;
+    reason?: string;
+  } {
+    // If topic has no assessments, can always complete
+    if (!topic.quizzes || topic.quizzes.length === 0) {
+      return { canComplete: true };
+    }
+
+    // Check if all quizzes have been passed
+    const allQuizzesPassed = topic.quizzes.every((quiz: any) => {
+      return quiz.attempts?.some((attempt: any) => attempt.passed);
+    });
+
+    if (!allQuizzesPassed) {
+      // Check if there are attempts remaining
+      const hasAttemptsRemaining = topic.quizzes.some((quiz: any) => {
+        const remaining = remainingAttempts[quiz.id];
+        return remaining === -1 || remaining > 0;
+      });
+
+      if (hasAttemptsRemaining) {
+        return {
+          canComplete: false,
+          reason: "Complete all required assessments before marking as complete."
+        };
+      } else {
+        return {
+          canComplete: false,
+          reason: "No attempts remaining for required assessments."
+        };
+      }
+    }
+
+    return { canComplete: true };
+  }
+}
+
+// components/ui/ProgressIndicator.tsx - Reusable progress component
+import React from 'react';
+import { Progress } from '@/components/ui/progress';
+import { CheckCircle, Circle, AlertCircle } from 'lucide-react';
+
+interface ProgressIndicatorProps {
+  progress: number;
+  status?: 'not_started' | 'in_progress' | 'completed' | 'failed';
+  showIcon?: boolean;
+  showPercentage?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  className?: string;
+}
+
+export function ProgressIndicator({
+  progress,
+  status = 'not_started',
+  showIcon = true,
+  showPercentage = true,
+  size = 'md',
+  className = '',
+}: ProgressIndicatorProps) {
+  const getStatusIcon = () => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'failed':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case 'in_progress':
+        return <Circle className="h-4 w-4 text-blue-500" />;
+      default:
+        return <Circle className="h-4 w-4 text-gray-400" />;
+    }
+  };
+
+  const getProgressColor = () => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-500';
+      case 'failed':
+        return 'bg-red-500';
+      case 'in_progress':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-300';
+    }
+  };
+
+  const sizeClasses = {
+    sm: 'h-1',
+    md: 'h-2',
+    lg: 'h-3',
+  };
+
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      {showIcon && getStatusIcon()}
+      <div className="flex-1">
+        <div className={`w-full bg-gray-200 rounded-full ${sizeClasses[size]}`}>
+          <div
+            className={`${sizeClasses[size]} rounded-full transition-all duration-300 ${getProgressColor()}`}
+            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+          />
+        </div>
+      </div>
+      {showPercentage && (
+        <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-right">
+          {progress}%
+        </span>
+      )}
+    </div>
+  );
+}
+
+// hooks/useProgress.ts - Custom hook for progress management
+import { useState, useEffect, useCallback } from 'react';
+
+interface ProgressData {
+  topicProgresses: any[];
+  moduleProgresses: any[];
+  enrollment: any;
+  loading: boolean;
+  error: string | null;
+}
+
+export function useProgress(courseId: string) {
+  const [data, setData] = useState<ProgressData>({
+    topicProgresses: [],
+    moduleProgresses: [],
+    enrollment: null,
+    loading: true,
+    error: null,
+  });
+
+  const fetchProgressData = useCallback(async () => {
+    try {
+      setData(prev => ({ ...prev, loading: true, error: null }));
+      
+      const response = await fetch(`/api/student/courses/${courseId}/progress`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch progress data');
+      }
+      
+      const progressData = await response.json();
+      
+      setData({
+        topicProgresses: progressData.topicProgresses || [],
+        moduleProgresses: progressData.moduleProgresses || [],
+        enrollment: progressData.enrollment,
+        loading: false,
+        error: null,
+      });
+    } catch (error) {
+      setData(prev => ({
+        ...prev,
+        loading: false,
+        error

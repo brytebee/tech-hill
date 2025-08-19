@@ -7,16 +7,44 @@ import { StudentLayout } from "@/components/layout/StudentLayout";
 import { CourseService } from "@/lib/services/courseService";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
 import { StudentCourseOverview } from "@/components/students/StudentCourseOverview";
+import { ProgressService } from "@/lib/services/progressService";
 
 interface PageProps {
   params: Promise<{ courseId: string }>;
 }
 
+// async function getCourseData(courseId: string, userId: string) {
+//   try {
+//     const [course, enrollment] = await Promise.all([
+//       CourseService.getCourseById(courseId),
+//       EnrollmentService.getEnrollment(userId, courseId),
+//     ]);
+
+//     if (!course) {
+//       return null;
+//     }
+
+//     // Only allow access to published courses for students
+//     if (course.status !== "PUBLISHED") {
+//       return null;
+//     }
+
+//     return {
+//       course,
+//       enrollment,
+//     };
+//   } catch (error) {
+//     console.error("Error fetching course data:", error);
+//     return null;
+//   }
+// }
+
 async function getCourseData(courseId: string, userId: string) {
   try {
-    const [course, enrollment] = await Promise.all([
+    const [course, enrollment, progressData] = await Promise.all([
       CourseService.getCourseById(courseId),
       EnrollmentService.getEnrollment(userId, courseId),
+      ProgressService.getCourseProgressData(userId, courseId),
     ]);
 
     if (!course) {
@@ -31,6 +59,7 @@ async function getCourseData(courseId: string, userId: string) {
     return {
       course,
       enrollment,
+      progressData,
     };
   } catch (error) {
     console.error("Error fetching course data:", error);
@@ -87,6 +116,7 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
         course={serializedCourse}
         enrollment={serializedEnrollment}
         userId={session.user.id}
+        progressData={data.progressData} // Pass the progress data
       />
     </StudentLayout>
   );

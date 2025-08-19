@@ -7,10 +7,44 @@ import { StudentLayout } from "@/components/layout/StudentLayout";
 import { TopicService } from "@/lib/services/topicService";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
 import { StudentTopicViewer } from "@/components/students/StudentTopicViewer";
+import { ProgressService } from "@/lib/services/progressService";
 
 interface PageProps {
   params: Promise<{ topicId: string }>;
 }
+
+// async function getTopicData(topicId: string, userId: string) {
+//   try {
+//     const topic = await TopicService.getTopicById(topicId);
+
+//     if (!topic) {
+//       return null;
+//     }
+
+//     // Check if user is enrolled in the course
+//     const enrollment = await EnrollmentService.getEnrollment(
+//       userId,
+//       topic.module.course.id
+//     );
+
+//     if (!enrollment || enrollment.status !== "ACTIVE") {
+//       return null;
+//     }
+
+//     // Check if topic is accessible (prerequisites met)
+//     // In real app, this would check TopicProgress for prerequisite completion
+//     const canAccess = true; // Simplified for now
+
+//     return {
+//       topic,
+//       enrollment,
+//       canAccess,
+//     };
+//   } catch (error) {
+//     console.error("Error fetching topic data:", error);
+//     return null;
+//   }
+// }
 
 async function getTopicData(topicId: string, userId: string) {
   try {
@@ -30,9 +64,11 @@ async function getTopicData(topicId: string, userId: string) {
       return null;
     }
 
-    // Check if topic is accessible (prerequisites met)
-    // In real app, this would check TopicProgress for prerequisite completion
-    const canAccess = true; // Simplified for now
+    // Check if topic is accessible using ProgressService
+    const canAccess = await ProgressService.canAccessTopic(userId, topicId);
+
+    // Get or create topic progress to track access
+    await ProgressService.getOrCreateTopicProgress(userId, topicId);
 
     return {
       topic,

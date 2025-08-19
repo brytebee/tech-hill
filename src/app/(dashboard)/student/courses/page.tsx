@@ -44,6 +44,67 @@ interface PageProps {
   }>;
 }
 
+// async function getCoursesData(
+//   userId: string,
+//   searchParams: {
+//     search?: string;
+//     difficulty?: string;
+//     page?: string;
+//   }
+// ) {
+//   try {
+//     const page = parseInt(searchParams.page || "1");
+//     const limit = 12;
+
+//     const [coursesResult, enrollments] = await Promise.all([
+//       CourseService.getCourses(
+//         {
+//           status: "PUBLISHED",
+//           search: searchParams.search,
+//           difficulty:
+//             searchParams.difficulty === "none"
+//               ? undefined
+//               : (searchParams.difficulty as any),
+//         },
+//         page,
+//         limit
+//       ),
+//       EnrollmentService.getUserEnrollments(userId),
+//     ]);
+
+//     // Create a map of enrolled course IDs for quick lookup
+//     const enrolledCourseIds = new Set(
+//       enrollments
+//         .filter((e) => e.status === "ACTIVE" || e.status === "COMPLETED")
+//         .map((e) => e.courseId)
+//     );
+
+//     // Add enrollment status to courses
+//     const coursesWithEnrollment = coursesResult.courses.map((course) => ({
+//       ...course,
+//       isEnrolled: enrolledCourseIds.has(course.id),
+//       enrollment: enrollments.find((e) => e.courseId === course.id),
+//     }));
+
+//     return {
+//       courses: coursesWithEnrollment,
+//       totalPages: coursesResult.totalPages,
+//       totalCourses: coursesResult.totalCourses,
+//       currentPage: page,
+//       enrollments,
+//     };
+//   } catch (error) {
+//     console.error("Error fetching courses data:", error);
+//     return {
+//       courses: [],
+//       totalPages: 1,
+//       totalCourses: 0,
+//       currentPage: 1,
+//       enrollments: [],
+//     };
+//   }
+// }
+
 async function getCoursesData(
   userId: string,
   searchParams: {
@@ -69,21 +130,60 @@ async function getCoursesData(
         page,
         limit
       ),
-      EnrollmentService.getUserEnrollments(userId),
+      // Enhanced to include progress data
+      prisma.enrollment.findMany({
+        where: { 
+          userId,
+          status: { in: ["ACTIVE", "COMPLETED"] }
+        },
+        include: {
+          course: {
+            include: {
+              modules: {
+                include: {
+                  progress: {
+                    where: { userId },
+                  },
+                  topics: {
+                    include: {
+                      progress: {
+                        where: { userId },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
-    // Create a map of enrolled course IDs for quick lookup
-    const enrolledCourseIds = new Set(
-      enrollments
-        .filter((e) => e.status === "ACTIVE" || e.status === "COMPLETED")
-        .map((e) => e.courseId)
-    );
+    // Create a map of enrolled course IDs with enhanced progress data
+    const enrollmentMap = new Map();
+    enrollments.forEach(enrollment => {
+      enrollmentMap.set(enrollment.courseId, {
+        ...enrollment,
+        detailedProgress: {
+          modulesCompleted: enrollment.course.modules.filter(module => 
+            module.progress.length > 0 && module.progress[0].status === "COMPLETED"
+          ).length,
+          totalModules: enrollment.course.modules.length,
+          topicsCompleted: enrollment.course.modules.flatMap(module => 
+            module.topics.filter(topic => 
+              topic.progress.length > 0 && topic.progress[0].status === "COMPLETED"
+            )
+          ).length,
+          totalTopics: enrollment.course.modules.flatMap(module => module.topics).length,
+        },
+      });
+    });
 
     // Add enrollment status to courses
     const coursesWithEnrollment = coursesResult.courses.map((course) => ({
       ...course,
-      isEnrolled: enrolledCourseIds.has(course.id),
-      enrollment: enrollments.find((e) => e.courseId === course.id),
+      isEnrolled: enrollmentMap.has(course.id),
+      enrollment: enrollmentMap.get(course.id),
     }));
 
     return {
