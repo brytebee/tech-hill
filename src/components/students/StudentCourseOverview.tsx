@@ -88,12 +88,6 @@ interface Enrollment {
   completedAt?: string;
 }
 
-// interface StudentCourseOverviewProps {
-//   course: Course;
-//   enrollment: Enrollment;
-//   userId: string;
-// }
-
 interface StudentCourseOverviewProps {
   course: Course;
   enrollment: Enrollment;
@@ -132,169 +126,6 @@ function getTopicIcon(type: string) {
   }
 }
 
-// function ModuleCard({
-//   module,
-//   isLocked,
-//   isExpanded,
-//   onToggle,
-//   courseId,
-// }: {
-//   module: Module;
-//   isLocked: boolean;
-//   isExpanded: boolean;
-//   onToggle: () => void;
-//   courseId: string;
-// }) {
-//   // Mock progress data - in real app, this would come from TopicProgress
-//   const completedTopics = Math.floor(module.topics.length * 0.3); // 30% completion mock
-//   const progressPercentage =
-//     module.topics.length > 0
-//       ? Math.round((completedTopics / module.topics.length) * 100)
-//       : 0;
-
-//   return (
-//     <Card
-//       className={`transition-all duration-200 ${isLocked ? "opacity-60" : ""}`}
-//     >
-//       <Collapsible open={isExpanded && !isLocked} onOpenChange={onToggle}>
-//         <CollapsibleTrigger>
-//           <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
-//             <div className="flex items-center justify-between">
-//               <div className="flex items-center space-x-3">
-//                 <div className="flex-shrink-0">
-//                   {isLocked ? (
-//                     <Lock className="h-5 w-5 text-gray-400" />
-//                   ) : (
-//                     progressPercentage === 100 && (
-//                       <CheckCircle className="h-5 w-5 text-green-500" />
-//                     )
-//                   )}
-//                 </div>
-//                 <div className="flex-grow">
-//                   <CardTitle className="text-lg flex items-center gap-2">
-//                     Module {module.order}: {module.title}
-//                     {module.isRequired && (
-//                       <Badge variant="secondary" className="text-xs">
-//                         Required
-//                       </Badge>
-//                     )}
-//                   </CardTitle>
-//                   <CardDescription className="flex items-center gap-4 mt-1">
-//                     <span className="flex items-center gap-1">
-//                       <Clock className="h-3 w-3" />
-//                       {module.duration} min
-//                     </span>
-//                     <span className="flex items-center gap-1">
-//                       <BookOpen className="h-3 w-3" />
-//                       {module.topics.length} topics
-//                     </span>
-//                     <span className="text-xs">
-//                       Passing: {module.passingScore}%
-//                     </span>
-//                   </CardDescription>
-//                 </div>
-//               </div>
-//               <div className="text-right">
-//                 <div className="text-sm font-medium text-gray-900">
-//                   {progressPercentage}%
-//                 </div>
-//                 <div className="w-20 h-2 bg-gray-200 rounded-full mt-1">
-//                   <div
-//                     className="h-2 bg-blue-600 rounded-full transition-all"
-//                     style={{ width: `${progressPercentage}%` }}
-//                   />
-//                 </div>
-//               </div>
-//             </div>
-//           </CardHeader>
-//         </CollapsibleTrigger>
-
-//         <CollapsibleContent>
-//           <CardContent className="pt-0">
-//             {module.description && (
-//               <p className="text-sm text-gray-600 mb-4">{module.description}</p>
-//             )}
-
-//             <div className="space-y-2">
-//               {module.topics.map((topic, index) => {
-//                 const isTopicCompleted = index < completedTopics;
-//                 const isTopicCurrent = index === completedTopics && !isLocked;
-
-//                 return (
-//                   <div
-//                     key={topic.id}
-//                     className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-//                       isTopicCompleted
-//                         ? "bg-green-50 border-green-200"
-//                         : isTopicCurrent
-//                         ? "bg-blue-50 border-blue-200"
-//                         : "bg-gray-50 border-gray-200"
-//                     }`}
-//                   >
-//                     <div className="flex items-center space-x-3">
-//                       <div className="flex-shrink-0">
-//                         {isTopicCompleted ? (
-//                           <CheckCircle className="h-4 w-4 text-green-500" />
-//                         ) : (
-//                           getTopicIcon(topic.topicType)
-//                         )}
-//                       </div>
-//                       <div>
-//                         <div className="font-medium text-sm">{topic.title}</div>
-//                         <div className="flex items-center gap-2 text-xs text-gray-500">
-//                           {topic.duration && (
-//                             <span className="flex items-center gap-1">
-//                               <Clock className="h-3 w-3" />
-//                               {topic.duration} min
-//                             </span>
-//                           )}
-//                           <Badge
-//                             variant="outline"
-//                             className="text-xs px-1 py-0"
-//                           >
-//                             {topic.topicType.toLowerCase()}
-//                           </Badge>
-//                           {topic.isRequired && (
-//                             <Badge
-//                               variant="secondary"
-//                               className="text-xs px-1 py-0"
-//                             >
-//                               Required
-//                             </Badge>
-//                           )}
-//                         </div>
-//                       </div>
-//                     </div>
-
-//                     <div className="flex-shrink-0">
-//                       {isTopicCompleted || isTopicCurrent ? (
-//                         <Link href={`/student/topics/${topic.id}`}>
-//                           <Button
-//                             size="sm"
-//                             variant={isTopicCompleted ? "outline" : "default"}
-//                           >
-//                             <Play className="h-3 w-3 mr-1" />
-//                             {isTopicCompleted ? "Review" : "Start"}
-//                           </Button>
-//                         </Link>
-//                       ) : (
-//                         <Button size="sm" variant="ghost" disabled>
-//                           <Lock className="h-3 w-3 mr-1" />
-//                           Locked
-//                         </Button>
-//                       )}
-//                     </div>
-//                   </div>
-//                 );
-//               })}
-//             </div>
-//           </CardContent>
-//         </CollapsibleContent>
-//       </Collapsible>
-//     </Card>
-//   );
-// }
-
 function ModuleCard({
   module,
   isLocked,
@@ -314,20 +145,24 @@ function ModuleCard({
 }) {
   // Calculate actual progress from database
   const completedTopics = topicProgresses.filter(
-    progress => progress.topicId && 
-    module.topics.some(topic => topic.id === progress.topicId) &&
-    progress.status === "COMPLETED"
+    (progress) =>
+      progress.topicId &&
+      module.topics.some((topic) => topic.id === progress.topicId) &&
+      progress.status === "COMPLETED"
   ).length;
 
-  const progressPercentage = module.topics.length > 0
-    ? Math.round((completedTopics / module.topics.length) * 100)
-    : 0;
+  const progressPercentage =
+    module.topics.length > 0
+      ? Math.round((completedTopics / module.topics.length) * 100)
+      : 0;
 
   const moduleStatus = moduleProgress?.status || "NOT_STARTED";
   const isModuleCompleted = moduleStatus === "COMPLETED";
 
   return (
-    <Card className={`transition-all duration-200 ${isLocked ? "opacity-60" : ""}`}>
+    <Card
+      className={`transition-all duration-200 ${isLocked ? "opacity-60" : ""}`}
+    >
       <Collapsible open={isExpanded && !isLocked} onOpenChange={onToggle}>
         <CollapsibleTrigger>
           <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
@@ -385,7 +220,7 @@ function ModuleCard({
                 <div className="w-20 h-2 bg-gray-200 rounded-full mt-1">
                   <div
                     className={`h-2 rounded-full transition-all ${
-                      isModuleCompleted ? 'bg-green-500' : 'bg-blue-600'
+                      isModuleCompleted ? "bg-green-500" : "bg-blue-600"
                     }`}
                     style={{ width: `${progressPercentage}%` }}
                   />
@@ -404,18 +239,20 @@ function ModuleCard({
             <div className="space-y-2">
               {module.topics.map((topic, index) => {
                 const topicProgress = topicProgresses.find(
-                  progress => progress.topicId === topic.id
+                  (progress) => progress.topicId === topic.id
                 );
                 const isTopicCompleted = topicProgress?.status === "COMPLETED";
-                const isTopicInProgress = topicProgress?.status === "IN_PROGRESS";
-                const isTopicAccessible = !isLocked && (
-                  index === 0 || 
-                  topicProgresses.some(p => 
-                    module.topics[index - 1] && 
-                    p.topicId === module.topics[index - 1].id && 
-                    p.status === "COMPLETED"
-                  )
-                );
+                const isTopicInProgress =
+                  topicProgress?.status === "IN_PROGRESS";
+                const isTopicAccessible =
+                  !isLocked &&
+                  (index === 0 ||
+                    topicProgresses.some(
+                      (p) =>
+                        module.topics[index - 1] &&
+                        p.topicId === module.topics[index - 1].id &&
+                        p.status === "COMPLETED"
+                    ));
 
                 return (
                   <div
@@ -521,35 +358,16 @@ export function StudentCourseOverview({
     setExpandedModules(newExpanded);
   };
 
-  // Determine which modules are locked based on prerequisites
-  // const getLockedModules = () => {
-  //   const completed = new Set<string>(); // Mock - would come from ModuleProgress
-  //   const locked = new Set<string>();
-
-  //   course.modules.forEach((module) => {
-  //     if (
-  //       module.prerequisiteModuleId &&
-  //       !completed.has(module.prerequisiteModuleId)
-  //     ) {
-  //       locked.add(module.id);
-  //     }
-  //   });
-
-  //   return locked;
-  // };
-
-  // const lockedModules = getLockedModules();
-
-    // Create maps for quick lookup of progress data
+  // Create maps for quick lookup of progress data
   const moduleProgressMap = new Map();
   const topicProgressMap = new Map();
 
   if (progressData) {
-    progressData.moduleProgresses.forEach(progress => {
+    progressData.moduleProgresses.forEach((progress) => {
       moduleProgressMap.set(progress.moduleId, progress);
     });
 
-    progressData.topicProgresses.forEach(progress => {
+    progressData.topicProgresses.forEach((progress) => {
       topicProgressMap.set(progress.topicId, progress);
     });
   }
@@ -559,7 +377,9 @@ export function StudentCourseOverview({
 
     course.modules.forEach((module) => {
       if (module.prerequisiteModuleId) {
-        const prereqProgress = moduleProgressMap.get(module.prerequisiteModuleId);
+        const prereqProgress = moduleProgressMap.get(
+          module.prerequisiteModuleId
+        );
         if (!prereqProgress || prereqProgress.status !== "COMPLETED") {
           locked.add(module.id);
         }
@@ -670,16 +490,6 @@ export function StudentCourseOverview({
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Course Content</h2>
 
-        {/* {course.modules.map((module) => (
-          <ModuleCard
-            key={module.id}
-            module={module}
-            isLocked={lockedModules.has(module.id)}
-            isExpanded={expandedModules.has(module.id)}
-            onToggle={() => toggleModule(module.id)}
-            courseId={course.id}
-          />
-        ))} */}
         {course.modules.map((module) => (
           <ModuleCard
             key={module.id}

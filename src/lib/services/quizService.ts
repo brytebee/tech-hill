@@ -1,6 +1,8 @@
+import { prisma } from "../db";
+import { ProgressService } from "./progressService";
+
 // lib/services/quizService.ts
 export class QuizService {
-
   static async completeQuizAttempt(
     userId: string,
     quizId: string,
@@ -25,11 +27,11 @@ export class QuizService {
         quizId,
         score,
         passed,
-        questionsCorrect: answers.filter(a => a.isCorrect).length,
+        questionsCorrect: answers.filter((a) => a.isCorrect).length,
         questionsTotal: quiz.questions.length,
         completedAt: new Date(),
         answers: {
-          create: answers.map(answer => ({
+          create: answers.map((answer) => ({
             questionId: answer.questionId,
             selectedOptions: answer.selectedOptions,
             textAnswer: answer.textAnswer,
@@ -52,6 +54,7 @@ export class QuizService {
   }
 }
 
+/** 
 // app/api/student/quiz/[quizId]/submit/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -186,9 +189,9 @@ export function StudentCourseOverview({
 
   return (
     <div className="space-y-6">
-      {/* ... existing header content */}
+      {/* ... existing header content
 
-      {/* Course Modules - Updated with real progress data */}
+      {/* Course Modules - Updated with real progress data 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Course Content</h2>
 
@@ -206,7 +209,7 @@ export function StudentCourseOverview({
         ))}
       </div>
 
-      {/* ... rest of the component */}
+      {/* ... rest of the component
     </div>
   );
 }
@@ -416,9 +419,9 @@ export function StudentCourseOverview({
 
   return (
     <div className="space-y-6">
-      {/* ... existing header content */}
+      {/* ... existing header content 
 
-      {/* Course Modules - Updated with real progress data */}
+      {/* Course Modules - Updated with real progress data 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Course Content</h2>
 
@@ -436,7 +439,7 @@ export function StudentCourseOverview({
         ))}
       </div>
 
-      {/* ... rest of the component */}
+      {/* ... rest of the component 
     </div>
   );
 }
@@ -457,3 +460,4 @@ return (
     />
   </StudentLayout>
 );
+*/

@@ -74,7 +74,7 @@ export class ModuleService {
 
   // Get module by ID
   static async getModuleById(id: string) {
-    return await prisma.module.findUnique({
+    const module = await prisma.module.findUnique({
       where: { id },
       include: {
         course: {
@@ -126,6 +126,19 @@ export class ModuleService {
         },
       },
     });
+
+    if (!module) return null;
+
+    const course = module.course;
+
+    // Convert Decimal to number for client component compatibility
+    return {
+      ...module,
+      course: {
+        ...course,
+        price: course.price ? Number(course.price) : 0,
+      },
+    };
   }
 
   // Get modules by course
@@ -209,7 +222,10 @@ export class ModuleService {
   }
 
   // Get available prerequisite modules for a course
-  static async getAvailablePrerequisites(courseId: string, excludeModuleId?: string) {
+  static async getAvailablePrerequisites(
+    courseId: string,
+    excludeModuleId?: string
+  ) {
     const where: any = { courseId };
     if (excludeModuleId) {
       where.id = { not: excludeModuleId };

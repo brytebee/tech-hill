@@ -418,14 +418,18 @@ export function StudentTopicViewer({
   userId,
 }: StudentTopicViewerProps) {
   const router = useRouter();
-  const [progressData, setProgressData] = useState<TopicProgressData | null>(null);
+  const [progressData, setProgressData] = useState<TopicProgressData | null>(
+    null
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch progress data on component mount
   useEffect(() => {
     const fetchProgressData = async () => {
       try {
-        const response = await fetch(`/api/student/topics/${topic.id}/progress`);
+        const response = await fetch(
+          `/api/student/topics/${topic.id}/progress`
+        );
         const data = await response.json();
         setProgressData(data);
       } catch (error) {
@@ -440,19 +444,26 @@ export function StudentTopicViewer({
 
   const handleMarkComplete = async () => {
     try {
-      const response = await fetch(`/api/student/topics/${topic.id}/mark-complete`, {
-        method: "POST",
-      });
-      
+      const response = await fetch(
+        `/api/student/topics/${topic.id}/mark-complete`,
+        {
+          method: "POST",
+        }
+      );
+
       if (response.ok) {
         const data = await response.json();
         if (data.canComplete) {
           // Refresh progress data
-          const progressResponse = await fetch(`/api/student/topics/${topic.id}/progress`);
+          const progressResponse = await fetch(
+            `/api/student/topics/${topic.id}/progress`
+          );
           const updatedData = await progressResponse.json();
           setProgressData(updatedData);
         } else {
-          alert("Please complete all required assessments before marking this topic as complete.");
+          alert(
+            "Please complete all required assessments before marking this topic as complete."
+          );
         }
       } else {
         throw new Error("Failed to mark complete");
@@ -464,7 +475,10 @@ export function StudentTopicViewer({
   };
 
   const handleStartQuiz = (quizId: string) => {
-    if (!progressData?.remainingAttempts[quizId] || progressData.remainingAttempts[quizId] === 0) {
+    if (
+      !progressData?.remainingAttempts[quizId] ||
+      progressData.remainingAttempts[quizId] === 0
+    ) {
       alert("No more attempts remaining for this quiz.");
       return;
     }
@@ -485,7 +499,8 @@ export function StudentTopicViewer({
               <span className="font-medium">Access Denied</span>
             </div>
             <p className="text-red-700 mt-1">
-              You don't have access to this topic. Please complete the prerequisites first.
+              You don't have access to this topic. Please complete the
+              prerequisites first.
             </p>
           </CardContent>
         </Card>
@@ -577,22 +592,30 @@ export function StudentTopicViewer({
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <span className="text-gray-500">Views:</span>
-                      <span className="ml-1 font-medium">{progressData.progress.viewCount}</span>
+                      <span className="ml-1 font-medium">
+                        {progressData.progress.viewCount}
+                      </span>
                     </div>
                     <div>
                       <span className="text-gray-500">Time Spent:</span>
-                      <span className="ml-1 font-medium">{progressData.progress.timeSpent} min</span>
+                      <span className="ml-1 font-medium">
+                        {progressData.progress.timeSpent} min
+                      </span>
                     </div>
                     {progressData.progress.attemptCount > 0 && (
                       <div>
                         <span className="text-gray-500">Attempts:</span>
-                        <span className="ml-1 font-medium">{progressData.progress.attemptCount}</span>
+                        <span className="ml-1 font-medium">
+                          {progressData.progress.attemptCount}
+                        </span>
                       </div>
                     )}
                     {progressData.progress.averageScore && (
                       <div>
                         <span className="text-gray-500">Avg Score:</span>
-                        <span className="ml-1 font-medium">{progressData.progress.averageScore}%</span>
+                        <span className="ml-1 font-medium">
+                          {progressData.progress.averageScore}%
+                        </span>
                       </div>
                     )}
                   </div>
@@ -612,7 +635,8 @@ export function StudentTopicViewer({
               <span className="font-medium">Prerequisite Required</span>
             </div>
             <p className="text-orange-700 mt-1">
-              Complete "{topic.prerequisiteTopic.title}" before accessing this topic.
+              Complete "{topic.prerequisiteTopic.title}" before accessing this
+              topic.
             </p>
           </CardContent>
         </Card>
@@ -698,21 +722,27 @@ export function StudentTopicViewer({
           <CardContent>
             <div className="space-y-4">
               {topic.quizzes.map((quiz) => {
-                const remainingAttempts = progressData.remainingAttempts[quiz.id];
-                const hasAttemptsLeft = remainingAttempts === -1 || remainingAttempts > 0;
-                const passedQuiz = topic.quizzes.some(q => 
-                  q.id === quiz.id && 
-                  progressData.progress?.topic?.quizzes?.some((tq: any) => 
-                    tq.id === quiz.id && 
-                    tq.attempts?.some((attempt: any) => attempt.passed)
-                  )
+                const remainingAttempts =
+                  progressData.remainingAttempts[quiz.id];
+                const hasAttemptsLeft =
+                  remainingAttempts === -1 || remainingAttempts > 0;
+                const passedQuiz = topic.quizzes.some(
+                  (q) =>
+                    q.id === quiz.id &&
+                    progressData.progress?.topic?.quizzes?.some(
+                      (tq: any) =>
+                        tq.id === quiz.id &&
+                        tq.attempts?.some((attempt: any) => attempt.passed)
+                    )
                 );
 
                 return (
                   <div
                     key={quiz.id}
                     className={`flex items-center justify-between p-4 border rounded-lg ${
-                      passedQuiz ? 'border-green-200 bg-green-50' : 'border-gray-200'
+                      passedQuiz
+                        ? "border-green-200 bg-green-50"
+                        : "border-gray-200"
                     }`}
                   >
                     <div>
@@ -731,7 +761,13 @@ export function StudentTopicViewer({
                           points
                         </span>
                         {remainingAttempts !== -1 && (
-                          <span className={remainingAttempts === 0 ? 'text-red-600' : 'text-blue-600'}>
+                          <span
+                            className={
+                              remainingAttempts === 0
+                                ? "text-red-600"
+                                : "text-blue-600"
+                            }
+                          >
                             {remainingAttempts} attempts left
                           </span>
                         )}
@@ -751,7 +787,7 @@ export function StudentTopicViewer({
                 );
               })}
             </div>
-            
+
             {/* Assessment completion warning */}
             {hasAssessments && !isCompleted && (
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -760,7 +796,8 @@ export function StudentTopicViewer({
                   <span className="font-medium">Assessment Required</span>
                 </div>
                 <p className="text-yellow-700 mt-1 text-sm">
-                  You must pass all assessments in this topic before marking it as complete.
+                  You must pass all assessments in this topic before marking it
+                  as complete.
                 </p>
               </div>
             )}
@@ -775,10 +812,9 @@ export function StudentTopicViewer({
             <div>
               {!isCompleted && (
                 <p className="text-sm text-gray-600 mb-2">
-                  {hasAssessments 
+                  {hasAssessments
                     ? "Complete all assessments and mark this topic as complete."
-                    : "Mark this topic as complete when you're done studying the material."
-                  }
+                    : "Mark this topic as complete when you're done studying the material."}
                 </p>
               )}
             </div>
@@ -787,14 +823,18 @@ export function StudentTopicViewer({
                 <Button variant="outline">Skip Topic</Button>
               )}
               {!isCompleted ? (
-                <Button 
+                <Button
                   onClick={handleMarkComplete}
-                  disabled={hasAssessments && !topic.quizzes.every(quiz => 
-                    progressData.progress?.topic?.quizzes?.some((tq: any) => 
-                      tq.id === quiz.id && 
-                      tq.attempts?.some((attempt: any) => attempt.passed)
+                  disabled={
+                    hasAssessments &&
+                    !topic.quizzes.every((quiz) =>
+                      progressData.progress?.topic?.quizzes?.some(
+                        (tq: any) =>
+                          tq.id === quiz.id &&
+                          tq.attempts?.some((attempt: any) => attempt.passed)
+                      )
                     )
-                  )}
+                  }
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Mark Complete

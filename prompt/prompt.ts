@@ -315,9 +315,284 @@ model QuizAttempt {
   @@map("quiz_attempts")
 }
 
-How can I progressively globally update progress in the following components.Such that students can see their progress of course, module, and topic. Please just provide suggested code changes, I have bulk of the code already. It would be unnecessary to provide the codes I already possess. More so on the topic details page i.e. topics/[topicId]/ if students have exhausted their attempts they should be unable to see the start quiz button in the assessment section. If a module, course, topic possess an assessment student can only mark them complete if the required assessments have been passed. If you required more details, please request, avoid hallucinating.
+// app/(dashboard)/student/page.tsx
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { StudentLayout } from "@/components/layout/StudentLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BookOpen, Clock, Award, TrendingUp, Play } from "lucide-react";
+import Link from "next/link";
+import { EnrollmentService } from "@/lib/services/enrollmentService";
+import { CourseService } from "@/lib/services/courseService";
+
+async function getStudentData(userId: string) {
+  try {
+    const [enrollments, availableCourses] = await Promise.all([
+      EnrollmentService.getUserEnrollments(userId),
+      CourseService.getCourses({ status: "PUBLISHED" }, 1, 10),
+    ]);
+
+    return {
+      enrollments,
+      availableCourses: availableCourses.courses,
+    };
+  } catch (error) {
+    console.error("Error fetching student data:", error);
+    return {
+      enrollments: [],
+      availableCourses: [],
+    };
+  }
+}
+
+export default async function StudentDashboard() {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  const { enrollments, availableCourses } = await getStudentData(
+    session.user.id
+  );
+
+  const totalTimeSpent = enrollments.reduce(
+    (total, enrollment) => total + (enrollment.totalTimeSpent || 0),
+    0
+  );
+
+  const completedCourses = enrollments.filter(
+    (e) => e.status === "COMPLETED"
+  ).length;
+  const overallProgress =
+    enrollments.length > 0
+      ? Math.round(
+          enrollments.reduce((sum, e) => sum + e.overallProgress, 0) /
+            enrollments.length
+        )
+      : 0;
+
+  return (
+    <StudentLayout>
+      <div className="space-y-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Welcome back, {session.user.firstName}!
+          </h2>
+          <p className="text-gray-600">
+            Continue your learning journey and build your computer skills.
+          </p>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Courses Enrolled
+              </CardTitle>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{enrollments.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {enrollments.length === 0
+                  ? "Start learning today"
+                  : "Active enrollments"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Time Spent</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {Math.round(totalTimeSpent / 60)}h
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Total learning time
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Completed</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{completedCourses}</div>
+              <p className="text-xs text-muted-foreground">Courses completed</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Progress</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{overallProgress}%</div>
+              <p className="text-xs text-muted-foreground">
+                Overall completion
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* My Courses & Available Courses */}
+        <div className="grid md:grid-cols-2 gap-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>My Courses</CardTitle>
+              <CardDescription>Continue where you left off</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {enrollments.length > 0 ? (
+                <div className="space-y-4">
+                  {enrollments.slice(0, 3).map((enrollment) => (
+                    <div key={enrollment.id} className="p-4 border rounded-lg">
+                      <h4 className="font-semibold mb-2">
+                        {enrollment.course.title}
+                      </h4>
+                      <p className="text-sm text-gray-600 mb-3">
+                        {enrollment.overallProgress}% complete
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <div className="w-full bg-gray-200 rounded-full h-2 mr-4">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full"
+                            style={{ width: `${enrollment.overallProgress}%` }}
+                          />
+                        </div>
+                        <Link href={`/student/courses/${enrollment.course.id}`}>
+                          <Button size="sm">
+                            <Play className="h-4 w-4 mr-1" />
+                            Continue
+                          </Button>
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                  {enrollments.length > 3 && (
+                    <Link href="/student/courses">
+                      <Button variant="outline" className="w-full">
+                        View All Courses
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h4 className="font-medium text-gray-600 mb-2">
+                    No enrolled courses
+                  </h4>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Browse available courses to start learning
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Courses</CardTitle>
+              <CardDescription>
+                Start your computer literacy journey
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {availableCourses.slice(0, 3).map((course) => (
+                  <div key={course.id} className="p-4 border rounded-lg">
+                    <h4 className="font-semibold mb-2">{course.title}</h4>
+                    <p className="text-sm text-gray-600 mb-3">
+                      {course.shortDescription ||
+                        course.description.substring(0, 100) + "..."}
+                    </p>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-500">
+                        {course.difficulty} • {course.duration}h
+                      </span>
+                      <Button size="sm">Enroll</Button>
+                    </div>
+                  </div>
+                ))}
+                <Link href="/student/courses">
+                  <Button variant="outline" className="w-full">
+                    Browse All Courses
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </StudentLayout>
+  );
+}
 
 // app/(dashboard)/student/courses/page.tsx
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth";
+import { StudentLayout } from "@/components/layout/StudentLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  BookOpen,
+  Clock,
+  Award,
+  Play,
+  Search,
+  Filter,
+  CheckCircle,
+  UserCheck,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { EnrollmentService } from "@/lib/services/enrollmentService";
+import { CourseService } from "@/lib/services/courseService";
+import { EnrollButton } from "@/components/students/EnrollButton";
+import { prisma } from "@/lib/db";
+
+interface PageProps {
+  searchParams: Promise<{
+    search?: string;
+    difficulty?: string;
+    page?: string;
+  }>;
+}
+
 async function getCoursesData(
   userId: string,
   searchParams: {
@@ -343,21 +618,66 @@ async function getCoursesData(
         page,
         limit
       ),
-      EnrollmentService.getUserEnrollments(userId),
+      // Enhanced to include progress data
+      prisma.enrollment.findMany({
+        where: {
+          userId,
+          status: { in: ["ACTIVE", "COMPLETED"] },
+        },
+        include: {
+          course: {
+            include: {
+              modules: {
+                include: {
+                  progress: {
+                    where: { userId },
+                  },
+                  topics: {
+                    include: {
+                      progress: {
+                        where: { userId },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
     ]);
 
-    // Create a map of enrolled course IDs for quick lookup
-    const enrolledCourseIds = new Set(
-      enrollments
-        .filter((e) => e.status === "ACTIVE" || e.status === "COMPLETED")
-        .map((e) => e.courseId)
-    );
+    // Create a map of enrolled course IDs with enhanced progress data
+    const enrollmentMap = new Map();
+    enrollments.forEach((enrollment) => {
+      enrollmentMap.set(enrollment.courseId, {
+        ...enrollment,
+        detailedProgress: {
+          modulesCompleted: enrollment.course.modules.filter(
+            (module) =>
+              module.progress.length > 0 &&
+              module.progress[0].status === "COMPLETED"
+          ).length,
+          totalModules: enrollment.course.modules.length,
+          topicsCompleted: enrollment.course.modules.flatMap((module) =>
+            module.topics.filter(
+              (topic) =>
+                topic.progress.length > 0 &&
+                topic.progress[0].status === "COMPLETED"
+            )
+          ).length,
+          totalTopics: enrollment.course.modules.flatMap(
+            (module) => module.topics
+          ).length,
+        },
+      });
+    });
 
     // Add enrollment status to courses
     const coursesWithEnrollment = coursesResult.courses.map((course) => ({
       ...course,
-      isEnrolled: enrolledCourseIds.has(course.id),
-      enrollment: enrollments.find((e) => e.courseId === course.id),
+      isEnrolled: enrollmentMap.has(course.id),
+      enrollment: enrollmentMap.get(course.id),
     }));
 
     return {
@@ -378,9 +698,63 @@ async function getCoursesData(
     };
   }
 }
+
+function getDifficultyColor(difficulty: string) {
+  switch (difficulty) {
+    case "BEGINNER":
+      return "bg-green-100 text-green-800";
+    case "INTERMEDIATE":
+      return "bg-yellow-100 text-yellow-800";
+    case "ADVANCED":
+      return "bg-red-100 text-red-800";
+    default:
+      return "bg-gray-100 text-gray-800";
+  }
+}
+
 function CourseCard({ course, userId }: { course: any; userId: string }) {
   return (
     <Card className="h-full flex flex-col">
+      <CardHeader>
+        <div className="flex justify-between items-start mb-2">
+          <Badge className={getDifficultyColor(course.difficulty)}>
+            {course.difficulty}
+          </Badge>
+          {course.isEnrolled && (
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              <UserCheck className="h-3 w-3 mr-1" />
+              Enrolled
+            </Badge>
+          )}
+        </div>
+        <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
+        <CardDescription className="line-clamp-3">
+          {course.shortDescription || course.description}
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="flex-1 flex flex-col justify-between">
+        <div className="space-y-3 mb-4">
+          <div className="flex items-center text-sm text-gray-600">
+            <Clock className="h-4 w-4 mr-1" />
+            {course.duration} hours
+          </div>
+
+          {course.tags && course.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {course.tags.slice(0, 3).map((tag: string) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+              {course.tags.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{course.tags.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+
           {course.isEnrolled && course.enrollment && (
             <div className="space-y-2">
               <div className="flex justify-between items-center text-sm">
@@ -397,7 +771,209 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
               </div>
             </div>
           )}
-      
+        </div>
+
+        <div className="flex gap-2">
+          {course.isEnrolled ? (
+            <>
+              <Link href={`/student/courses/${course.id}`} className="flex-1">
+                <Button className="w-full">
+                  <Play className="h-4 w-4 mr-2" />
+                  {course.enrollment?.overallProgress > 0
+                    ? "Continue"
+                    : "Start"}
+                </Button>
+              </Link>
+              <EnrollButton
+                courseId={course.id}
+                isEnrolled={true}
+                variant="outline"
+                size="default"
+              >
+                <X className="h-4 w-4" />
+              </EnrollButton>
+            </>
+          ) : (
+            <EnrollButton
+              courseId={course.id}
+              isEnrolled={false}
+              className="w-full"
+            >
+              Enroll Now
+            </EnrollButton>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SearchAndFilters({
+  searchParams,
+}: {
+  searchParams: {
+    search?: string;
+    difficulty?: string;
+    page?: string;
+  };
+}) {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search courses..."
+                defaultValue={searchParams.search || ""}
+                name="search"
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          <Select
+            defaultValue={searchParams.difficulty || "none"}
+            name="difficulty"
+          >
+            <SelectTrigger className="w-full md:w-[180px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Difficulty" />
+            </SelectTrigger>
+            <SelectContent>
+              {/* TODO: Watch out for the "none" here and ensure it's not a source of bugs */}
+              <SelectItem value="none">All Levels</SelectItem>
+              <SelectItem value="BEGINNER">Beginner</SelectItem>
+              <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+              <SelectItem value="ADVANCED">Advanced</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button type="submit">Apply Filters</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function Pagination({
+  currentPage,
+  totalPages,
+}: {
+  currentPage: number;
+  totalPages: number;
+}) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex justify-center items-center space-x-2">
+      <Button variant="outline" disabled={currentPage <= 1} size="sm">
+        Previous
+      </Button>
+
+      <span className="text-sm text-gray-600">
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <Button variant="outline" disabled={currentPage >= totalPages} size="sm">
+        Next
+      </Button>
+    </div>
+  );
+}
+
+export default async function StudentCoursesPage({ searchParams }: PageProps) {
+  const session = await getServerSession(authOptions);
+
+  if (!session) {
+    redirect("/login");
+  }
+
+  // Await searchParams before using its properties
+  const resolvedSearchParams = await searchParams;
+
+  const { courses, totalPages, totalCourses, currentPage, enrollments } =
+    await getCoursesData(session.user.id, resolvedSearchParams);
+
+  const enrolledCount = enrollments.filter(
+    (e) => e.status === "ACTIVE" || e.status === "COMPLETED"
+  ).length;
+
+  return (
+    <StudentLayout>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
+            <p className="text-gray-600 mt-1">
+              Discover and manage your computer literacy courses
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center">
+              <BookOpen className="h-4 w-4 mr-1" />
+              {totalCourses} Available
+            </div>
+            <div className="flex items-center">
+              <UserCheck className="h-4 w-4 mr-1" />
+              {enrolledCount} Enrolled
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <form method="GET">
+          <SearchAndFilters searchParams={resolvedSearchParams} />
+        </form>
+
+        {/* Course Grid */}
+        {courses.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {courses.map((course) => (
+                <CourseCard
+                  key={course.id}
+                  course={course}
+                  userId={session.user.id}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            <Pagination currentPage={currentPage} totalPages={totalPages} />
+          </>
+        ) : (
+          /* Empty State */
+          <Card>
+            <CardContent className="text-center py-12">
+              <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-600 mb-2">
+                No courses found
+              </h3>
+              <p className="text-gray-500 mb-4">
+                {resolvedSearchParams.search ||
+                (resolvedSearchParams.difficulty &&
+                  resolvedSearchParams.difficulty !== "none")
+                  ? "Try adjusting your search criteria"
+                  : "No courses are currently available"}
+              </p>
+              {(resolvedSearchParams.search ||
+                (resolvedSearchParams.difficulty &&
+                  resolvedSearchParams.difficulty !== "none")) && (
+                <Link href="/student/courses">
+                  <Button variant="outline">Clear Filters</Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </StudentLayout>
+  );
+}
 
 // app/(dashboard)/student/courses/[courseId]/page.tsx
 import { getServerSession } from "next-auth";
@@ -408,6 +984,7 @@ import { StudentLayout } from "@/components/layout/StudentLayout";
 import { CourseService } from "@/lib/services/courseService";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
 import { StudentCourseOverview } from "@/components/students/StudentCourseOverview";
+import { ProgressService } from "@/lib/services/progressService";
 
 interface PageProps {
   params: Promise<{ courseId: string }>;
@@ -415,9 +992,10 @@ interface PageProps {
 
 async function getCourseData(courseId: string, userId: string) {
   try {
-    const [course, enrollment] = await Promise.all([
+    const [course, enrollment, progressData] = await Promise.all([
       CourseService.getCourseById(courseId),
       EnrollmentService.getEnrollment(userId, courseId),
+      ProgressService.getCourseProgressData(userId, courseId),
     ]);
 
     if (!course) {
@@ -432,6 +1010,7 @@ async function getCourseData(courseId: string, userId: string) {
     return {
       course,
       enrollment,
+      progressData,
     };
   } catch (error) {
     console.error("Error fetching course data:", error);
@@ -488,1196 +1067,8 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
         course={serializedCourse}
         enrollment={serializedEnrollment}
         userId={session.user.id}
+        progressData={data.progressData}
       />
     </StudentLayout>
   );
 }
-
-// components/students/StudentCourseOverview.tsx
-"use client";
-
-import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  BookOpen,
-  Clock,
-  ChevronDown,
-  ChevronRight,
-  Play,
-  CheckCircle,
-  Lock,
-  FileText,
-  Video,
-  Award,
-  Users,
-  Calendar,
-  Target,
-  BarChart3,
-} from "lucide-react";
-import Link from "next/link";
-
-interface Topic {
-  id: string;
-  title: string;
-  duration?: number;
-  topicType: string;
-  isRequired: boolean;
-}
-
-interface Module {
-  id: string;
-  title: string;
-  description?: string;
-  order: number;
-  duration: number;
-  passingScore: number;
-  prerequisiteModuleId?: string;
-  isRequired: boolean;
-  topics: Topic[];
-  _count: {
-    topics: number;
-  };
-}
-
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  shortDescription?: string;
-  thumbnail?: string;
-  difficulty: string;
-  duration: number;
-  passingScore: number;
-  tags: string[];
-  prerequisites: string[];
-  learningOutcomes: string[];
-  creator: {
-    firstName: string;
-    lastName: string;
-  };
-  modules: Module[];
-  _count: {
-    enrollments: number;
-  };
-}
-
-interface Enrollment {
-  id: string;
-  status: string;
-  overallProgress: number;
-  enrolledAt: string;
-  completedAt?: string;
-}
-
-interface StudentCourseOverviewProps {
-  course: Course;
-  enrollment: Enrollment;
-  userId: string;
-}
-
-function getDifficultyColor(difficulty: string) {
-  switch (difficulty) {
-    case "BEGINNER":
-      return "bg-green-100 text-green-800 border-green-200";
-    case "INTERMEDIATE":
-      return "bg-yellow-100 text-yellow-800 border-yellow-200";
-    case "ADVANCED":
-      return "bg-red-100 text-red-800 border-red-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-}
-
-function getTopicIcon(type: string) {
-  switch (type) {
-    case "VIDEO":
-      return <Video className="h-4 w-4" />;
-    case "PRACTICE":
-      return <Target className="h-4 w-4" />;
-    case "ASSESSMENT":
-      return <Award className="h-4 w-4" />;
-    case "RESOURCE":
-      return <FileText className="h-4 w-4" />;
-    default:
-      return <BookOpen className="h-4 w-4" />;
-  }
-}
-
-function ModuleCard({
-  module,
-  isLocked,
-  isExpanded,
-  onToggle,
-  courseId,
-}: {
-  module: Module;
-  isLocked: boolean;
-  isExpanded: boolean;
-  onToggle: () => void;
-  courseId: string;
-}) {
-  // Mock progress data - in real app, this would come from TopicProgress
-  const completedTopics = Math.floor(module.topics.length * 0.3); // 30% completion mock
-  const progressPercentage =
-    module.topics.length > 0
-      ? Math.round((completedTopics / module.topics.length) * 100)
-      : 0;
-
-  return (
-    <Card
-      className={`transition-all duration-200 ${isLocked ? "opacity-60" : ""}`}
-    >
-      <Collapsible open={isExpanded && !isLocked} onOpenChange={onToggle}>
-        <CollapsibleTrigger>
-          <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0">
-                  {
-                    isLocked ? (
-                      <Lock className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      progressPercentage === 100 && (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )
-                    )
-                  }
-                </div>
-                <div className="flex-grow">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    Module {module.order}: {module.title}
-                    {module.isRequired && (
-                      <Badge variant="secondary" className="text-xs">
-                        Required
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="flex items-center gap-4 mt-1">
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      {module.duration} min
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="h-3 w-3" />
-                      {module.topics.length} topics
-                    </span>
-                    <span className="text-xs">
-                      Passing: {module.passingScore}%
-                    </span>
-                  </CardDescription>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-gray-900">
-                  {progressPercentage}%
-                </div>
-                <div className="w-20 h-2 bg-gray-200 rounded-full mt-1">
-                  <div
-                    className="h-2 bg-blue-600 rounded-full transition-all"
-                    style={{ width: `${progressPercentage}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-        </CollapsibleTrigger>
-
-        <CollapsibleContent>
-          <CardContent className="pt-0">
-            {module.description && (
-              <p className="text-sm text-gray-600 mb-4">{module.description}</p>
-            )}
-
-            <div className="space-y-2">
-              {module.topics.map((topic, index) => {
-                const isTopicCompleted = index < completedTopics;
-                const isTopicCurrent = index === completedTopics && !isLocked;
-
-                return (
-                  <div
-                    key={topic.id}
-                    className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                      isTopicCompleted
-                        ? "bg-green-50 border-green-200"
-                        : isTopicCurrent
-                        ? "bg-blue-50 border-blue-200"
-                        : "bg-gray-50 border-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        {isTopicCompleted ? (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
-                        ) : (
-                          getTopicIcon(topic.topicType)
-                        )}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">{topic.title}</div>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          {topic.duration && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {topic.duration} min
-                            </span>
-                          )}
-                          <Badge
-                            variant="outline"
-                            className="text-xs px-1 py-0"
-                          >
-                            {topic.topicType.toLowerCase()}
-                          </Badge>
-                          {topic.isRequired && (
-                            <Badge
-                              variant="secondary"
-                              className="text-xs px-1 py-0"
-                            >
-                              Required
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex-shrink-0">
-                      {isTopicCompleted || isTopicCurrent ? (
-                        <Link href={`/student/topics/${topic.id}`}>
-                          <Button
-                            size="sm"
-                            variant={isTopicCompleted ? "outline" : "default"}
-                          >
-                            <Play className="h-3 w-3 mr-1" />
-                            {isTopicCompleted ? "Review" : "Start"}
-                          </Button>
-                        </Link>
-                      ) : (
-                        <Button size="sm" variant="ghost" disabled>
-                          <Lock className="h-3 w-3 mr-1" />
-                          Locked
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
-    </Card>
-  );
-}
-
-export function StudentCourseOverview({
-  course,
-  enrollment,
-  userId,
-}: StudentCourseOverviewProps) {
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(
-    new Set()
-  );
-
-  const toggleModule = (moduleId: string) => {
-    const newExpanded = new Set(expandedModules);
-    if (newExpanded.has(moduleId)) {
-      newExpanded.delete(moduleId);
-    } else {
-      newExpanded.add(moduleId);
-    }
-    setExpandedModules(newExpanded);
-  };
-
-  // Determine which modules are locked based on prerequisites
-  const getLockedModules = () => {
-    const completed = new Set<string>(); // Mock - would come from ModuleProgress
-    const locked = new Set<string>();
-
-    course.modules.forEach((module) => {
-      if (
-        module.prerequisiteModuleId &&
-        !completed.has(module.prerequisiteModuleId)
-      ) {
-        locked.add(module.id);
-      }
-    });
-
-    return locked;
-  };
-
-  const lockedModules = getLockedModules();
-
-  return (
-    <div className="space-y-6">
-      {/* Course Header */}
-      <div className="bg-white rounded-lg border">
-        <div className="p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge className={getDifficultyColor(course.difficulty)}>
-                  {course.difficulty}
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-blue-100 text-blue-800"
-                >
-                  Enrolled
-                </Badge>
-              </div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {course.title}
-              </h1>
-              <p className="text-gray-600 mb-4">
-                {course.shortDescription || course.description}
-              </p>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-400" />
-                  <span>{course.duration} hours</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-gray-400" />
-                  <span>{course.modules.length} modules</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-gray-400" />
-                  <span>{course._count.enrollments} students</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-gray-400" />
-                  <span>{course.passingScore}% to pass</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Overview */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium">Course Progress</h3>
-              <span className="text-sm font-medium">
-                {enrollment.overallProgress}%
-              </span>
-            </div>
-            <Progress value={enrollment.overallProgress} className="h-2" />
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>
-                Started {new Date(enrollment.enrolledAt).toLocaleDateString()}
-              </span>
-              <span>
-                {enrollment.completedAt
-                  ? `Completed ${new Date(
-                      enrollment.completedAt
-                    ).toLocaleDateString()}`
-                  : `${course.modules.length - lockedModules.size} of ${
-                      course.modules.length
-                    } modules available`}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Learning Outcomes */}
-      {course.learningOutcomes && course.learningOutcomes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Learning Outcomes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {course.learningOutcomes.map((outcome, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span className="text-sm">{outcome}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Course Modules */}
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Course Content</h2>
-
-        {course.modules.map((module) => (
-          <ModuleCard
-            key={module.id}
-            module={module}
-            isLocked={lockedModules.has(module.id)}
-            isExpanded={expandedModules.has(module.id)}
-            onToggle={() => toggleModule(module.id)}
-            courseId={course.id}
-          />
-        ))}
-      </div>
-
-      {/* Course Tags */}
-      {course.tags && course.tags.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Topics Covered</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {course.tags.map((tag) => (
-                <Badge key={tag} variant="outline">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
-
-// app/(dashboard)/student/topics/[topicId]/page.tsx
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { notFound } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { StudentLayout } from "@/components/layout/StudentLayout";
-import { TopicService } from "@/lib/services/topicService";
-import { EnrollmentService } from "@/lib/services/enrollmentService";
-import { StudentTopicViewer } from "@/components/students/StudentTopicViewer";
-
-interface PageProps {
-  params: Promise<{ topicId: string }>;
-}
-
-async function getTopicData(topicId: string, userId: string) {
-  try {
-    const topic = await TopicService.getTopicById(topicId);
-
-    if (!topic) {
-      return null;
-    }
-
-    // Check if user is enrolled in the course
-    const enrollment = await EnrollmentService.getEnrollment(
-      userId,
-      topic.module.course.id
-    );
-
-    if (!enrollment || enrollment.status !== "ACTIVE") {
-      return null;
-    }
-
-    // Check if topic is accessible (prerequisites met)
-    // In real app, this would check TopicProgress for prerequisite completion
-    const canAccess = true; // Simplified for now
-
-    return {
-      topic,
-      enrollment,
-      canAccess,
-    };
-  } catch (error) {
-    console.error("Error fetching topic data:", error);
-    return null;
-  }
-}
-
-export default async function StudentTopicDetailsPage({ params }: PageProps) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  const { topicId } = await params;
-  const data = await getTopicData(topicId, session.user.id);
-
-  if (!data || !data.canAccess) {
-    notFound();
-  }
-
-  const { topic, enrollment } = data;
-
-  return (
-    <StudentLayout title={topic.title} description={`${topic.description}`}>
-      <StudentTopicViewer
-        topic={topic}
-        enrollment={enrollment}
-        userId={session.user.id}
-      />
-    </StudentLayout>
-  );
-}
-
-// components/students/StudentTopicViewer.tsx
-"use client";
-
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import {
-  BookOpen,
-  Clock,
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle,
-  Play,
-  FileText,
-  Video,
-  Award,
-  Target,
-  AlertTriangle,
-  User,
-  Calendar,
-} from "lucide-react";
-import Link from "next/link";
-import { StudentCourseService } from "@/lib/services/student/courseService";
-
-interface Quiz {
-  id: string;
-  title: string;
-  passingScore: number;
-  questions: Array<{
-    id: string;
-    questionType: string;
-    points: number;
-  }>;
-}
-
-interface Topic {
-  id: string;
-  title: string;
-  slug: string;
-  description?: string;
-  content: string;
-  orderIndex: number;
-  duration?: number;
-  topicType: string;
-  videoUrl?: string;
-  attachments: string[];
-  passingScore: number;
-  maxAttempts?: number;
-  isRequired: boolean;
-  allowSkip: boolean;
-  prerequisiteTopic?: {
-    id: string;
-    title: string;
-  };
-  module: {
-    id: string;
-    title: string;
-    course: {
-      id: string;
-      title: string;
-      creator: {
-        firstName: string;
-        lastName: string;
-      };
-    };
-  };
-  quizzes: Quiz[];
-}
-
-interface Enrollment {
-  id: string;
-  status: string;
-  overallProgress: number;
-}
-
-interface StudentTopicViewerProps {
-  topic: Topic;
-  enrollment: Enrollment;
-  userId: string;
-}
-
-function getTopicIcon(type: string) {
-  switch (type) {
-    case "VIDEO":
-      return <Video className="h-5 w-5" />;
-    case "PRACTICE":
-      return <Target className="h-5 w-5" />;
-    case "ASSESSMENT":
-      return <Award className="h-5 w-5" />;
-    case "RESOURCE":
-      return <FileText className="h-5 w-5" />;
-    default:
-      return <BookOpen className="h-5 w-5" />;
-  }
-}
-
-function getTopicTypeColor(type: string) {
-  switch (type) {
-    case "VIDEO":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "PRACTICE":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "ASSESSMENT":
-      return "bg-orange-100 text-orange-800 border-orange-200";
-    case "RESOURCE":
-      return "bg-green-100 text-green-800 border-green-200";
-    default:
-      return "bg-gray-100 text-gray-800 border-gray-200";
-  }
-}
-
-export function StudentTopicViewer({
-  topic,
-  enrollment,
-  userId,
-}: StudentTopicViewerProps) {
-  const router = useRouter();
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [progressStarted, setProgressStarted] = useState(false);
-
-  // Mock progress tracking - in real app this would sync with TopicProgress
-  useEffect(() => {
-    // Mark as started when component mounts
-    if (!progressStarted) {
-      setProgressStarted(true);
-      // In real app: call API to update TopicProgress status to IN_PROGRESS
-      console.log("Marking topic as started:", topic.id);
-    }
-  }, [topic.id, progressStarted]);
-
-  const handleMarkComplete = async () => {
-    try {
-      const res = await fetch(`/api/student/topics/${topic.id}/mark-complete`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        console.log("Marking topic as completed:", topic.id);
-        setIsCompleted(true);
-      } else {
-        if (!res.ok) throw new Error("Failed to fetch users");
-      }
-    } catch (error) {
-      console.error("Failed to mark topic as completed:", error);
-    }
-  };
-
-  const handleStartQuiz = (quizId: string) => {
-    router.push(`/student/quiz/${quizId}?topicId=${topic.id}`);
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Breadcrumb Navigation */}
-      <nav className="flex items-center space-x-2 text-sm text-gray-500">
-        <Link
-          href={`/student/courses/${topic.module.course.id}`}
-          className="hover:text-gray-700 flex items-center gap-1"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          {topic.module.course.title}
-        </Link>
-        <span>/</span>
-        <span>{topic.module.title}</span>
-        <span>/</span>
-        <span className="text-gray-900 font-medium">{topic.title}</span>
-      </nav>
-
-      {/* Topic Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-3">
-                <Badge className={getTopicTypeColor(topic.topicType)}>
-                  {getTopicIcon(topic.topicType)}
-                  <span className="ml-1">{topic.topicType}</span>
-                </Badge>
-                {topic.isRequired && (
-                  <Badge variant="secondary">Required</Badge>
-                )}
-                {isCompleted && (
-                  <Badge className="bg-green-100 text-green-800 border-green-200">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Completed
-                  </Badge>
-                )}
-              </div>
-
-              <CardTitle className="text-2xl mb-2">{topic.title}</CardTitle>
-
-              {topic.description && (
-                <p className="text-gray-600 mb-4">{topic.description}</p>
-              )}
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                {topic.duration && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-gray-400" />
-                    <span>{topic.duration} minutes</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-gray-400" />
-                  <span>{topic.passingScore}% to pass</span>
-                </div>
-                {topic.maxAttempts && (
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-gray-400" />
-                    <span>{topic.maxAttempts} attempts max</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-400" />
-                  <span>
-                    {topic.module.course.creator.firstName}{" "}
-                    {topic.module.course.creator.lastName}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Prerequisite Warning */}
-      {topic.prerequisiteTopic && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-orange-800">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="font-medium">Prerequisite Required</span>
-            </div>
-            <p className="text-orange-700 mt-1">
-              Complete "{topic.prerequisiteTopic.title}" before accessing this
-              topic.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Video Content */}
-      {topic.videoUrl && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Video className="h-5 w-5" />
-              Video Content
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-              <div className="text-center">
-                <Video className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500">Video Player</p>
-                <p className="text-sm text-gray-400">URL: {topic.videoUrl}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Main Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Content
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div
-            className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: topic.content }}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Attachments */}
-      {topic.attachments && topic.attachments.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Resources & Attachments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3">
-              {topic.attachments.map((attachment, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                >
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-4 w-4 text-gray-500" />
-                    <span className="font-medium">Resource {index + 1}</span>
-                    <span className="text-sm text-gray-500">{attachment}</span>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    Download
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Quizzes */}
-      {topic.quizzes && topic.quizzes.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Award className="h-5 w-5" />
-              Assessments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {topic.quizzes.map((quiz) => (
-                <div
-                  key={quiz.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div>
-                    <h4 className="font-medium">{quiz.title}</h4>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                      <span>{quiz.questions.length} questions</span>
-                      <span>Passing: {quiz.passingScore}%</span>
-                      <span>
-                        Total:{" "}
-                        {quiz.questions.reduce((sum, q) => sum + q.points, 0)}{" "}
-                        points
-                      </span>
-                    </div>
-                  </div>
-                  <Button onClick={() => handleStartQuiz(quiz.id)}>
-                    <Play className="h-4 w-4 mr-2" />
-                    Start Quiz
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Action Buttons */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div>
-              {!isCompleted && (
-                <p className="text-sm text-gray-600 mb-2">
-                  Mark this topic as complete when you're done studying the
-                  material.
-                </p>
-              )}
-            </div>
-            <div className="flex gap-3">
-              {topic.allowSkip && !topic.isRequired && (
-                <Button variant="outline">Skip Topic</Button>
-              )}
-              {!isCompleted ? (
-                <Button onClick={handleMarkComplete}>
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Mark Complete
-                </Button>
-              ) : (
-                <Button variant="outline">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Completed
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Navigation */}
-      <div className="flex justify-between pt-6">
-        <Link href={`/student/courses/${topic.module.course.id}`}>
-          <Button variant="outline">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Course
-          </Button>
-        </Link>
-
-        <div className="text-center">
-          <p className="text-sm text-gray-500">
-            Topic {topic.orderIndex} in {topic.module.title}
-          </p>
-        </div>
-
-        <Button variant="outline" disabled>
-          Next Topic
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-
-// lib/utils/progressUtils.ts - Utility functions for progress calculations
-export class ProgressUtils {
-  // Calculate module completion percentage based on required topics
-  static calculateModuleProgress(
-    moduleTopics: any[],
-    topicProgresses: any[]
-  ): {
-    percentage: number;
-    completed: number;
-    total: number;
-    passed: boolean;
-  } {
-    const requiredTopics = moduleTopics.filter(topic => topic.isRequired);
-    const completedTopics = requiredTopics.filter(topic => {
-      const progress = topicProgresses.find(p => p.topicId === topic.id);
-      return progress && progress.status === 'COMPLETED';
-    });
-
-    const percentage = requiredTopics.length > 0 
-      ? Math.round((completedTopics.length / requiredTopics.length) * 100)
-      : 0;
-
-    return {
-      percentage,
-      completed: completedTopics.length,
-      total: requiredTopics.length,
-      passed: percentage === 100,
-    };
-  }
-
-  // Calculate course completion percentage based on required modules
-  static calculateCourseProgress(
-    courseModules: any[],
-    moduleProgresses: any[]
-  ): {
-    percentage: number;
-    completed: number;
-    total: number;
-    passed: boolean;
-  } {
-    const requiredModules = courseModules.filter(module => module.isRequired);
-    const completedModules = requiredModules.filter(module => {
-      const progress = moduleProgresses.find(p => p.moduleId === module.id);
-      return progress && progress.status === 'COMPLETED';
-    });
-
-    const percentage = requiredModules.length > 0 
-      ? Math.round((completedModules.length / requiredModules.length) * 100)
-      : 0;
-
-    return {
-      percentage,
-      completed: completedModules.length,
-      total: requiredModules.length,
-      passed: percentage === 100,
-    };
-  }
-
-  // Get next available topic for a user in a module
-  static getNextAvailableTopic(
-    moduleTopics: any[],
-    topicProgresses: any[]
-  ): any | null {
-    const sortedTopics = moduleTopics.sort((a, b) => a.orderIndex - b.orderIndex);
-    
-    for (const topic of sortedTopics) {
-      const progress = topicProgresses.find(p => p.topicId === topic.id);
-      
-      // If topic is not started or in progress, check prerequisites
-      if (!progress || progress.status !== 'COMPLETED') {
-        if (topic.prerequisiteTopicId) {
-          const prereqProgress = topicProgresses.find(
-            p => p.topicId === topic.prerequisiteTopicId
-          );
-          if (!prereqProgress || prereqProgress.status !== 'COMPLETED') {
-            continue; // Skip this topic, prerequisite not met
-          }
-        }
-        
-        return topic; // This is the next available topic
-      }
-    }
-    
-    return null; // All topics completed
-  }
-
-  // Check if a student can mark a topic as complete
-  static canCompleteTopicValue(
-    topic: any,
-    topicProgress: any,
-    remainingAttempts: { [quizId: string]: number }
-  ): {
-    canComplete: boolean;
-    reason?: string;
-  } {
-    // If topic has no assessments, can always complete
-    if (!topic.quizzes || topic.quizzes.length === 0) {
-      return { canComplete: true };
-    }
-
-    // Check if all quizzes have been passed
-    const allQuizzesPassed = topic.quizzes.every((quiz: any) => {
-      return quiz.attempts?.some((attempt: any) => attempt.passed);
-    });
-
-    if (!allQuizzesPassed) {
-      // Check if there are attempts remaining
-      const hasAttemptsRemaining = topic.quizzes.some((quiz: any) => {
-        const remaining = remainingAttempts[quiz.id];
-        return remaining === -1 || remaining > 0;
-      });
-
-      if (hasAttemptsRemaining) {
-        return {
-          canComplete: false,
-          reason: "Complete all required assessments before marking as complete."
-        };
-      } else {
-        return {
-          canComplete: false,
-          reason: "No attempts remaining for required assessments."
-        };
-      }
-    }
-
-    return { canComplete: true };
-  }
-}
-
-// components/ui/ProgressIndicator.tsx - Reusable progress component
-import React from 'react';
-import { Progress } from '@/components/ui/progress';
-import { CheckCircle, Circle, AlertCircle } from 'lucide-react';
-
-interface ProgressIndicatorProps {
-  progress: number;
-  status?: 'not_started' | 'in_progress' | 'completed' | 'failed';
-  showIcon?: boolean;
-  showPercentage?: boolean;
-  size?: 'sm' | 'md' | 'lg';
-  className?: string;
-}
-
-export function ProgressIndicator({
-  progress,
-  status = 'not_started',
-  showIcon = true,
-  showPercentage = true,
-  size = 'md',
-  className = '',
-}: ProgressIndicatorProps) {
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'in_progress':
-        return <Circle className="h-4 w-4 text-blue-500" />;
-      default:
-        return <Circle className="h-4 w-4 text-gray-400" />;
-    }
-  };
-
-  const getProgressColor = () => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'failed':
-        return 'bg-red-500';
-      case 'in_progress':
-        return 'bg-blue-500';
-      default:
-        return 'bg-gray-300';
-    }
-  };
-
-  const sizeClasses = {
-    sm: 'h-1',
-    md: 'h-2',
-    lg: 'h-3',
-  };
-
-  return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      {showIcon && getStatusIcon()}
-      <div className="flex-1">
-        <div className={`w-full bg-gray-200 rounded-full ${sizeClasses[size]}`}>
-          <div
-            className={`${sizeClasses[size]} rounded-full transition-all duration-300 ${getProgressColor()}`}
-            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-          />
-        </div>
-      </div>
-      {showPercentage && (
-        <span className="text-sm font-medium text-gray-700 min-w-[3rem] text-right">
-          {progress}%
-        </span>
-      )}
-    </div>
-  );
-}
-
-// hooks/useProgress.ts - Custom hook for progress management
-import { useState, useEffect, useCallback } from 'react';
-
-interface ProgressData {
-  topicProgresses: any[];
-  moduleProgresses: any[];
-  enrollment: any;
-  loading: boolean;
-  error: string | null;
-}
-
-export function useProgress(courseId: string) {
-  const [data, setData] = useState<ProgressData>({
-    topicProgresses: [],
-    moduleProgresses: [],
-    enrollment: null,
-    loading: true,
-    error: null,
-  });
-
-  const fetchProgressData = useCallback(async () => {
-    try {
-      setData(prev => ({ ...prev, loading: true, error: null }));
-      
-      const response = await fetch(`/api/student/courses/${courseId}/progress`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch progress data');
-      }
-      
-      const progressData = await response.json();
-      
-      setData({
-        topicProgresses: progressData.topicProgresses || [],
-        moduleProgresses: progressData.moduleProgresses || [],
-        enrollment: progressData.enrollment,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      setData(prev => ({
-        ...prev,
-        loading: false,
-        error

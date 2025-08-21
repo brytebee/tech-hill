@@ -1,5 +1,5 @@
 // lib/services/progressService.ts
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/db";
 import { ProgressStatus, MasteryLevel } from "@prisma/client";
 
 export class ProgressService {
@@ -19,7 +19,7 @@ export class ProgressService {
               include: {
                 attempts: {
                   where: { userId },
-                  orderBy: { createdAt: 'desc' },
+                  orderBy: { createdAt: "desc" },
                 },
               },
             },
@@ -43,7 +43,7 @@ export class ProgressService {
                 include: {
                   attempts: {
                     where: { userId },
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { createdAt: "desc" },
                   },
                 },
               },
@@ -57,7 +57,11 @@ export class ProgressService {
   }
 
   // Update topic progress based on completion and quiz scores
-  static async updateTopicProgress(userId: string, topicId: string, completed: boolean = false) {
+  static async updateTopicProgress(
+    userId: string,
+    topicId: string,
+    completed: boolean = false
+  ) {
     const topicProgress = await this.getOrCreateTopicProgress(userId, topicId);
     const topic = topicProgress.topic;
 
@@ -68,15 +72,15 @@ export class ProgressService {
 
     if (hasAssessments && completed) {
       // For assessment topics, check if passing score is met
-      const passedAttempts = topic.quizzes.flatMap(quiz => 
-        quiz.attempts.filter(attempt => attempt.passed)
+      const passedAttempts = topic.quizzes.flatMap((quiz) =>
+        quiz.attempts.filter((attempt) => attempt.passed)
       );
-      
+
       if (passedAttempts.length === 0) {
         canComplete = false;
       } else {
         // Get best score from passed attempts
-        bestScore = Math.max(...passedAttempts.map(attempt => attempt.score));
+        bestScore = Math.max(...passedAttempts.map((attempt) => attempt.score));
       }
     }
 
@@ -89,7 +93,9 @@ export class ProgressService {
       updateData.status = ProgressStatus.COMPLETED;
       updateData.completedAt = new Date();
       updateData.completionRate = 100;
-      updateData.masteryAchieved = bestScore ? bestScore >= topic.passingScore : true;
+      updateData.masteryAchieved = bestScore
+        ? bestScore >= topic.passingScore
+        : true;
     } else if (completed && !canComplete) {
       // User tried to complete but hasn't passed assessments
       updateData.status = ProgressStatus.NEEDS_REVIEW;
@@ -135,28 +141,41 @@ export class ProgressService {
 
     if (!module) return;
 
-    const requiredTopics = module.topics.filter(topic => topic.isRequired);
-    const completedRequiredTopics = requiredTopics.filter(topic => 
-      topic.progress.length > 0 && 
-      topic.progress[0].status === ProgressStatus.COMPLETED
+    const requiredTopics = module.topics.filter((topic) => topic.isRequired);
+    const completedRequiredTopics = requiredTopics.filter(
+      (topic) =>
+        topic.progress.length > 0 &&
+        topic.progress[0].status === ProgressStatus.COMPLETED
     );
 
-    const progressPercentage = requiredTopics.length > 0 
-      ? Math.round((completedRequiredTopics.length / requiredTopics.length) * 100)
-      : 0;
+    const progressPercentage =
+      requiredTopics.length > 0
+        ? Math.round(
+            (completedRequiredTopics.length / requiredTopics.length) * 100
+          )
+        : 0;
 
-    const allTopicsCompleted = completedRequiredTopics.length === requiredTopics.length;
+    const allTopicsCompleted =
+      completedRequiredTopics.length === requiredTopics.length;
 
     // Calculate average score from completed topics with assessments
     const topicsWithScores = completedRequiredTopics
-      .map(topic => topic.progress[0])
-      .filter(progress => progress.bestScore !== null);
-    
-    const averageScore = topicsWithScores.length > 0
-      ? Math.round(topicsWithScores.reduce((sum, progress) => sum + (progress.bestScore || 0), 0) / topicsWithScores.length)
-      : null;
+      .map((topic) => topic.progress[0])
+      .filter((progress) => progress.bestScore !== null);
 
-    const passedModule = averageScore ? averageScore >= module.passingScore : allTopicsCompleted;
+    const averageScore =
+      topicsWithScores.length > 0
+        ? Math.round(
+            topicsWithScores.reduce(
+              (sum, progress) => sum + (progress.bestScore || 0),
+              0
+            ) / topicsWithScores.length
+          )
+        : null;
+
+    const passedModule = averageScore
+      ? averageScore >= module.passingScore
+      : allTopicsCompleted;
 
     let moduleProgress = await prisma.moduleProgress.findUnique({
       where: {
@@ -179,6 +198,23 @@ export class ProgressService {
           bestScore: averageScore,
         },
       });
+    } else if (allTopicsCompleted) {
+      await prisma.moduleProgress.update({
+        where: { id: moduleProgress.id },
+        data: {
+          progressPercentage,
+          currentScore: averageScore,
+          bestScore: Math.max(moduleProgress.bestScore || 0, averageScore || 0),
+          status:
+            allTopicsCompleted && passedModule
+              ? ProgressStatus.COMPLETED
+              : progressPercentage > 0
+              ? ProgressStatus.IN_PROGRESS
+              : ProgressStatus.NOT_STARTED,
+          completedAt: allTopicsCompleted && passedModule ? new Date() : null,
+          lastAccessAt: new Date(),
+        },
+      });
     } else {
       await prisma.moduleProgress.update({
         where: { id: moduleProgress.id },
@@ -186,11 +222,12 @@ export class ProgressService {
           progressPercentage,
           currentScore: averageScore,
           bestScore: Math.max(moduleProgress.bestScore || 0, averageScore || 0),
-          status: allTopicsCompleted && passedModule 
-            ? ProgressStatus.COMPLETED 
-            : progressPercentage > 0 
-            ? ProgressStatus.IN_PROGRESS 
-            : ProgressStatus.NOT_STARTED,
+          status:
+            allTopicsCompleted && passedModule
+              ? ProgressStatus.COMPLETED
+              : progressPercentage > 0
+              ? ProgressStatus.IN_PROGRESS
+              : ProgressStatus.NOT_STARTED,
           completedAt: allTopicsCompleted && passedModule ? new Date() : null,
           lastAccessAt: new Date(),
         },
@@ -222,28 +259,43 @@ export class ProgressService {
 
     if (!course) return;
 
-    const requiredModules = course.modules.filter(module => module.isRequired);
-    const completedRequiredModules = requiredModules.filter(module => 
-      module.progress.length > 0 && 
-      module.progress[0].status === ProgressStatus.COMPLETED
+    const requiredModules = course.modules.filter(
+      (module) => module.isRequired
+    );
+    const completedRequiredModules = requiredModules.filter(
+      (module) =>
+        module.progress.length > 0 &&
+        module.progress[0].status === ProgressStatus.COMPLETED
     );
 
-    const overallProgress = requiredModules.length > 0 
-      ? Math.round((completedRequiredModules.length / requiredModules.length) * 100)
-      : 0;
+    const overallProgress =
+      requiredModules.length > 0
+        ? Math.round(
+            (completedRequiredModules.length / requiredModules.length) * 100
+          )
+        : 0;
 
-    const allModulesCompleted = completedRequiredModules.length === requiredModules.length;
+    const allModulesCompleted =
+      completedRequiredModules.length === requiredModules.length;
 
     // Calculate final grade from completed modules
     const modulesWithScores = completedRequiredModules
-      .map(module => module.progress[0])
-      .filter(progress => progress.currentScore !== null);
-    
-    const finalGrade = modulesWithScores.length > 0
-      ? Math.round(modulesWithScores.reduce((sum, progress) => sum + (progress.currentScore || 0), 0) / modulesWithScores.length)
-      : null;
+      .map((module) => module.progress[0])
+      .filter((progress) => progress.currentScore !== null);
 
-    const passedCourse = finalGrade ? finalGrade >= course.passingScore : allModulesCompleted;
+    const finalGrade =
+      modulesWithScores.length > 0
+        ? Math.round(
+            modulesWithScores.reduce(
+              (sum, progress) => sum + (progress.currentScore || 0),
+              0
+            ) / modulesWithScores.length
+          )
+        : null;
+
+    const passedCourse = finalGrade
+      ? finalGrade >= course.passingScore
+      : allModulesCompleted;
 
     await prisma.enrollment.update({
       where: {
@@ -265,7 +317,10 @@ export class ProgressService {
   }
 
   // Check if user can access a topic (prerequisites met)
-  static async canAccessTopic(userId: string, topicId: string): Promise<boolean> {
+  static async canAccessTopic(
+    userId: string,
+    topicId: string
+  ): Promise<boolean> {
     const topic = await prisma.topic.findUnique({
       where: { id: topicId },
       include: {
@@ -294,7 +349,10 @@ export class ProgressService {
         },
       });
 
-      if (!prereqModuleProgress || prereqModuleProgress.status !== ProgressStatus.COMPLETED) {
+      if (
+        !prereqModuleProgress ||
+        prereqModuleProgress.status !== ProgressStatus.COMPLETED
+      ) {
         return false;
       }
     }
@@ -310,7 +368,10 @@ export class ProgressService {
         },
       });
 
-      if (!prereqTopicProgress || prereqTopicProgress.status !== ProgressStatus.COMPLETED) {
+      if (
+        !prereqTopicProgress ||
+        prereqTopicProgress.status !== ProgressStatus.COMPLETED
+      ) {
         return false;
       }
     }
@@ -353,7 +414,7 @@ export class ProgressService {
                 include: {
                   attempts: {
                     where: { userId },
-                    orderBy: { createdAt: 'desc' },
+                    orderBy: { createdAt: "desc" },
                   },
                 },
               },
@@ -371,14 +432,17 @@ export class ProgressService {
   }
 
   // Check remaining quiz attempts for a topic
-  static async getRemainingAttempts(userId: string, topicId: string): Promise<{ [quizId: string]: number }> {
+  static async getRemainingAttempts(
+    userId: string,
+    topicId: string
+  ): Promise<{ [quizId: string]: number }> {
     const topic = await prisma.topic.findUnique({
       where: { id: topicId },
       include: {
         quizzes: {
           include: {
             attempts: {
-              where: { 
+              where: {
                 userId,
                 isPractice: false, // Only count real attempts
               },
@@ -392,10 +456,10 @@ export class ProgressService {
 
     const remainingAttempts: { [quizId: string]: number } = {};
 
-    topic.quizzes.forEach(quiz => {
+    topic.quizzes.forEach((quiz) => {
       const attemptCount = quiz.attempts.length;
       const maxAttempts = quiz.maxAttempts || topic.maxAttempts;
-      
+
       if (maxAttempts) {
         remainingAttempts[quiz.id] = Math.max(0, maxAttempts - attemptCount);
       } else {

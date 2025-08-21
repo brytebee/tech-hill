@@ -16,7 +16,7 @@
 // ) {
 //   try {
 //     const session = await getServerSession(authOptions)
-    
+
 //     if (!session || session.user.role !== 'STUDENT') {
 //       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 //     }
@@ -35,14 +35,14 @@
 //     return NextResponse.json(progress)
 //   } catch (error) {
 //     console.error('POST /api/student/topics/[topicId]/progress error:', error)
-    
+
 //     if (error instanceof z.ZodError) {
 //       return NextResponse.json(
 //         { error: 'Invalid request data', details: error.errors },
 //         { status: 400 }
 //       )
 //     }
-    
+
 //     return NextResponse.json(
 //       { error: 'Internal server error' },
 //       { status: 500 }
@@ -57,15 +57,15 @@
 // ) {
 //   try {
 //     const session = await getServerSession(authOptions)
-    
+
 //     if (!session || session.user.role !== 'STUDENT') {
 //       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 //     }
 
 //     const { topicId } = await params
-    
+
 //     const accessibility = await StudentCourseService.getTopicAccessibility(
-//       session.user.id, 
+//       session.user.id,
 //       topicId
 //     )
 
@@ -95,7 +95,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { topicId } = params;
+    const { topicId } = await params;
 
     const [progress, remainingAttempts] = await Promise.all([
       ProgressService.getOrCreateTopicProgress(session.user.id, topicId),
