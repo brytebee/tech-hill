@@ -37,6 +37,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: { moduleId: string } }
 ) {
+  const { moduleId } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -49,8 +50,6 @@ export async function PUT(
         { status: 403 }
       );
     }
-
-    const { moduleId } = await params;
     const body = await request.json();
 
     // Check if module exists and user has access
@@ -59,7 +58,10 @@ export async function PUT(
       return NextResponse.json({ error: "Module not found" }, { status: 404 });
     }
 
-    if (session.user.role !== "ADMIN" && existingModule.course.creator.id !== session.user.id) {
+    if (
+      session.user.role !== "ADMIN" &&
+      existingModule.course.creator.id !== session.user.id
+    ) {
       return NextResponse.json(
         { error: "You can only edit modules for your own courses" },
         { status: 403 }
@@ -70,7 +72,7 @@ export async function PUT(
 
     return NextResponse.json(module);
   } catch (error) {
-    console.error("PUT /api/modules/[moduleId] error:", error);
+    console.error(`PUT /api/modules/${moduleId} error:`, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -104,7 +106,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Module not found" }, { status: 404 });
     }
 
-    if (session.user.role !== "ADMIN" && existingModule.course.creator.id !== session.user.id) {
+    if (
+      session.user.role !== "ADMIN" &&
+      existingModule.course.creator.id !== session.user.id
+    ) {
       return NextResponse.json(
         { error: "You can only delete modules for your own courses" },
         { status: 403 }
@@ -114,7 +119,10 @@ export async function DELETE(
     // Check if other modules depend on this one
     if (existingModule.dependentModules.length > 0) {
       return NextResponse.json(
-        { error: "Cannot delete module that is a prerequisite for other modules" },
+        {
+          error:
+            "Cannot delete module that is a prerequisite for other modules",
+        },
         { status: 400 }
       );
     }

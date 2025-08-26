@@ -164,7 +164,7 @@ export function TopicForm({
           <Input
             id="passingScore"
             type="number"
-            value={formData.passingScore}
+            value={+(formData.passingScore || "0")}
             onChange={(e) =>
               onInputChange("passingScore", parseInt(e.target.value))
             }

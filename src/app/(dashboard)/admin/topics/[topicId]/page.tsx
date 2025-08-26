@@ -522,7 +522,7 @@ export default async function TopicDetailsPage({
                             View
                           </Button>
                         </Link>
-                        <Link href={`/admin/quizzes/${quiz.id}/edit`}>
+                        <Link href={`/admin/quizzes/${quiz.id}/builder`}>
                           <Button variant="outline" size="sm">
                             <Edit className="h-4 w-4" />
                           </Button>

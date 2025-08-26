@@ -35,6 +35,7 @@ import Link from "next/link";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
 import { CourseService } from "@/lib/services/courseService";
 import { EnrollButton } from "@/components/students/EnrollButton";
+import { prisma } from "@/lib/db";
 
 interface PageProps {
   searchParams: Promise<{
@@ -43,67 +44,6 @@ interface PageProps {
     page?: string;
   }>;
 }
-
-// async function getCoursesData(
-//   userId: string,
-//   searchParams: {
-//     search?: string;
-//     difficulty?: string;
-//     page?: string;
-//   }
-// ) {
-//   try {
-//     const page = parseInt(searchParams.page || "1");
-//     const limit = 12;
-
-//     const [coursesResult, enrollments] = await Promise.all([
-//       CourseService.getCourses(
-//         {
-//           status: "PUBLISHED",
-//           search: searchParams.search,
-//           difficulty:
-//             searchParams.difficulty === "none"
-//               ? undefined
-//               : (searchParams.difficulty as any),
-//         },
-//         page,
-//         limit
-//       ),
-//       EnrollmentService.getUserEnrollments(userId),
-//     ]);
-
-//     // Create a map of enrolled course IDs for quick lookup
-//     const enrolledCourseIds = new Set(
-//       enrollments
-//         .filter((e) => e.status === "ACTIVE" || e.status === "COMPLETED")
-//         .map((e) => e.courseId)
-//     );
-
-//     // Add enrollment status to courses
-//     const coursesWithEnrollment = coursesResult.courses.map((course) => ({
-//       ...course,
-//       isEnrolled: enrolledCourseIds.has(course.id),
-//       enrollment: enrollments.find((e) => e.courseId === course.id),
-//     }));
-
-//     return {
-//       courses: coursesWithEnrollment,
-//       totalPages: coursesResult.totalPages,
-//       totalCourses: coursesResult.totalCourses,
-//       currentPage: page,
-//       enrollments,
-//     };
-//   } catch (error) {
-//     console.error("Error fetching courses data:", error);
-//     return {
-//       courses: [],
-//       totalPages: 1,
-//       totalCourses: 0,
-//       currentPage: 1,
-//       enrollments: [],
-//     };
-//   }
-// }
 
 async function getCoursesData(
   userId: string,
@@ -132,9 +72,9 @@ async function getCoursesData(
       ),
       // Enhanced to include progress data
       prisma.enrollment.findMany({
-        where: { 
+        where: {
           userId,
-          status: { in: ["ACTIVE", "COMPLETED"] }
+          status: { in: ["ACTIVE", "COMPLETED"] },
         },
         include: {
           course: {
@@ -161,20 +101,26 @@ async function getCoursesData(
 
     // Create a map of enrolled course IDs with enhanced progress data
     const enrollmentMap = new Map();
-    enrollments.forEach(enrollment => {
+    enrollments.forEach((enrollment) => {
       enrollmentMap.set(enrollment.courseId, {
         ...enrollment,
         detailedProgress: {
-          modulesCompleted: enrollment.course.modules.filter(module => 
-            module.progress.length > 0 && module.progress[0].status === "COMPLETED"
+          modulesCompleted: enrollment.course.modules.filter(
+            (module) =>
+              module.progress.length > 0 &&
+              module.progress[0].status === "COMPLETED"
           ).length,
           totalModules: enrollment.course.modules.length,
-          topicsCompleted: enrollment.course.modules.flatMap(module => 
-            module.topics.filter(topic => 
-              topic.progress.length > 0 && topic.progress[0].status === "COMPLETED"
+          topicsCompleted: enrollment.course.modules.flatMap((module) =>
+            module.topics.filter(
+              (topic) =>
+                topic.progress.length > 0 &&
+                topic.progress[0].status === "COMPLETED"
             )
           ).length,
-          totalTopics: enrollment.course.modules.flatMap(module => module.topics).length,
+          totalTopics: enrollment.course.modules.flatMap(
+            (module) => module.topics
+          ).length,
         },
       });
     });
