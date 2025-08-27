@@ -22,7 +22,9 @@ b. how should I know this?
 c. it signifies danger and shows the mouse is having issues that should be checked
 d. it often changes to green when the PC is ready, it only indicated the PC is booting
 
-CorrectAnswer a 3. When do we often have to use the right click?
+CorrectAnswer a
+
+3. When do we often have to use the right click?
 
 Options:
 a. to play games
@@ -30,13 +32,17 @@ b. to select items
 c. to get options of a selected item
 d. all of the above
 
-CorrectAnswer c 4. Generally speaking, the right-click is used more frequently than the click.
+CorrectAnswer c
+
+4. Generally speaking, the right-click is used more frequently than the click.
 
 Options:
 a. false
 b. true
 
-CorrectAnswer false 5. I want to scroll a long page and I am using a traditional external mouse, which part should I use?
+CorrectAnswer false
+
+5. I want to scroll a long page and I am using a traditional external mouse, which part should I use?
 
 Options:
 a. click
@@ -44,7 +50,9 @@ b. double-click
 c. right-clcik
 d. scroll-ball
 
-CorrectAnswer d 6. What is the primary function of the mouse?
+CorrectAnswer d
+
+6. What is the primary function of the mouse?
 
 Options:
 a. Please let's consult the manufacturer
@@ -52,7 +60,9 @@ b. navigating the interface/display of a computer device
 c. selecting stuff on the monitor
 d. replying chats
 
-CorrectAnswer b 7. The drag and drop operation can be used for? Select all that apply.
+CorrectAnswer b
+
+7. The drag and drop operation can be used for? Select all that apply.
 
 Options:
 a. coping files
@@ -60,7 +70,9 @@ b. uploading images
 c. playing draggable games
 d. none of the above
 
-CorrectAnswer a,b and c 8. Select all the applies.Which of the following is an action that can be performed with a mouse on a computer device - Assumption: Ideally and under normal circumstances?
+CorrectAnswer a,b and c
+
+8. Select all the applies.Which of the following is an action that can be performed with a mouse on a computer device - Assumption: Ideally and under normal circumstances?
 
 Options:
 a. selecting multiple picture on the file explorer/finder
