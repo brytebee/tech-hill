@@ -116,7 +116,7 @@ export class ProgressService {
     });
 
     // Update module progress after topic completion
-    if (completed && canComplete) {
+    if (completed && (canComplete || !hasAssessments)) {
       await this.updateModuleProgress(userId, topic.moduleId);
     }
 
@@ -133,6 +133,7 @@ export class ProgressService {
             progress: {
               where: { userId },
             },
+            quizzes: true,
           },
         },
         course: true,
@@ -173,9 +174,16 @@ export class ProgressService {
           )
         : null;
 
-    const passedModule = averageScore
-      ? averageScore >= module.passingScore
-      : allTopicsCompleted;
+    // Check if module has any topics with assessments
+    const hasAssessmentTopics = module.topics.some(
+      (topic) => topic.quizzes && topic.quizzes.length > 0
+    );
+
+    const passedModule = hasAssessmentTopics
+      ? averageScore
+        ? averageScore >= module.passingScore
+        : false
+      : allTopicsCompleted; // If no assessments, just need all topics completed
 
     let moduleProgress = await prisma.moduleProgress.findUnique({
       where: {

@@ -510,6 +510,15 @@ export function StudentTopicViewer({
 
   const isCompleted = progressData.progress?.status === "COMPLETED";
   const hasAssessments = topic.quizzes.length > 0;
+  const canMarkComplete =
+    !hasAssessments ||
+    topic.quizzes.every((quiz) =>
+      progressData.progress?.topic?.quizzes?.some(
+        (tq: any) =>
+          tq.id === quiz.id &&
+          tq.attempts?.some((attempt: any) => attempt.passed)
+      )
+    );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -825,16 +834,7 @@ export function StudentTopicViewer({
               {!isCompleted ? (
                 <Button
                   onClick={handleMarkComplete}
-                  disabled={
-                    hasAssessments &&
-                    !topic.quizzes.every((quiz) =>
-                      progressData.progress?.topic?.quizzes?.some(
-                        (tq: any) =>
-                          tq.id === quiz.id &&
-                          tq.attempts?.some((attempt: any) => attempt.passed)
-                      )
-                    )
-                  }
+                  disabled={!canMarkComplete}
                 >
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Mark Complete
