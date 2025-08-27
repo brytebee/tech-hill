@@ -89,7 +89,7 @@ export class ProgressService {
       viewCount: { increment: 1 },
     };
 
-    if (completed && canComplete) {
+    if ((completed && canComplete) || !hasAssessments) {
       updateData.status = ProgressStatus.COMPLETED;
       updateData.completedAt = new Date();
       updateData.completionRate = 100;
