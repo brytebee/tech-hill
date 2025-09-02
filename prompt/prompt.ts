@@ -1,1074 +1,937 @@
+Please show only code changes to the file I have provided as they are lengthy. Only provide full code for new file if any.
 
-model Course {
-  id            String         @id @default(cuid())
-  title         String
-  description   String         @db.Text
-  shortDescription String?
-  thumbnail     String?
-  status        CourseStatus   @default(DRAFT)
-  difficulty    DifficultyLevel @default(BEGINNER)
-  duration      Int            // Duration in hours
-  price         Decimal        @default(0) @db.Decimal(10, 2)
-  tags          String[]
-  prerequisites String[]
-  
-  // Content
-  syllabus      String?        @db.Text
-  learningOutcomes String[]
-  
-  // Assessment Requirements
-  passingScore  Int            @default(80) // Overall course passing percentage
-  requireSequentialCompletion Boolean @default(true) // Must complete modules in order
-  allowRetakes  Boolean        @default(true)
-  maxAttempts   Int?           // Null = unlimited attempts
-  
-  // Timestamps
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  publishedAt   DateTime?
-  
-  // Relations
-  creatorId     String
-  creator       User           @relation("CourseCreator", fields: [creatorId], references: [id])
-  modules       Module[]
-  enrollments   Enrollment[]
-  certificates  Certificate[]
-  
-  @@map("courses")
-}
+## ** Day 4: Quiz System & Progress Logic **
+### Morning (4 hours)
+- [ ] Complete quiz timer functionality
 
-// Enhanced Module with Assessment Requirements
-model Module {
-  id          String   @id @default(cuid())
-  title       String
-  description String?  @db.Text
-  order       Int
-  duration    Int      // Duration in minutes
-  
-  // Assessment Requirements
-  passingScore Int     @default(80) // Module passing percentage
-  prerequisiteModuleId String? // Must complete this module first
-  isRequired   Boolean @default(true) // Can skip if false
-  unlockDelay  Int?    // Hours to wait before unlock (for spaced learning)
-  
-  // Timestamps
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  // Relations
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  prerequisiteModule Module? @relation("ModulePrerequisites", fields: [prerequisiteModuleId], references: [id])
-  dependentModules Module[] @relation("ModulePrerequisites")
-  topics      Topic[]
-  progress    ModuleProgress[]
-  
-  @@map("modules")
-}
 
-// Topics (Individual learning units within modules)
-model Topic {
-  id          String     @id @default(cuid())
-  title       String
-  slug        String     @unique // URL-friendly identifier
-  description String?    @db.Text
-  content     String     @db.Text // Rich text content
-  orderIndex  Int        // Sequence within module
-  duration    Int?       // Duration in minutes
-  
-  // Topic Type & Content
-  topicType   TopicType  @default(LESSON)
-  videoUrl    String?    // For video topics
-  attachments String[]   // File URLs for resources
-  
-  // Assessment Requirements
-  passingScore Int       @default(80) // Topic passing percentage
-  maxAttempts  Int?      // Per topic attempt limit
-  isRequired   Boolean   @default(true)
-  allowSkip    Boolean   @default(false) // Can skip if struggling
-  
-  // Prerequisites within module
-  prerequisiteTopicId String?
-  
-  // Timestamps
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  
-  // Relations
-  moduleId    String
-  module      Module     @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  prerequisiteTopic Topic? @relation("TopicPrerequisites", fields: [prerequisiteTopicId], references: [id])
-  dependentTopics Topic[] @relation("TopicPrerequisites")
-  
-  quizzes     Quiz[]
-  progress    TopicProgress[]
-  submissions Submission[]
-  
-  @@map("topics")
-}
+### **End of Day 4 Checklist:**
+- [ ] ✅ Complete quiz system with timer works
+- [ ] ✅ Complete quiz timer functionality with time limits
+- [ ] ✅ Timer counts down with warnings
 
-enum TopicType {
-  LESSON       // Text/video content
-  PRACTICE     // Interactive exercises
-  ASSESSMENT   // Graded quiz/test
-  RESOURCE     // Downloadable materials
-}
+Please help me implement the quiz timer, when a arrives this page, I want to present instructions to the student. Which includes:
+- Their internet connection must be stable.
+- Their surounding environment must be quiet and conducive for them to take the quiz.
+- Their full attention is needed
+- They cannot close the tab or window while the test is ongoing.
+- If the quiz time runs out without them finishing, their progress would automatically submit.
+- Add other known instruction for online quizzes and assessments
 
-// Enhanced Quiz System
-model Quiz {
-  id          String   @id @default(cuid())
-  topicId     String
-  title       String
-  description String?
-  
-  // Quiz Configuration
-  timeLimit   Int?     // Minutes (null = no time limit)
-  shuffleQuestions Boolean @default(false)
-  shuffleOptions Boolean @default(false)
-  showFeedback Boolean @default(true) // Show correct answers after
-  allowReview Boolean @default(true) // Allow reviewing answers
-  passingScore Int     @default(80) // Percentage to pass
-  maxAttempts Int?     // Null = unlimited
-  
-  // Advanced Features
-  adaptiveDifficulty Boolean @default(false) // Adjust based on performance
-  requireMastery Boolean @default(false) // Must get all questions right
-  practiceMode Boolean @default(false) // Doesn't count toward progress
-  
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+You can chose the most modern way to present this.
 
-  topic     Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  questions Question[]
-  attempts  QuizAttempt[]
+Update the time to meet the requirement of Day 4.
+The timer currently counts down, it should auto trigger submission when it elapses.
+Page refresh should trigger a warning. Do not worry about tab switching though, it should just be in the instructions but we are not implementing it now.
 
-  @@map("quizzes")
-}
-
-// Enhanced Enrollment with Progress Tracking
-enum EnrollmentStatus {
-  ACTIVE
-  COMPLETED
-  DROPPED
-  SUSPENDED
-  ON_HOLD
-}
-
-model Enrollment {
-  id              String           @id @default(cuid())
-  status          EnrollmentStatus @default(ACTIVE)
-  overallProgress Int              @default(0) // Overall course progress percentage
-  
-  // Completion & Performance
-  completedAt     DateTime?
-  certificateIssued Boolean        @default(false)
-  finalGrade      Int?             // Final course grade percentage
-  totalTimeSpent  Int              @default(0) // Total minutes spent
-  
-  // Attempts & Retakes
-  attemptNumber   Int              @default(1)
-  canRetake       Boolean          @default(true)
-  nextRetakeAt    DateTime?        // When they can retake if failed
-  
-  // Timestamps
-  enrolledAt      DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  lastAccessAt    DateTime?
-  
-  // Relations
-  userId          String
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId        String
-  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, courseId])
-  @@map("enrollments")
-}
-
-// Detailed Module Progress Tracking
-enum ProgressStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-  NEEDS_REVIEW
-  FAILED
-}
-
-model ModuleProgress {
-  id            String         @id @default(cuid())
-  userId        String
-  moduleId      String
-  status        ProgressStatus @default(NOT_STARTED)
-  
-  // Progress Metrics
-  progressPercentage Int         @default(0)
-  currentScore  Int?            // Current average score
-  bestScore     Int?            // Best attempt score
-  attemptsUsed  Int            @default(0)
-  timeSpent     Int            @default(0) // Minutes spent
-  
-  // Status Tracking
-  startedAt     DateTime?
-  completedAt   DateTime?
-  lastAccessAt  DateTime?
-  unlockedAt    DateTime?       // When module became available
-  
-  // Mastery Tracking
-  masteryLevel  MasteryLevel   @default(NOVICE)
-  strugglingAreas String[]      // Topics where student is struggling
-  strongAreas   String[]       // Topics where student excels
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, moduleId])
-  @@map("module_progress")
-}
-
-// Granular Topic Progress
-model TopicProgress {
-  id            String         @id @default(cuid())
-  userId        String
-  topicId       String
-  status        ProgressStatus @default(NOT_STARTED)
-  
-  // Detailed Analytics
-  attemptCount  Int            @default(0)
-  bestScore     Int?           // Best quiz score as percentage
-  averageScore  Int?           // Average across all attempts
-  timeSpent     Int            @default(0) // Minutes spent on topic
-  
-  // Learning Analytics
-  viewCount     Int            @default(0) // How many times viewed
-  completionRate Int           @default(0) // Percentage of topic completed
-  strugglingIndicator Boolean  @default(false) // Algorithm sets this
-  masteryAchieved Boolean     @default(false)
-  
-  // Timestamps
-  startedAt     DateTime?
-  completedAt   DateTime?
-  lastAccessAt  DateTime?
-  
-  // Spaced Repetition
-  nextReviewAt  DateTime?      // When to review this topic again
-  reviewCount   Int            @default(0)
-  
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, topicId])
-  @@map("topic_progress")
-}
-
-enum MasteryLevel {
-  NOVICE
-  DEVELOPING
-  PROFICIENT
-  ADVANCED
-  EXPERT
-}
-
-// Enhanced Quiz Attempts with Detailed Analytics
-model QuizAttempt {
-  id          String    @id @default(cuid())
-  userId      String
-  quizId      String
-  
-  // Performance Metrics
-  score       Int       // Percentage score
-  passed      Boolean   @default(false)
-  isPractice  Boolean   @default(false) // Practice vs real attempt
-  
-  // Timing Analytics
-  startedAt   DateTime  @default(now())
-  completedAt DateTime?
-  timeSpent   Int?      // Seconds spent on quiz
-  
-  // Detailed Analytics
-  questionsCorrect Int   @default(0)
-  questionsTotal   Int   @default(0)
-  averageTimePerQuestion Int? // Seconds per question
-  
-  // Behavioral Analytics
-  questionsSkipped Int   @default(0)
-  questionsReviewed Int  @default(0)
-  hintsUsed       Int    @default(0)
-  
-  // Learning Insights
-  difficultyAreas Json?  // Topics/skills where student struggled
-  strengthAreas   Json?  // Topics/skills where student excelled
-  recommendedReview String[] // Topics to review
-  
-  createdAt   DateTime  @default(now())
-
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  answers Answer[]
-
-  @@map("quiz_attempts")
-}
-
-// app/(dashboard)/student/page.tsx
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { StudentLayout } from "@/components/layout/StudentLayout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { BookOpen, Clock, Award, TrendingUp, Play } from "lucide-react";
-import Link from "next/link";
-import { EnrollmentService } from "@/lib/services/enrollmentService";
-import { CourseService } from "@/lib/services/courseService";
-
-async function getStudentData(userId: string) {
-  try {
-    const [enrollments, availableCourses] = await Promise.all([
-      EnrollmentService.getUserEnrollments(userId),
-      CourseService.getCourses({ status: "PUBLISHED" }, 1, 10),
-    ]);
-
-    return {
-      enrollments,
-      availableCourses: availableCourses.courses,
-    };
-  } catch (error) {
-    console.error("Error fetching student data:", error);
-    return {
-      enrollments: [],
-      availableCourses: [],
-    };
-  }
-}
-
-export default async function StudentDashboard() {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  const { enrollments, availableCourses } = await getStudentData(
-    session.user.id
-  );
-
-  const totalTimeSpent = enrollments.reduce(
-    (total, enrollment) => total + (enrollment.totalTimeSpent || 0),
-    0
-  );
-
-  const completedCourses = enrollments.filter(
-    (e) => e.status === "COMPLETED"
-  ).length;
-  const overallProgress =
-    enrollments.length > 0
-      ? Math.round(
-          enrollments.reduce((sum, e) => sum + e.overallProgress, 0) /
-            enrollments.length
-        )
-      : 0;
-
-  return (
-    <StudentLayout>
-      <div className="space-y-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Welcome back, {session.user.firstName}!
-          </h2>
-          <p className="text-gray-600">
-            Continue your learning journey and build your computer skills.
-          </p>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Courses Enrolled
-              </CardTitle>
-              <BookOpen className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{enrollments.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {enrollments.length === 0
-                  ? "Start learning today"
-                  : "Active enrollments"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Time Spent</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {Math.round(totalTimeSpent / 60)}h
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Total learning time
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <Award className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{completedCourses}</div>
-              <p className="text-xs text-muted-foreground">Courses completed</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Progress</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{overallProgress}%</div>
-              <p className="text-xs text-muted-foreground">
-                Overall completion
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* My Courses & Available Courses */}
-        <div className="grid md:grid-cols-2 gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>My Courses</CardTitle>
-              <CardDescription>Continue where you left off</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {enrollments.length > 0 ? (
-                <div className="space-y-4">
-                  {enrollments.slice(0, 3).map((enrollment) => (
-                    <div key={enrollment.id} className="p-4 border rounded-lg">
-                      <h4 className="font-semibold mb-2">
-                        {enrollment.course.title}
-                      </h4>
-                      <p className="text-sm text-gray-600 mb-3">
-                        {enrollment.overallProgress}% complete
-                      </p>
-                      <div className="flex justify-between items-center">
-                        <div className="w-full bg-gray-200 rounded-full h-2 mr-4">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full"
-                            style={{ width: `${enrollment.overallProgress}%` }}
-                          />
-                        </div>
-                        <Link href={`/student/courses/${enrollment.course.id}`}>
-                          <Button size="sm">
-                            <Play className="h-4 w-4 mr-1" />
-                            Continue
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                  {enrollments.length > 3 && (
-                    <Link href="/student/courses">
-                      <Button variant="outline" className="w-full">
-                        View All Courses
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <h4 className="font-medium text-gray-600 mb-2">
-                    No enrolled courses
-                  </h4>
-                  <p className="text-sm text-gray-500 mb-4">
-                    Browse available courses to start learning
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Courses</CardTitle>
-              <CardDescription>
-                Start your computer literacy journey
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {availableCourses.slice(0, 3).map((course) => (
-                  <div key={course.id} className="p-4 border rounded-lg">
-                    <h4 className="font-semibold mb-2">{course.title}</h4>
-                    <p className="text-sm text-gray-600 mb-3">
-                      {course.shortDescription ||
-                        course.description.substring(0, 100) + "..."}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-500">
-                        {course.difficulty} • {course.duration}h
-                      </span>
-                      <Button size="sm">Enroll</Button>
-                    </div>
-                  </div>
-                ))}
-                <Link href="/student/courses">
-                  <Button variant="outline" className="w-full">
-                    Browse All Courses
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </StudentLayout>
-  );
-}
-
-// app/(dashboard)/student/courses/page.tsx
-import { getServerSession } from "next-auth";
-import { redirect } from "next/navigation";
-import { authOptions } from "@/lib/auth";
-import { StudentLayout } from "@/components/layout/StudentLayout";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  BookOpen,
-  Clock,
-  Award,
-  Play,
-  Search,
-  Filter,
-  CheckCircle,
-  UserCheck,
-  X,
-} from "lucide-react";
-import Link from "next/link";
-import { EnrollmentService } from "@/lib/services/enrollmentService";
-import { CourseService } from "@/lib/services/courseService";
-import { EnrollButton } from "@/components/students/EnrollButton";
-import { prisma } from "@/lib/db";
-
-interface PageProps {
-  searchParams: Promise<{
-    search?: string;
-    difficulty?: string;
-    page?: string;
-  }>;
-}
-
-async function getCoursesData(
-  userId: string,
-  searchParams: {
-    search?: string;
-    difficulty?: string;
-    page?: string;
-  }
-) {
-  try {
-    const page = parseInt(searchParams.page || "1");
-    const limit = 12;
-
-    const [coursesResult, enrollments] = await Promise.all([
-      CourseService.getCourses(
-        {
-          status: "PUBLISHED",
-          search: searchParams.search,
-          difficulty:
-            searchParams.difficulty === "none"
-              ? undefined
-              : (searchParams.difficulty as any),
-        },
-        page,
-        limit
-      ),
-      // Enhanced to include progress data
-      prisma.enrollment.findMany({
-        where: {
-          userId,
-          status: { in: ["ACTIVE", "COMPLETED"] },
-        },
-        include: {
-          course: {
-            include: {
-              modules: {
-                include: {
-                  progress: {
-                    where: { userId },
-                  },
-                  topics: {
-                    include: {
-                      progress: {
-                        where: { userId },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      }),
-    ]);
-
-    // Create a map of enrolled course IDs with enhanced progress data
-    const enrollmentMap = new Map();
-    enrollments.forEach((enrollment) => {
-      enrollmentMap.set(enrollment.courseId, {
-        ...enrollment,
-        detailedProgress: {
-          modulesCompleted: enrollment.course.modules.filter(
-            (module) =>
-              module.progress.length > 0 &&
-              module.progress[0].status === "COMPLETED"
-          ).length,
-          totalModules: enrollment.course.modules.length,
-          topicsCompleted: enrollment.course.modules.flatMap((module) =>
-            module.topics.filter(
-              (topic) =>
-                topic.progress.length > 0 &&
-                topic.progress[0].status === "COMPLETED"
-            )
-          ).length,
-          totalTopics: enrollment.course.modules.flatMap(
-            (module) => module.topics
-          ).length,
-        },
-      });
-    });
-
-    // Add enrollment status to courses
-    const coursesWithEnrollment = coursesResult.courses.map((course) => ({
-      ...course,
-      isEnrolled: enrollmentMap.has(course.id),
-      enrollment: enrollmentMap.get(course.id),
-    }));
-
-    return {
-      courses: coursesWithEnrollment,
-      totalPages: coursesResult.totalPages,
-      totalCourses: coursesResult.totalCourses,
-      currentPage: page,
-      enrollments,
-    };
-  } catch (error) {
-    console.error("Error fetching courses data:", error);
-    return {
-      courses: [],
-      totalPages: 1,
-      totalCourses: 0,
-      currentPage: 1,
-      enrollments: [],
-    };
-  }
-}
-
-function getDifficultyColor(difficulty: string) {
-  switch (difficulty) {
-    case "BEGINNER":
-      return "bg-green-100 text-green-800";
-    case "INTERMEDIATE":
-      return "bg-yellow-100 text-yellow-800";
-    case "ADVANCED":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-800";
-  }
-}
-
-function CourseCard({ course, userId }: { course: any; userId: string }) {
-  return (
-    <Card className="h-full flex flex-col">
-      <CardHeader>
-        <div className="flex justify-between items-start mb-2">
-          <Badge className={getDifficultyColor(course.difficulty)}>
-            {course.difficulty}
-          </Badge>
-          {course.isEnrolled && (
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-              <UserCheck className="h-3 w-3 mr-1" />
-              Enrolled
-            </Badge>
-          )}
-        </div>
-        <CardTitle className="text-lg line-clamp-2">{course.title}</CardTitle>
-        <CardDescription className="line-clamp-3">
-          {course.shortDescription || course.description}
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="flex-1 flex flex-col justify-between">
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center text-sm text-gray-600">
-            <Clock className="h-4 w-4 mr-1" />
-            {course.duration} hours
-          </div>
-
-          {course.tags && course.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {course.tags.slice(0, 3).map((tag: string) => (
-                <Badge key={tag} variant="outline" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
-              {course.tags.length > 3 && (
-                <Badge variant="outline" className="text-xs">
-                  +{course.tags.length - 3}
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {course.isEnrolled && course.enrollment && (
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Progress</span>
-                <span className="font-medium">
-                  {course.enrollment.overallProgress}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
-                  style={{ width: `${course.enrollment.overallProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          {course.isEnrolled ? (
-            <>
-              <Link href={`/student/courses/${course.id}`} className="flex-1">
-                <Button className="w-full">
-                  <Play className="h-4 w-4 mr-2" />
-                  {course.enrollment?.overallProgress > 0
-                    ? "Continue"
-                    : "Start"}
-                </Button>
-              </Link>
-              <EnrollButton
-                courseId={course.id}
-                isEnrolled={true}
-                variant="outline"
-                size="default"
-              >
-                <X className="h-4 w-4" />
-              </EnrollButton>
-            </>
-          ) : (
-            <EnrollButton
-              courseId={course.id}
-              isEnrolled={false}
-              className="w-full"
-            >
-              Enroll Now
-            </EnrollButton>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SearchAndFilters({
-  searchParams,
-}: {
-  searchParams: {
-    search?: string;
-    difficulty?: string;
-    page?: string;
-  };
-}) {
-  return (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search courses..."
-                defaultValue={searchParams.search || ""}
-                name="search"
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <Select
-            defaultValue={searchParams.difficulty || "none"}
-            name="difficulty"
-          >
-            <SelectTrigger className="w-full md:w-[180px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Difficulty" />
-            </SelectTrigger>
-            <SelectContent>
-              {/* TODO: Watch out for the "none" here and ensure it's not a source of bugs */}
-              <SelectItem value="none">All Levels</SelectItem>
-              <SelectItem value="BEGINNER">Beginner</SelectItem>
-              <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
-              <SelectItem value="ADVANCED">Advanced</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button type="submit">Apply Filters</Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Pagination({
-  currentPage,
-  totalPages,
-}: {
-  currentPage: number;
-  totalPages: number;
-}) {
-  if (totalPages <= 1) return null;
-
-  return (
-    <div className="flex justify-center items-center space-x-2">
-      <Button variant="outline" disabled={currentPage <= 1} size="sm">
-        Previous
-      </Button>
-
-      <span className="text-sm text-gray-600">
-        Page {currentPage} of {totalPages}
-      </span>
-
-      <Button variant="outline" disabled={currentPage >= totalPages} size="sm">
-        Next
-      </Button>
-    </div>
-  );
-}
-
-export default async function StudentCoursesPage({ searchParams }: PageProps) {
-  const session = await getServerSession(authOptions);
-
-  if (!session) {
-    redirect("/login");
-  }
-
-  // Await searchParams before using its properties
-  const resolvedSearchParams = await searchParams;
-
-  const { courses, totalPages, totalCourses, currentPage, enrollments } =
-    await getCoursesData(session.user.id, resolvedSearchParams);
-
-  const enrolledCount = enrollments.filter(
-    (e) => e.status === "ACTIVE" || e.status === "COMPLETED"
-  ).length;
-
-  return (
-    <StudentLayout>
-      <div className="space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
-            <p className="text-gray-600 mt-1">
-              Discover and manage your computer literacy courses
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            <div className="flex items-center">
-              <BookOpen className="h-4 w-4 mr-1" />
-              {totalCourses} Available
-            </div>
-            <div className="flex items-center">
-              <UserCheck className="h-4 w-4 mr-1" />
-              {enrolledCount} Enrolled
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filters */}
-        <form method="GET">
-          <SearchAndFilters searchParams={resolvedSearchParams} />
-        </form>
-
-        {/* Course Grid */}
-        {courses.length > 0 ? (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {courses.map((course) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  userId={session.user.id}
-                />
-              ))}
-            </div>
-
-            {/* Pagination */}
-            <Pagination currentPage={currentPage} totalPages={totalPages} />
-          </>
-        ) : (
-          /* Empty State */
-          <Card>
-            <CardContent className="text-center py-12">
-              <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-600 mb-2">
-                No courses found
-              </h3>
-              <p className="text-gray-500 mb-4">
-                {resolvedSearchParams.search ||
-                (resolvedSearchParams.difficulty &&
-                  resolvedSearchParams.difficulty !== "none")
-                  ? "Try adjusting your search criteria"
-                  : "No courses are currently available"}
-              </p>
-              {(resolvedSearchParams.search ||
-                (resolvedSearchParams.difficulty &&
-                  resolvedSearchParams.difficulty !== "none")) && (
-                <Link href="/student/courses">
-                  <Button variant="outline">Clear Filters</Button>
-                </Link>
-              )}
-            </CardContent>
-          </Card>
-        )}
-      </div>
-    </StudentLayout>
-  );
-}
-
-// app/(dashboard)/student/courses/[courseId]/page.tsx
+// app/(dashboard)/student/quiz/[quizId]/page.tsx
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { StudentLayout } from "@/components/layout/StudentLayout";
-import { CourseService } from "@/lib/services/courseService";
-import { EnrollmentService } from "@/lib/services/enrollmentService";
-import { StudentCourseOverview } from "@/components/students/StudentCourseOverview";
-import { ProgressService } from "@/lib/services/progressService";
+import { QuizInterface } from "@/components/students/QuizInterface";
+import { shuffleArray } from "@/lib/common/shuffler";
 
 interface PageProps {
-  params: Promise<{ courseId: string }>;
+  params: Promise<{ quizId: string }>;
+  searchParams: Promise<{ topicId?: string }>;
 }
 
-async function getCourseData(courseId: string, userId: string) {
+// Fetch quiz data from API
+async function getQuizData(quizId: string, topicId?: string) {
   try {
-    const [course, enrollment, progressData] = await Promise.all([
-      CourseService.getCourseById(courseId),
-      EnrollmentService.getEnrollment(userId, courseId),
-      ProgressService.getCourseProgressData(userId, courseId),
-    ]);
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const url = new URL(`/api/student/quiz/${quizId}`, baseUrl);
 
-    if (!course) {
-      return null;
+    if (topicId) {
+      url.searchParams.set("topicId", topicId);
     }
 
-    // Only allow access to published courses for students
-    if (course.status !== "PUBLISHED") {
-      return null;
+    const response = await fetch(url.toString(), {
+      headers: {
+        Cookie: "", // Session will be handled by getServerSession
+      },
+      cache: "no-store", // Ensure fresh data
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    return {
-      course,
-      enrollment,
-      progressData,
-    };
+    return await response.json();
   } catch (error) {
-    console.error("Error fetching course data:", error);
+    console.error("Error fetching quiz data:", error);
     return null;
   }
 }
 
-export default async function StudentCourseDetailsPage({ params }: PageProps) {
+export default async function QuizPage({ params, searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
 
-  if (!session) {
+  if (!session || session.user.role !== "STUDENT") {
     redirect("/login");
   }
 
-  const { courseId } = await params;
-  const data = await getCourseData(courseId, session.user.id);
+  const { quizId } = await params;
+  const { topicId } = await searchParams;
 
-  if (!data) {
+  // For server-side data fetching, we'll use Prisma directly
+  // This is more efficient than making an API call to ourselves
+  const { prisma } = await import("@/lib/db");
+
+  try {
+    // Fetch quiz with all related data
+    const quiz = await prisma.quiz.findUnique({
+      where: {
+        id: quizId,
+        isActive: true,
+      },
+      include: {
+        topic: {
+          include: {
+            module: {
+              include: {
+                course: true,
+              },
+            },
+          },
+        },
+        questions: {
+          where: {
+            isActive: true,
+          },
+          include: {
+            options: {
+              orderBy: { orderIndex: "asc" },
+            },
+          },
+          orderBy: { orderIndex: "asc" },
+        },
+      },
+    });
+
+    if (!quiz) {
+      notFound();
+    }
+
+    // Check if student is enrolled in the course
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId: session.user.id,
+          courseId: quiz.topic.module.course.id,
+        },
+        status: "ACTIVE",
+      },
+    });
+
+    if (!enrollment) {
+      redirect("/student/courses");
+    }
+
+    // Get student's previous attempts
+    const attempts = await prisma.quizAttempt.findMany({
+      where: {
+        quizId,
+        userId: session.user.id,
+        isPractice: false,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        score: true,
+        passed: true,
+        startedAt: true,
+        completedAt: true,
+        timeSpent: true,
+        questionsCorrect: true,
+        questionsTotal: true,
+      },
+    });
+
+    // Check if student can take the quiz
+    const canTakeQuiz = quiz.maxAttempts
+      ? attempts.length < quiz.maxAttempts
+      : true;
+    const hasPassedQuiz = attempts.some((attempt) => attempt.passed);
+
+    if (!canTakeQuiz && !hasPassedQuiz) {
+      redirect(`/student/quiz/${quizId}/results`);
+    }
+
+    // Get topic progress to check prerequisites
+    let topicProgress = null;
+    if (topicId) {
+      topicProgress = await prisma.topicProgress.findUnique({
+        where: {
+          userId_topicId: {
+            userId: session.user.id,
+            topicId,
+          },
+        },
+      });
+    }
+
+    // Format questions for frontend (hide correct answers)
+    let formattedQuestions = quiz.questions.map((question) => ({
+      id: question.id,
+      questionText: question.questionText,
+      questionType: question.questionType,
+      points: question.points,
+      hint: question.hint,
+      timeLimit: question.timeLimit,
+      allowPartialCredit: question.allowPartialCredit,
+      caseSensitive: question.caseSensitive,
+      orderIndex: question.orderIndex,
+      required: true, // Assume all questions are required for now
+      options:
+        question.options?.map((option) => ({
+          id: option.id,
+          text: option.text,
+          orderIndex: option.orderIndex,
+          // Don't send isCorrect to frontend
+        })) || [],
+    }));
+
+    // Shuffle questions if required
+    if (quiz.shuffleQuestions) {
+      formattedQuestions = shuffleArray(formattedQuestions);
+    }
+
+    // // Shuffle options within each question if required
+    if (quiz.shuffleOptions) {
+      formattedQuestions.forEach((question) => {
+        if (question.options.length > 0) {
+          question.options = shuffleArray(question.options);
+        }
+      });
+    }
+
+    const quizData = {
+      id: quiz.id,
+      title: quiz.title,
+      description: quiz.description,
+      passingScore: quiz.passingScore,
+      timeLimit: quiz.timeLimit,
+      allowRetakes: quiz.maxAttempts ? quiz.maxAttempts > 1 : true,
+      maxAttempts: quiz.maxAttempts,
+      shuffleQuestions: quiz.shuffleQuestions,
+      showResults: quiz.showFeedback,
+      topic: {
+        id: quiz.topic.id,
+        title: quiz.topic.title,
+        module: {
+          id: quiz.topic.module.id,
+          title: quiz.topic.module.title,
+          course: {
+            id: quiz.topic.module.course.id,
+            title: quiz.topic.module.course.title,
+          },
+        },
+      },
+      questions: formattedQuestions,
+    };
+
+    const metadata = {
+      totalQuestions: quiz.questions.length,
+      totalPoints: quiz.questions.reduce((sum, q) => sum + q.points, 0),
+      attemptNumber: attempts.length + 1,
+      attemptsRemaining: quiz.maxAttempts
+        ? quiz.maxAttempts - attempts.length
+        : null,
+      hasPassedQuiz,
+    };
+
+    return (
+      <StudentLayout>
+        <QuizInterface
+          quiz={quizData}
+          attempts={attempts}
+          userId={session.user.id}
+          topicId={topicId}
+          metadata={metadata}
+        />
+      </StudentLayout>
+    );
+  } catch (error) {
+    console.error("Error loading quiz:", error);
     notFound();
   }
+}
 
-  const { course, enrollment } = data;
+// components/students/QuizInterface.tsx
+"use client";
 
-  if (!course) {
-    redirect("/student");
-  }
-  // Check if user is enrolled
-  if (!enrollment || enrollment.status !== "ACTIVE") {
-    redirect(`/student/courses?enroll=${courseId}`);
-  }
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  User,
+  FileText,
+  Award,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  AlertTriangle,
+  Save,
+  Send,
+  Timer,
+  Clock,
+} from "lucide-react";
+import { toast } from "sonner";
 
-  // Serialize the course data to handle Decimal and Date objects
-  const serializedCourse = {
-    ...course,
-    createdAt: course.createdAt?.toISOString(),
-    updatedAt: course.updatedAt?.toISOString(),
-    publishedAt: course.publishedAt?.toISOString(),
+interface QuizOption {
+  id: string;
+  text: string;
+  orderIndex: number;
+}
+
+interface QuizQuestion {
+  id: string;
+  questionText: string;
+  questionType:
+    | "MULTIPLE_CHOICE"
+    | "MULTIPLE_SELECT"
+    | "TRUE_FALSE"
+    | "SHORT_ANSWER"
+    | "LONG_ANSWER"
+    | "MATCHING"
+    | "ORDERING";
+  points: number;
+  required: boolean;
+  options: QuizOption[];
+  hint?: string;
+  timeLimit?: number;
+  allowPartialCredit?: boolean;
+  caseSensitive?: boolean;
+  orderIndex: number;
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  description?: string;
+  passingScore: number;
+  timeLimit?: number;
+  allowRetakes: boolean;
+  maxAttempts?: number;
+  shuffleQuestions: boolean;
+  showResults: boolean;
+  topic: {
+    id: string;
+    title: string;
+    module: {
+      id: string;
+      title: string;
+      course: {
+        id: string;
+        title: string;
+      };
+    };
+  };
+  questions: QuizQuestion[];
+}
+
+interface AttemptData {
+  id: string;
+  score: number;
+  passed: boolean;
+  startedAt: Date;
+  completedAt: Date | null;
+  timeSpent: number | null;
+  questionsCorrect: number;
+  questionsTotal: number;
+}
+
+interface QuizMetadata {
+  totalQuestions: number;
+  totalPoints: number;
+  attemptNumber: number;
+  attemptsRemaining: number | null;
+  hasPassedQuiz: boolean;
+}
+
+interface QuizInterfaceProps {
+  quiz: Quiz;
+  attempts: AttemptData[];
+  userId: string;
+  topicId?: string;
+  metadata: QuizMetadata;
+}
+
+type Answer = string | string[];
+
+export function QuizInterface({
+  quiz,
+  attempts,
+  userId,
+  topicId,
+  metadata,
+}: QuizInterfaceProps) {
+  const router = useRouter();
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [timeLeft, setTimeLeft] = useState(
+    quiz.timeLimit ? quiz.timeLimit * 60 : null
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [quizStartTime] = useState(Date.now());
+
+  // Timer effect
+  useEffect(() => {
+    if (timeLeft === null || timeLeft <= 0) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null || prev <= 1) {
+          // Auto-submit when time runs out
+          handleSubmitQuiz();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  // Auto-save answers periodically
+  useEffect(() => {
+    const saveInterval = setInterval(() => {
+      if (Object.keys(answers).length > 0) {
+        // Auto-save logic could be implemented here
+        console.log("Auto-saving answers...", answers);
+      }
+    }, 30000); // Save every 30 seconds
+
+    return () => clearInterval(saveInterval);
+  }, [answers]);
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${remainingSeconds
+      .toString()
+      .padStart(2, "0")}`;
   };
 
-  // Serialize the enrollment data
-  const serializedEnrollment = {
-    ...enrollment,
-    enrolledAt: enrollment.enrolledAt.toISOString(),
-    completedAt: enrollment.completedAt?.toISOString(),
-    lastAccessAt: enrollment.lastAccessAt?.toISOString(),
+  const handleAnswerChange = (questionId: string, answer: Answer) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: answer,
+    }));
   };
+
+  const getAnsweredCount = () => {
+    return Object.keys(answers).length;
+  };
+
+  const getProgressPercentage = () => {
+    return Math.round((getAnsweredCount() / quiz.questions.length) * 100);
+  };
+
+  const handleSubmitQuiz = async () => {
+    setIsSubmitting(true);
+    try {
+      const timeSpent = Math.floor((Date.now() - quizStartTime) / 1000); // Convert to seconds
+
+      const submitData = {
+        answers,
+        timeSpent,
+        topicId,
+      };
+
+      const response = await fetch(`/api/student/quiz/${quiz.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(submitData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit quiz");
+      }
+
+      const result = await response.json();
+
+      toast.success("Quiz submitted successfully!");
+
+      // Redirect to results page
+      router.push(
+        `/student/quiz/${quiz.id}/results?attempt=${result.attempt.id}`
+      );
+    } catch (error) {
+      console.error("Failed to submit quiz:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit quiz"
+      );
+      setIsSubmitting(false);
+    }
+  };
+
+  const canSubmit = () => {
+    const requiredQuestions = quiz.questions.filter((q) => q.required);
+    const answeredRequired = requiredQuestions.filter(
+      (q) =>
+        answers[q.id] &&
+        (typeof answers[q.id] === "string"
+          ? answers[q.id].trim() !== ""
+          : Array.isArray(answers[q.id]) && answers[q.id].length > 0)
+    ).length;
+    return answeredRequired === requiredQuestions.length;
+  };
+
+  const renderQuestion = (question: QuizQuestion, index: number) => {
+    const answer = answers[question.id];
+
+    switch (question.questionType) {
+      case "MULTIPLE_CHOICE":
+      case "TRUE_FALSE":
+        return (
+          <div className="space-y-3">
+            <RadioGroup
+              value={(answer as string) || ""}
+              onValueChange={(value) => handleAnswerChange(question.id, value)}
+            >
+              {question.options.map((option) => (
+                <div key={option.id} className="flex items-center space-x-3">
+                  <RadioGroupItem value={option.id} id={option.id} />
+                  <Label
+                    htmlFor={option.id}
+                    className="flex-1 cursor-pointer py-2"
+                  >
+                    {option.text}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        );
+
+      case "MULTIPLE_SELECT":
+        const selectedOptions = (answer as string[]) || [];
+        return (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600 mb-3">Select all that apply:</p>
+            {question.options.map((option) => (
+              <div key={option.id} className="flex items-center space-x-3">
+                <Checkbox
+                  id={option.id}
+                  checked={selectedOptions.includes(option.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleAnswerChange(question.id, [
+                        ...selectedOptions,
+                        option.id,
+                      ]);
+                    } else {
+                      handleAnswerChange(
+                        question.id,
+                        selectedOptions.filter((id) => id !== option.id)
+                      );
+                    }
+                  }}
+                />
+                <Label
+                  htmlFor={option.id}
+                  className="flex-1 cursor-pointer py-2"
+                >
+                  {option.text}
+                </Label>
+              </div>
+            ))}
+          </div>
+        );
+
+      case "SHORT_ANSWER":
+        return (
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Enter your answer..."
+              value={(answer as string) || ""}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              className="min-h-[100px]"
+            />
+            {question.caseSensitive && (
+              <p className="text-xs text-amber-600">
+                Note: This answer is case-sensitive
+              </p>
+            )}
+          </div>
+        );
+
+      case "LONG_ANSWER":
+        const wordCount = (((answer as string) || "").match(/\S+/g) || [])
+          .length;
+        return (
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Write your detailed answer here..."
+              value={(answer as string) || ""}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              className="min-h-[200px]"
+            />
+            <div className="flex justify-between text-sm text-gray-500">
+              <span>Word count: {wordCount}</span>
+              <span className="text-blue-600">
+                Detailed answers may be manually graded
+              </span>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="text-red-500">
+            Unsupported question type: {question.questionType}
+          </div>
+        );
+    }
+  };
+
+  const currentQ = quiz.questions[currentQuestion];
 
   return (
-    <StudentLayout
-      title={serializedCourse.title}
-      description={serializedCourse.shortDescription as string}
-    >
-      <StudentCourseOverview
-        course={serializedCourse}
-        enrollment={serializedEnrollment}
-        userId={session.user.id}
-        progressData={data.progressData}
-      />
-    </StudentLayout>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Quiz Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">{quiz.title}</CardTitle>
+              <div className="flex items-center gap-4 text-sm text-gray-600 mt-2">
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {quiz.topic.module.course.title}
+                </span>
+                <span className="flex items-center gap-1">
+                  <FileText className="h-3 w-3" />
+                  {quiz.questions.length} questions
+                </span>
+                <span className="flex items-center gap-1">
+                  <Award className="h-3 w-3" />
+                  {quiz.passingScore}% to pass
+                </span>
+                {metadata.totalPoints && (
+                  <span className="flex items-center gap-1">
+                    <Award className="h-3 w-3" />
+                    {metadata.totalPoints} points
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="text-right">
+              {timeLeft !== null && (
+                <div
+                  className={`flex items-center gap-2 text-lg font-mono ${
+                    timeLeft < 300
+                      ? "text-red-600 animate-pulse"
+                      : "text-gray-700"
+                  }`}
+                >
+                  <Timer className="h-5 w-5" />
+                  {formatTime(timeLeft)}
+                  {timeLeft < 300 && (
+                    <span className="text-xs text-red-600 ml-2">
+                      TIME RUNNING OUT!
+                    </span>
+                  )}
+                </div>
+              )}
+              {attempts.length > 0 && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Attempt {metadata.attemptNumber} of {quiz.maxAttempts || "∞"}
+                </p>
+              )}
+              {metadata.attemptsRemaining !== null && (
+                <p className="text-sm text-amber-600 mt-1">
+                  {metadata.attemptsRemaining} attempts remaining
+                </p>
+              )}
+            </div>
+          </div>
+
+          {quiz.description && (
+            <p className="text-gray-600 mt-3">{quiz.description}</p>
+          )}
+        </CardHeader>
+      </Card>
+
+      {/* Progress Bar */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Quiz Progress</span>
+            <span className="text-sm text-gray-600">
+              {getAnsweredCount()} of {quiz.questions.length} answered
+            </span>
+          </div>
+          <Progress value={getProgressPercentage()} className="h-2" />
+        </CardContent>
+      </Card>
+
+      {/* Question Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Badge variant="outline">
+                Question {currentQuestion + 1} of {quiz.questions.length}
+              </Badge>
+              <Badge className="bg-blue-100 text-blue-800">
+                {currentQ.points} points
+              </Badge>
+              {currentQ.required && <Badge variant="secondary">Required</Badge>}
+              {currentQ.timeLimit && (
+                <Badge variant="outline">
+                  <Clock className="h-3 w-3 mr-1" />
+                  {currentQ.timeLimit}s
+                </Badge>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {answers[currentQ.id] && (
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              )}
+            </div>
+          </div>
+
+          <CardTitle className="text-lg leading-relaxed mt-4">
+            {currentQ.questionText}
+          </CardTitle>
+
+          {currentQ.hint && (
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-700">
+                <span className="font-medium">Hint:</span> {currentQ.hint}
+              </p>
+            </div>
+          )}
+        </CardHeader>
+
+        <CardContent>{renderQuestion(currentQ, currentQuestion)}</CardContent>
+      </Card>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between">
+        <Button
+          variant="outline"
+          onClick={() => setCurrentQuestion((prev) => Math.max(0, prev - 1))}
+          disabled={currentQuestion === 0}
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Previous
+        </Button>
+
+        <div className="flex items-center gap-2">
+          {quiz.questions.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentQuestion(index)}
+              className={`w-8 h-8 rounded-full text-sm font-medium transition-colors ${
+                index === currentQuestion
+                  ? "bg-blue-600 text-white"
+                  : answers[quiz.questions[index].id]
+                  ? "bg-green-100 text-green-800 border border-green-200"
+                  : "bg-gray-100 text-gray-600 border border-gray-200"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
+        </div>
+
+        {currentQuestion < quiz.questions.length - 1 ? (
+          <Button
+            onClick={() =>
+              setCurrentQuestion((prev) =>
+                Math.min(quiz.questions.length - 1, prev + 1)
+              )
+            }
+          >
+            Next
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        ) : (
+          <AlertDialog
+            open={showSubmitDialog}
+            onOpenChange={setShowSubmitDialog}
+          >
+            <AlertDialogTrigger asChild>
+              <Button
+                className="bg-green-600 hover:bg-green-700"
+                disabled={!canSubmit()}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Submit Quiz
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Submit Quiz?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <p>
+                    You have answered {getAnsweredCount()} out of{" "}
+                    {quiz.questions.length} questions.
+                  </p>
+                  {!canSubmit() && (
+                    <div className="text-red-600 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      Please answer all required questions before submitting.
+                    </div>
+                  )}
+                  <p>
+                    Once submitted, you cannot change your answers. Are you sure
+                    you want to submit?
+                  </p>
+                  {timeLeft !== null && timeLeft < 60 && (
+                    <div className="text-amber-600 flex items-center gap-2">
+                      <Timer className="h-4 w-4" />
+                      Less than 1 minute remaining!
+                    </div>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isSubmitting}>
+                  Review Answers
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleSubmitQuiz}
+                  disabled={!canSubmit() || isSubmitting}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Submitting...
+                    </>
+                  ) : (
+                    "Submit Quiz"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+      </div>
+
+      {/* Auto-save indicator */}
+      <div className="text-center">
+        <p className="text-xs text-gray-500 flex items-center justify-center gap-1">
+          <Save className="h-3 w-3" />
+          Answers are saved automatically as you type
+        </p>
+      </div>
+
+      {/* Quiz Stats */}
+      {attempts.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <h3 className="font-medium mb-3">Previous Attempts</h3>
+            <div className="space-y-2">
+              {attempts.slice(0, 3).map((attempt, index) => (
+                <div
+                  key={attempt.id}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span>Attempt {attempts.length - index}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={attempt.passed ? "default" : "destructive"}>
+                      {attempt.score}%
+                    </Badge>
+                    <span className="text-gray-500">
+                      {attempt.questionsCorrect}/{attempt.questionsTotal}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
+
+
+Summary of Changes
+The implementation includes:
+✅ Day 4 Checklist Complete:
+
+Complete quiz timer functionality ✅
+Timer counts down with warnings ✅
+Auto-submit when time expires ✅
+
+Key Features Added:
+
+Quiz Instructions Component:
+
+Modern card-based layout with icons
+Connection stability test
+Comprehensive quiz guidelines
+Required acknowledgment system
+Connection test functionality
+
+
+Enhanced Timer Functionality:
+
+Auto-submission when timer expires
+Warning notifications at 5 minutes and 1 minute
+Prevents starting timer until instructions are acknowledged
+Visual time warnings with color changes
+
+
+Page Protection:
+
+Browser refresh/close warning (beforeunload event)
+Instructions clearly state not to close tab/window
+
+
+Instructions Include:
+
+Stable internet connection requirement
+Quiet environment necessity
+Full attention requirement
+No tab/window closing warning
+Auto-submit information
+Additional standard online assessment guidelines
+
+
+User Experience:
+
+Connection test with real-time feedback
+Required vs optional instruction differentiation
+Clear quiz metadata display
+Modern, accessible design
+
+
+
+The quiz now provides a comprehensive pre-quiz setup experience that ensures students understand all requirements before beginning their assessment.
