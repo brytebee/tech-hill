@@ -1,0 +1,611 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  BookOpen,
+  Clock,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle,
+  Play,
+  FileText,
+  Video,
+  Award,
+  Target,
+  AlertTriangle,
+  Unlock as UnlockIcon,
+  Lock as LockIcon,
+  User,
+} from "lucide-react";
+import Link from "next/link";
+
+export interface Quiz {
+  id: string;
+  title: string;
+  passingScore: number;
+  questions: Array<{
+    id: string;
+    questionType: string;
+    points: number;
+  }>;
+}
+
+export interface Topic {
+  id: string;
+  title: string;
+  slug: string;
+  description?: string;
+  content: string;
+  orderIndex: number;
+  duration?: number;
+  topicType: string;
+  videoUrl?: string;
+  attachments: string[];
+  passingScore: number;
+  maxAttempts?: number;
+  isRequired: boolean;
+  allowSkip: boolean;
+  prerequisiteTopic?: {
+    id: string;
+    title: string;
+  };
+  module: {
+    id: string;
+    title: string;
+    course: {
+      id: string;
+      title: string;
+      creator: {
+        firstName: string;
+        lastName: string;
+      };
+    };
+  };
+  quizzes: Quiz[];
+}
+
+export interface Enrollment {
+  id: string;
+  status: string;
+  overallProgress: number;
+}
+
+export interface StudentTopicViewerProps {
+  topic: Topic;
+  enrollment: Enrollment;
+  userId: string;
+}
+
+export interface TopicProgressData {
+  progress: any;
+  remainingAttempts: { [quizId: string]: number };
+  canAccess: boolean;
+}
+
+function getTopicIcon(type: string) {
+  switch (type) {
+    case "VIDEO":
+      return <Video className="h-5 w-5" />;
+    case "PRACTICE":
+      return <Target className="h-5 w-5" />;
+    case "ASSESSMENT":
+      return <Award className="h-5 w-5" />;
+    case "RESOURCE":
+      return <FileText className="h-5 w-5" />;
+    default:
+      return <BookOpen className="h-5 w-5" />;
+  }
+}
+
+function getTopicTypeColor(type: string) {
+  switch (type) {
+    case "VIDEO":
+      return "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800";
+    case "PRACTICE":
+      return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800";
+    case "ASSESSMENT":
+      return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800";
+    case "RESOURCE":
+      return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800";
+    default:
+      return "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+  }
+}
+
+export function StudentTopicViewer({
+  topic,
+  enrollment,
+  userId,
+}: StudentTopicViewerProps) {
+  const router = useRouter();
+  const isPreviewOnly = !enrollment || enrollment.status !== "ACTIVE";
+  const [progressData, setProgressData] = useState<TopicProgressData | null>(
+    isPreviewOnly
+      ? { progress: null, remainingAttempts: {}, canAccess: true }
+      : null,
+  );
+  const [isLoading, setIsLoading] = useState(!isPreviewOnly);
+
+  useEffect(() => {
+    if (isPreviewOnly) return;
+    const fetchProgressData = async () => {
+      try {
+        const response = await fetch(
+          `/api/student/topics/${topic.id}/progress`,
+        );
+        const data = await response.json();
+        setProgressData(data);
+      } catch (error: any) {
+        console.error("Error fetching progress data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProgressData();
+  }, [topic.id, isPreviewOnly]);
+
+  const handleMarkComplete = async () => {
+    try {
+      const response = await fetch(
+        `/api/student/topics/${topic.id}/mark-complete`,
+        { method: "POST" },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.canComplete) {
+          const progressResponse = await fetch(
+            `/api/student/topics/${topic.id}/progress`,
+          );
+          const updatedData = await progressResponse.json();
+          setProgressData(updatedData);
+        } else {
+          alert("Please complete all required assessments before marking this topic as complete.");
+        }
+      } else {
+        throw new Error("Failed to mark complete");
+      }
+    } catch (error: any) {
+      console.error("Failed to mark completed:", error);
+      alert("Error updating progress. Please try again.");
+    }
+  };
+
+  const handleStartQuiz = (quizId: string) => {
+    if (
+      !progressData?.remainingAttempts[quizId] ||
+      progressData.remainingAttempts[quizId] === 0
+    ) {
+      alert("No more attempts remaining for this quiz.");
+      return;
+    }
+    router.push(`/student/quiz/${quizId}?topicId=${topic.id}`);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="max-w-4xl mx-auto p-8 flex items-center justify-center min-h-[50vh]">
+         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
+
+  if (!progressData?.canAccess) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <Card className="border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-red-800 dark:text-red-400">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-semibold">Access Denied</span>
+            </div>
+            <p className="text-red-700 dark:text-red-300 mt-2">
+              You don't have access to this topic. Please complete the prerequisites first.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const isCompleted = progressData?.progress?.status === "COMPLETED";
+  const hasAssessments = topic.quizzes.length > 0;
+  const canMarkComplete =
+    !hasAssessments ||
+    topic.quizzes.every((quiz) =>
+      progressData?.progress?.topic?.quizzes?.some(
+        (tq: any) =>
+          tq.id === quiz.id &&
+          tq.attempts?.some((attempt: any) => attempt.passed),
+      ),
+    );
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      {/* Breadcrumbs */}
+      <nav className="flex items-center space-x-2 text-sm text-slate-500 dark:text-slate-400 font-medium">
+        <Link
+          href={`/student/courses/${topic.module.course.id}`}
+          className="hover:text-slate-900 dark:hover:text-white flex items-center gap-1 transition-colors"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          {topic.module.course.title}
+        </Link>
+        <span className="opacity-50">/</span>
+        <span className="truncate max-w-[150px] sm:max-w-none">{topic.module.title}</span>
+        <span className="opacity-50">/</span>
+        <span className="text-slate-900 dark:text-white truncate max-w-[150px] sm:max-w-none">{topic.title}</span>
+      </nav>
+
+      {/* Preview Alert */}
+      {isPreviewOnly && (
+        <Card className="border-blue-200 dark:border-blue-900/30 bg-blue-50 dark:bg-blue-900/10 shadow-sm">
+          <CardContent className="pt-6 pb-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+              <div className="flex items-start gap-3 text-blue-800 dark:text-blue-300">
+                <UnlockIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-base tracking-tight mb-1 flex items-center gap-2">Free Lesson Preview <Badge className="bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100 hover:bg-blue-200">PROMO</Badge></p>
+                  <p className="text-sm opacity-90 leading-relaxed max-w-lg">
+                    Enroll now to track your progress, take quizzes, complete assessments, and earn your verified certificate.
+                  </p>
+                </div>
+              </div>
+              <Link href={`/student/courses/${topic.module.course.id}`}>
+                <Button className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20 whitespace-nowrap h-10 px-6 font-semibold">
+                  Unlock Full Course
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Topic Header Card */}
+      <Card className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-sm relative">
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/5 dark:bg-blue-500/10 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+        <CardHeader className="relative z-10 pb-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2 mb-4">
+                <Badge className={`${getTopicTypeColor(topic.topicType)} shadow-sm`}>
+                  {getTopicIcon(topic.topicType)}
+                  <span className="ml-1.5 uppercase tracking-wider text-[10px] font-bold">{topic.topicType}</span>
+                </Badge>
+                {topic.isRequired && (
+                  <Badge variant="secondary" className="shadow-sm dark:bg-slate-800 dark:text-slate-300">Required</Badge>
+                )}
+                {isCompleted && (
+                  <Badge className="bg-green-100 dark:bg-green-500/20 text-green-800 dark:text-green-300 border-0 shadow-sm">
+                    <CheckCircle className="h-3 w-3 mr-1.5" />
+                    Completed
+                  </Badge>
+                )}
+                {progressData?.progress?.bestScore && (
+                  <Badge variant="outline" className="shadow-sm border-slate-200 dark:border-slate-700">
+                    Best Score: {progressData.progress.bestScore}%
+                  </Badge>
+                )}
+              </div>
+
+              <CardTitle className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white mb-3">
+                {topic.title}
+              </CardTitle>
+
+              {topic.description && (
+                <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed max-w-3xl mb-6">
+                  {topic.description}
+                </p>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-slate-100 dark:border-slate-800/60 text-sm">
+                {topic.duration && (
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
+                    <Clock className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span>{topic.duration} minutes</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
+                  <Target className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <span>{topic.passingScore}% to pass</span>
+                </div>
+                {topic.maxAttempts && (
+                  <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
+                    <AlertTriangle className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                    <span>{topic.maxAttempts} attempts max</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium">
+                  <User className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <span>
+                    {topic.module.course.creator.firstName} {topic.module.course.creator.lastName}
+                  </span>
+                </div>
+              </div>
+
+              {/* Statistical Progress Block */}
+              {progressData?.progress && (
+                <div className="mt-5 p-4 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Views</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{progressData.progress.viewCount}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Time Spent</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{progressData.progress.timeSpent} min</span>
+                    </div>
+                    {progressData.progress.attemptCount > 0 && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Attempts</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{progressData.progress.attemptCount}</span>
+                      </div>
+                    )}
+                    {progressData.progress.averageScore && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider">Avg Score</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{progressData.progress.averageScore}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Prerequisite Hard Stop */}
+      {topic.prerequisiteTopic && (
+        <Card className="border-orange-200 dark:border-orange-900/30 bg-orange-50 dark:bg-orange-900/10 shadow-sm">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-orange-800 dark:text-orange-400">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-semibold">Prerequisite Required</span>
+            </div>
+            <p className="text-orange-700 dark:text-orange-300 mt-2">
+              Complete "{topic.prerequisiteTopic.title}" before generating progress on this topic.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Video Block */}
+      {topic.videoUrl && (
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Video className="h-5 w-5 text-blue-500" />
+              Primary Lecture Video
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="aspect-video bg-slate-900 flex items-center justify-center group relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30 group-hover:opacity-40 transition-opacity duration-700" />
+              <div className="text-center relative z-10">
+                <Button size="icon" className="w-16 h-16 rounded-full bg-blue-600/90 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30 mb-4 backdrop-blur-md">
+                   <Play className="h-6 w-6 ml-1" />
+                </Button>
+                <p className="text-slate-300 font-medium">Video Player Stand-in</p>
+                <p className="text-xs text-slate-500 mt-1 truncate max-w-sm">{topic.videoUrl}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Primary Markdown Content */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+        <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BookOpen className="h-5 w-5 text-slate-400" />
+            Reading Material
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-8 px-6 sm:px-10 pb-10">
+          <div
+            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 sm:prose-lg"
+            dangerouslySetInnerHTML={{ __html: topic.content }}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Attachments */}
+      {topic.attachments && topic.attachments.length > 0 && (
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+          <CardHeader className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-800">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-5 w-5 text-slate-400" />
+              Resources & Downloads
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="grid gap-3">
+              {topic.attachments.map((attachment, index) => (
+                <div
+                  key={index}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors gap-4"
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                      <FileText className="h-5 w-5 text-slate-500 dark:text-slate-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm text-slate-900 dark:text-slate-100 truncate">Resource Attachment {index + 1}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{attachment}</p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" className="shrink-0 bg-white dark:bg-slate-900">
+                    Download
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Quizzes List */}
+      {topic.quizzes && topic.quizzes.length > 0 && (
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <CardHeader className="bg-blue-50/50 dark:bg-blue-900/10 border-b border-slate-200 dark:border-slate-800">
+            <CardTitle className="flex items-center gap-2 text-lg text-slate-900 dark:text-white">
+              <Award className="h-5 w-5 text-blue-500" />
+              Required Assessments
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {topic.quizzes.map((quiz) => {
+                const remainingAttempts = progressData?.remainingAttempts[quiz.id] ?? 0;
+                const hasAttemptsLeft = remainingAttempts === -1 || remainingAttempts > 0;
+                const passedQuiz = topic.quizzes.some(
+                  (q) =>
+                    q.id === quiz.id &&
+                    progressData?.progress?.topic?.quizzes?.some(
+                      (tq: any) =>
+                        tq.id === quiz.id &&
+                        tq.attempts?.some((attempt: any) => attempt.passed),
+                    ),
+                );
+
+                return (
+                  <div
+                    key={quiz.id}
+                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-5 border rounded-xl transition-all ${
+                      passedQuiz
+                        ? "border-green-200 dark:border-green-900/30 bg-green-50/50 dark:bg-green-900/10"
+                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-blue-200 dark:hover:border-blue-800"
+                    }`}
+                  >
+                    <div className="mb-4 sm:mb-0">
+                      <h4 className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        {quiz.title}
+                        {passedQuiz && (
+                          <CheckCircle className="h-4.5 w-4.5 text-green-500" />
+                        )}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">
+                        <span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5"/> {quiz.questions.length} questions</span>
+                        <span className="flex items-center gap-1.5"><Target className="w-3.5 h-3.5"/> Passing: {quiz.passingScore}%</span>
+                        <span className="flex items-center gap-1.5">
+                          <Award className="w-3.5 h-3.5"/> Total: {quiz.questions.reduce((sum, q) => sum + q.points, 0)} pts
+                        </span>
+                        {remainingAttempts !== -1 && (
+                          <Badge variant="outline" className={`${remainingAttempts === 0 ? "border-red-200 text-red-600 dark:border-red-900 dark:text-red-400" : "border-blue-200 text-blue-600 dark:border-blue-800 dark:text-blue-400"}`}>
+                            {remainingAttempts} attempts left
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {isPreviewOnly ? (
+                      <div className="text-right flex flex-col items-center sm:items-end w-full sm:w-auto">
+                        <Button variant="outline" disabled className="w-full sm:w-auto h-10">
+                          <LockIcon className="h-4 w-4 mr-2" />
+                          Locked in Preview
+                        </Button>
+                      </div>
+                    ) : hasAttemptsLeft ? (
+                      <Button onClick={() => handleStartQuiz(quiz.id)} className={`w-full sm:w-auto h-10 ${passedQuiz ? 'bg-white text-slate-900 border border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:hover:bg-slate-700' : 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-500/20'}`}>
+                        <Play className={`h-4 w-4 mr-2 ${passedQuiz ? '' : 'fill-current'}`} />
+                        {passedQuiz ? "Retake for higher score" : "Start Assessment"}
+                      </Button>
+                    ) : (
+                      <Button variant="outline" disabled className="w-full sm:w-auto h-10 border-red-200 text-red-500 dark:border-red-900/50 dark:text-red-400">
+                        No Attempts Left
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Assessment block condition */}
+            {hasAssessments && !isCompleted && (
+              <div className="mt-5 p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-xl flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-500 shrink-0 mt-0.5" />
+                <div>
+                  <h5 className="font-semibold text-yellow-800 dark:text-yellow-400 text-sm">Action Required</h5>
+                  <p className="text-yellow-700 dark:text-yellow-300 mt-1 text-sm leading-relaxed">
+                    You must pass all assessments in this topic before you can mark it as complete and progress to the next module.
+                  </p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Completion Actions Box */}
+      <Card className="border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 relative overflow-hidden">
+        {isCompleted && <div className="absolute inset-0 bg-green-500/5 dark:bg-green-500/10 pointer-events-none" />}
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+            <div className="max-w-xl">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
+                {isCompleted ? "Topic Completed! 🎉" : hasAssessments ? "Ready to move on?" : "Finished reading?"}
+              </h3>
+              {!isCompleted && (
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {hasAssessments
+                    ? "Pass all assessments above to unlock the completion status for this topic."
+                    : "Make sure you completely understand the material before tracking your completion."}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto shrink-0">
+              {topic.allowSkip && !topic.isRequired && !isCompleted && (
+                <Button variant="outline" className="h-11 dark:border-slate-700">Skip Topic</Button>
+              )}
+              {isPreviewOnly ? (
+                <Link href={`/student/courses/${topic.module.course.id}`} className="w-full">
+                  <Button className="w-full h-11 bg-blue-600 hover:bg-blue-500 text-white font-semibold">Join Course to Track</Button>
+                </Link>
+              ) : !isCompleted ? (
+                <Button
+                  onClick={handleMarkComplete}
+                  disabled={!canMarkComplete}
+                  className="h-11 bg-slate-900 hover:bg-slate-800 text-white dark:bg-blue-600 dark:hover:bg-blue-500 transition-all shadow-md font-semibold"
+                >
+                  <CheckCircle className="h-4.5 w-4.5 mr-2" />
+                  Mark as Complete
+                </Button>
+              ) : (
+                <Button variant="outline" disabled className="h-11 border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400 font-semibold opacity-100">
+                  <CheckCircle className="h-4.5 w-4.5 mr-2" />
+                  Completed
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Footer Navigation */}
+      <div className="flex items-center justify-between pt-4 pb-8 border-t border-slate-200 dark:border-slate-800 mt-8">
+        <Link href={`/student/courses/${topic.module.course.id}`}>
+          <Button variant="ghost" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Back to Overview</span>
+            <span className="sm:hidden">Back</span>
+          </Button>
+        </Link>
+
+        <div className="text-center px-4">
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            Pos <span className="text-slate-900 dark:text-slate-300 mx-1">{topic.orderIndex}</span>
+          </p>
+        </div>
+
+        <Button variant="ghost" disabled className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50">
+          <span className="hidden sm:inline">Next</span>
+          <ArrowRight className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
+    </div>
+  );
+}
