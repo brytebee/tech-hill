@@ -18,6 +18,8 @@ export default withAuth(
       pathname === "/" ||
       pathname.startsWith("/pricing") ||
       pathname.startsWith("/payment") ||
+      pathname.startsWith("/verify-email") ||
+      pathname.startsWith("/api/auth/verify") ||
       pathname.startsWith("/api/payment") ||
       pathname.startsWith("/api/webhooks") ||
       pathname.startsWith("/api/health-check");
@@ -126,6 +128,8 @@ export default withAuth(
           pathname.startsWith("/auth") ||
           pathname.startsWith("/pricing") ||
           pathname.startsWith("/payment") ||
+          pathname.startsWith("/verify-email") ||
+          pathname.startsWith("/api/auth/verify") ||
           pathname.startsWith("/api/webhooks") ||
           pathname.startsWith("/forgot-password")
         ) {

@@ -102,7 +102,8 @@ model User {
   usedCoupons   CouponUsage[]
 
   // Security
-  devices Device[]
+  devices  Device[]
+  passkeys PasskeyCredential[]
 
   @@map("users")
 }
@@ -900,4 +901,24 @@ model Device {
 
   @@unique([userId, deviceHash])
   @@map("devices")
+}
+
+// --------------------------------------
+// WEBAUTHN / PASSKEYS
+// --------------------------------------
+model PasskeyCredential {
+  id              String   @id @default(cuid())
+  userId          String
+  credentialID    String   @unique // Stored as Base64URL string for easier lookup
+  publicKey       Bytes
+  counter         BigInt
+  transports      String?  // JSON stringified array of transports
+  deviceType      String   // 'singleDevice' | 'multiDevice'
+  backedUp        Boolean
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("passkey_credentials")
 }
