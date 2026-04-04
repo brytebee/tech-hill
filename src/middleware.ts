@@ -73,6 +73,17 @@ export default withAuth(
 
     // Student routes - all authenticated users can access
     if (pathname.startsWith("/student")) {
+      // Protect Premium Routes from users without an active subscription
+      const isPremiumRoute = 
+        pathname.startsWith("/student/courses") || 
+        pathname.startsWith("/student/quiz") || 
+        pathname.startsWith("/student/topics");
+
+      // @ts-ignore - Property exists thanks to custom NextAuth logic
+      if (isPremiumRoute && token?.hasActiveSubscription === false) {
+        return NextResponse.redirect(new URL("/pricing?reason=expired", req.url));
+      }
+
       return null;
     }
 
