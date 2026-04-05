@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       userVerification: 'preferred',
     });
 
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     // @ts-ignore
     cookieStore.set("webauthn_auth_challenge", options.challenge, {
       httpOnly: true,

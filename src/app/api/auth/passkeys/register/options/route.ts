@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Store the challenge in a secure HTTP-Only cookie for verification
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     // @ts-ignore typescript complains about cookies(), but it works in server actions/routes
     cookieStore.set("webauthn_challenge", options.challenge, {
       httpOnly: true,

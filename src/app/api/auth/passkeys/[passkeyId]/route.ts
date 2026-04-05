@@ -5,7 +5,7 @@ import { prisma } from "@/lib/db";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { passkeyId: string } }
+  { params }: { params: Promise<{ passkeyId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,9 +13,11 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { passkeyId } = await params;
+
     // Ensure the passkey belongs to the requesting user before deleting
     const passkey = await prisma.passkeyCredential.findUnique({
-      where: { id: params.passkeyId },
+      where: { id: passkeyId },
       select: { userId: true },
     });
 
@@ -28,7 +30,7 @@ export async function DELETE(
     }
 
     await prisma.passkeyCredential.delete({
-      where: { id: params.passkeyId },
+      where: { id: passkeyId },
     });
 
     return NextResponse.json({ success: true });

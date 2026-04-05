@@ -1,17 +1,15 @@
+import { AdminLayout } from "@/components/layout/AdminLayout";
 import { PasskeySettings } from "@/components/shared/passkey-settings";
 
 export default function AdminSettingsPage() {
   return (
-    <div className="max-w-3xl py-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-          Security Settings
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Manage your account security and authentication methods.
-        </p>
+    <AdminLayout 
+      title="Security Settings" 
+      description="Manage your account security and authentication methods"
+    >
+      <div className="max-w-4xl space-y-8 animate-fade-in">
+        <PasskeySettings settingsPath="/admin/settings" />
       </div>
-      <PasskeySettings settingsPath="/admin/settings" />
-    </div>
+    </AdminLayout>
   );
 }

@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     // @ts-ignore
     const expectedChallenge = cookieStore.get("webauthn_challenge")?.value;
 
