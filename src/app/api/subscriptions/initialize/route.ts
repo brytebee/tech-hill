@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { paymentService } from "@/lib/payment/service";
 import { PaystackService } from "@/lib/payment/paystack";
 import { CouponService } from "@/lib/services/couponService";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -100,7 +101,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: paymentResponse.authorizationUrl });
   } catch (error: any) {
-    console.error("Subscription Error:", error);
+    logger.error("subscriptions:initialize", "Subscription Error:", error);
     return NextResponse.json(
       { error: error.message || "Internal Server Error" },
       { status: 500 },

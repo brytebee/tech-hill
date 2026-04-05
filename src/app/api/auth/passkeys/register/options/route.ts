@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/engine/lib/auth";
 import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
+import { logger } from "@/lib/logger";
 
 const rpName = "Tech Hill";
 const rpID = process.env.NEXT_PUBLIC_APP_URL 
@@ -58,7 +59,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(options);
 
   } catch (error: any) {
-    console.error("Passkey Options Error:", error);
+    logger.error("auth:passkeys:register:options", "Passkey Options Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

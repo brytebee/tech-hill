@@ -1,8 +1,17 @@
 import './globals.css'
-import { Inter } from 'next/font/google'
+import localFont from 'next/font/local'
 import { Providers } from '@/components/providers'
 
-const inter = Inter({ subsets: ['latin'] })
+// Serve Inter from the local file system — eliminates repeated Google Fonts
+// network round-trips that flood the dev terminal with 404 warnings.
+const inter = localFont({
+  src: [
+    { path: '../../public/fonts/inter-var.woff2', weight: '100 900', style: 'normal' },
+  ],
+  variable: '--font-inter',
+  display: 'swap',
+  fallback: ['system-ui', 'arial'],
+})
 
 export const metadata = {
   title: 'Tech Hill - Computer Literacy Platform',

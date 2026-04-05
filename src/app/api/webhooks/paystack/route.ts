@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { paymentService } from "@/lib/payment/service";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
 
       if (!transaction) {
         // We log and return 200 so Paystack stops retrying
-        console.warn(`Webhook: Transaction ${reference} not found in DB.`);
+        logger.warn("webhooks:paystack", `Webhook: Transaction ${reference} not found in DB.`);
         return NextResponse.json({ received: true });
       }
 
@@ -148,7 +149,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    console.error("Webhook Error:", error.message);
+    logger.error("webhooks:paystack", "Webhook Error:", error.message);
     // Return 400 for bad signatures so Paystack knows it failed
     if (error.message.includes("signature")) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });

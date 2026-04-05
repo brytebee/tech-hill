@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CourseService } from "@/lib/services/courseService";
 import { PromotionService } from "@/lib/services/promotionService";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export async function GET() {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error("[PUBLIC_PRICING_API_ERROR]", error);
+    logger.error("public:pricing", "[PUBLIC_PRICING_API_ERROR]", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch pricing data" },
       { status: 500 }

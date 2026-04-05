@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const updateQuizSchema = z.object({
   title: z.string().min(1).optional(),
@@ -50,7 +51,7 @@ export async function GET(
 
     return NextResponse.json(quiz);
   } catch (error: any) {
-    console.error("GET /api/quizzes/[quizId] error:", error);
+    logger.error("quizzes:quizId", "GET /api/quizzes/[quizId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -95,7 +96,7 @@ export async function PUT(
 
     return NextResponse.json(updatedQuiz);
   } catch (error: any) {
-    console.error("PUT /api/quizzes/[quizId] error:", error);
+    logger.error("quizzes:quizId", "PUT /api/quizzes/[quizId] error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -145,7 +146,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Quiz deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /api/quizzes/[quizId] error:", error);
+    logger.error("quizzes:quizId", "DELETE /api/quizzes/[quizId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

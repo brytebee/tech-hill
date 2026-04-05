@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { CourseService } from "@/lib/services/courseService";
+import { logger } from "@/lib/logger";
 
 // POST /api/courses/[courseId]/archive - Archive a course
 export async function POST(
@@ -58,7 +59,7 @@ export async function POST(
       course: updatedCourse,
     });
   } catch (error: any) {
-    console.error("POST /api/courses/[courseId]/archive error:", error);
+    logger.error("courses:courseId:archive", "POST /api/courses/[courseId]/archive error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -160,7 +161,7 @@ export async function PUT(
       course: updatedCourse,
     });
   } catch (error: any) {
-    console.error("PUT /api/courses/[courseId]/archive error:", error);
+    logger.error("courses:courseId:archive", "PUT /api/courses/[courseId]/archive error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -226,7 +227,7 @@ export async function DELETE(
       message: "Course permanently deleted successfully",
     });
   } catch (error: any) {
-    console.error("DELETE /api/courses/[courseId]/archive error:", error);
+    logger.error("courses:courseId:archive", "DELETE /api/courses/[courseId]/archive error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

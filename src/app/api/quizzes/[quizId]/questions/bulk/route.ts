@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const optionSchema = z.object({
   id: z.string().optional(),
@@ -256,7 +257,7 @@ export async function PUT(
       message: `Successfully saved ${result.length} questions`,
     });
   } catch (error: any) {
-    console.error("PUT /api/quizzes/[quizId]/questions/bulk error:", error);
+    logger.error("quizzes:quizId:questions:bulk", "PUT /api/quizzes/[quizId]/questions/bulk error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -301,7 +302,7 @@ export async function GET(
 
     return NextResponse.json(questions);
   } catch (error: any) {
-    console.error("GET /api/quizzes/[quizId]/questions/bulk error:", error);
+    logger.error("quizzes:quizId:questions:bulk", "GET /api/quizzes/[quizId]/questions/bulk error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

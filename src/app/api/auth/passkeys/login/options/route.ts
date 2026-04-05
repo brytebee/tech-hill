@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateAuthenticationOptions } from "@simplewebauthn/server";
 import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
+import { logger } from "@/lib/logger";
 
 const rpID = process.env.NEXT_PUBLIC_APP_URL 
   ? new URL(process.env.NEXT_PUBLIC_APP_URL).hostname 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(options);
 
   } catch (error: any) {
-    console.error("Passkey Auth Options Error:", error);
+    logger.error("auth:passkeys:login:options", "Passkey Auth Options Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

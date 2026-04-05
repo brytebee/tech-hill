@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { paymentService } from "@/lib/payment/service";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -147,7 +148,7 @@ export async function GET(req: Request) {
       new URL("/dashboard?payment=success", req.url),
     );
   } catch (error: any) {
-    console.error("Payment Verification Error:", error);
+    logger.error("payment:callback", "Payment Verification Error:", error);
     return NextResponse.redirect(new URL("/payment/error", req.url));
   }
 }

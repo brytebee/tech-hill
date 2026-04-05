@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { UserService } from "@/lib/services/userService";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("GET /api/users error:", error);
+    logger.error("users", "GET /api/users error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(user, { status: 201 });
   } catch (error: any) {
-    console.error("POST /api/users error:", error);
+    logger.error("users", "POST /api/users error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

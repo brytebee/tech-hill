@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { CourseService } from "@/lib/services/courseService";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const createCourseSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error("GET /api/courses error:", error);
+    logger.error("courses", "GET /api/courses error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(course, { status: 201 });
   } catch (error: any) {
-    console.error("POST /api/courses error:", error);
+    logger.error("courses", "POST /api/courses error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

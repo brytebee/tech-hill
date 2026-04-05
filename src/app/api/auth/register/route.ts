@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { hashPassword, isValidEmail, isStrongPassword } from "@/lib/utils";
 import { UserRole, UserStatus } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 // Simple in-memory rate limiter for anti-spam (5 requests per IP per minute)
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Log successful registration
-    console.log(`New user registered and verification email sent: ${user.email} (${user.id})`);
+    logger.info("auth:register", `New user registered and verification email sent: ${user.email} (${user.id})`);
 
     return NextResponse.json(
       {
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error: any) {
-    console.error("Registration error:", error);
+    logger.error("auth:register", "Registration error:", error);
 
     return NextResponse.json(
       { message: "An unexpected error occurred. Please try again." },

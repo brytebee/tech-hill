@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TopicService } from "@/lib/services/topicService";
+import { logger } from "@/lib/logger";
 
 // GET /api/topics/[topicId] - Get topic by ID
 export async function GET(
@@ -24,7 +25,7 @@ export async function GET(
 
     return NextResponse.json(topic);
   } catch (error: any) {
-    console.error("GET /api/topics/[topicId] error:", error);
+    logger.error("topics:topicId", "GET /api/topics/[topicId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -73,7 +74,7 @@ export async function PUT(
 
     return NextResponse.json(topic);
   } catch (error: any) {
-    console.error("PUT /api/topics/[topicId] error:", error);
+    logger.error("topics:topicId", "PUT /api/topics/[topicId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -131,7 +132,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Topic deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /api/topics/[topicId] error:", error);
+    logger.error("topics:topicId", "DELETE /api/topics/[topicId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

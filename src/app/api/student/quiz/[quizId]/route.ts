@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { shuffleArray } from "@/lib/common/shuffler";
+import { logger } from "@/lib/logger";
 
 // GET /api/student/quiz/[quizId] - Get quiz data for student
 export async function GET(
@@ -185,7 +186,7 @@ export async function GET(
 
     return NextResponse.json(response);
   } catch (error: any) {
-    console.error("GET /api/student/quiz/[quizId] error:", error);
+    logger.error("student:quiz:quizId", "GET /api/student/quiz/[quizId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -521,7 +522,7 @@ export async function POST(
       },
     });
   } catch (error: any) {
-    console.error("POST /api/student/quiz/[quizId] error:", error);
+    logger.error("student:quiz:quizId", "POST /api/student/quiz/[quizId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

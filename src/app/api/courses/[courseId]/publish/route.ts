@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { CourseService } from "@/lib/services/courseService";
+import { logger } from "@/lib/logger";
 
 // POST /api/courses/[courseId]/publish - Publish a course
 export async function POST(
@@ -82,7 +83,7 @@ export async function POST(
       course: updatedCourse,
     });
   } catch (error: any) {
-    console.error("POST /api/courses/[courseId]/publish error:", error);
+    logger.error("courses:courseId:publish", "POST /api/courses/[courseId]/publish error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -144,7 +145,7 @@ export async function PUT(
       course: updatedCourse,
     });
   } catch (error: any) {
-    console.error("PUT /api/courses/[courseId]/publish error:", error);
+    logger.error("courses:courseId:publish", "PUT /api/courses/[courseId]/publish error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

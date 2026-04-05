@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const optionSchema = z.object({
   text: z.string().min(1, "Option text is required"),
@@ -185,7 +186,7 @@ export async function POST(
 
     return NextResponse.json(question, { status: 201 });
   } catch (error) {
-    console.error("POST /api/quizzes/[quizId]/questions error:", error);
+    logger.error("quizzes:quizId:questions", "POST /api/quizzes/[quizId]/questions error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -235,7 +236,7 @@ export async function GET(
 
     return NextResponse.json(questions);
   } catch (error: any) {
-    console.error("GET /api/quizzes/[quizId]/questions error:", error);
+    logger.error("quizzes:quizId:questions", "GET /api/quizzes/[quizId]/questions error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

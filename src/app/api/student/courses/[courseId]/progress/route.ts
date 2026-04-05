@@ -25,7 +25,7 @@
 
 //     return NextResponse.json(progress);
 //   } catch (error) {
-//     console.error("GET /api/student/courses/[courseId]/progress error:", error);
+//     logger.error("student:courses:courseId:progress", "GET /api/student/courses/[courseId]/progress error:", error);
 //     return NextResponse.json(
 //       { error: "Internal server error" },
 //       { status: 500 }
@@ -38,6 +38,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ProgressService } from "@/lib/services/progressService";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -58,7 +59,7 @@ export async function GET(
 
     return NextResponse.json(progressData);
   } catch (error: any) {
-    console.error("Error fetching course progress:", error);
+    logger.error("student:courses:courseId:progress", "Error fetching course progress:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

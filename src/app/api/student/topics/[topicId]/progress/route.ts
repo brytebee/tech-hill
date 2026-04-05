@@ -34,7 +34,7 @@
 
 //     return NextResponse.json(progress)
 //   } catch (error) {
-//     console.error('POST /api/student/topics/[topicId]/progress error:', error)
+//     logger.error("student:topics:topicId:progress", 'POST /api/student/topics/[topicId]/progress error:', error)
 
 //     if (error instanceof z.ZodError) {
 //       return NextResponse.json(
@@ -71,7 +71,7 @@
 
 //     return NextResponse.json(accessibility)
 //   } catch (error) {
-//     console.error('GET /api/student/topics/[topicId]/progress error:', error)
+//     logger.error("student:topics:topicId:progress", 'GET /api/student/topics/[topicId]/progress error:', error)
 //     return NextResponse.json(
 //       { error: 'Internal server error' },
 //       { status: 500 }
@@ -84,6 +84,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ProgressService } from "@/lib/services/progressService";
+import { logger } from "@/lib/logger";
 
 export async function GET(
   request: NextRequest,
@@ -108,7 +109,7 @@ export async function GET(
       canAccess: await ProgressService.canAccessTopic(session.user.id, topicId),
     });
   } catch (error: any) {
-    console.error("Error fetching topic progress:", error);
+    logger.error("student:topics:topicId:progress", "Error fetching topic progress:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

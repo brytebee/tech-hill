@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { PromotionService } from "@/lib/services/promotionService";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       coupon: result.coupon,
     });
   } catch (error: any) {
-    console.error("Coupon validation error:", error);
+    logger.error("coupons:validate", "Coupon validation error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

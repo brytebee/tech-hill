@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TopicService } from "@/lib/services/topicService";
 import { ModuleService } from "@/lib/services/moduleService";
+import { logger } from "@/lib/logger";
 
 // GET /api/modules/[moduleId]/topics - Get all topics for a module
 export async function GET(
@@ -21,7 +22,7 @@ export async function GET(
 
     return NextResponse.json({ topics });
   } catch (error: any) {
-    console.error("GET /api/modules/[moduleId]/topics error:", error);
+    logger.error("modules:moduleId:topics", "GET /api/modules/[moduleId]/topics error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -92,7 +93,7 @@ export async function POST(
 
     return NextResponse.json(topic, { status: 201 });
   } catch (error: any) {
-    console.error("POST /api/modules/[moduleId]/topics error:", error);
+    logger.error("modules:moduleId:topics", "POST /api/modules/[moduleId]/topics error:", error);
 
     // Handle unique constraint violation for slug
     if (error.code === "P2002" && error.meta?.target?.includes("slug")) {

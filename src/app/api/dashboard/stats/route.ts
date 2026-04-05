@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { UserService } from "@/lib/services/userService";
 import { CourseService } from "@/lib/services/courseService";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
+import { logger } from "@/lib/logger";
 
 // GET /api/dashboard/stats - Get dashboard statistics
 export async function GET(request: NextRequest) {
@@ -79,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(stats);
   } catch (error: any) {
-    console.error("GET /api/dashboard/stats error:", error);
+    logger.error("dashboard:stats", "GET /api/dashboard/stats error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

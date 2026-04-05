@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/engine/lib/auth";
 import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
+import { logger } from "@/lib/logger";
 
 const rpID = process.env.NEXT_PUBLIC_APP_URL 
   ? new URL(process.env.NEXT_PUBLIC_APP_URL).hostname 
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Verification failed" }, { status: 400 });
 
   } catch (error: any) {
-    console.error("Passkey Verify Error:", error);
+    logger.error("auth:passkeys:register:verify", "Passkey Verify Error:", error);
     return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }

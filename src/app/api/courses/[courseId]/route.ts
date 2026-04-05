@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { CourseService } from "@/lib/services/courseService";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const updateCourseSchema = z.object({
   title: z.string().min(1).optional(),
@@ -57,7 +58,7 @@ export async function GET(
 
     return NextResponse.json(course);
   } catch (error: any) {
-    console.error("GET /api/courses/[courseId] error:", error);
+    logger.error("courses:courseId", "GET /api/courses/[courseId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -104,7 +105,7 @@ export async function PUT(
 
     return NextResponse.json(course);
   } catch (error: any) {
-    console.error("PUT /api/courses/[courseId] error:", error);
+    logger.error("courses:courseId", "PUT /api/courses/[courseId] error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -161,7 +162,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Course deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /api/courses/[courseId] error:", error);
+    logger.error("courses:courseId", "DELETE /api/courses/[courseId] error:", error);
 
     if (error.code === "P2025") {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });

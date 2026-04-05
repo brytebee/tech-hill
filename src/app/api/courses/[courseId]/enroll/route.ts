@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
 import { CourseService } from "@/lib/services/courseService";
 import { AppError } from "@/lib/errors";
+import { NotificationService } from "@/lib/services/notificationService";
+import { logger } from "@/lib/logger";
 
 // POST /api/courses/[courseId]/enroll - Enroll in a course
 export async function POST(
@@ -37,9 +39,20 @@ export async function POST(
       courseId,
     });
 
+    // Fire enrollment notification (non-blocking — never fails the response)
+    NotificationService.createNotification({
+      userId: session.user.id,
+      type: "ENROLLMENT",
+      title: "Course Enrolled!",
+      message: `You are now enrolled in "${course.title}". Start learning now!`,
+      linkUrl: `/student/courses/${courseId}`,
+    }).catch((err) =>
+      logger.warn("enroll", "Failed to fire enrollment notification", err)
+    );
+
     return NextResponse.json(enrollment, { status: 201 });
   } catch (error: any) {
-    console.error("POST /api/courses/[courseId]/enroll error:", error);
+    logger.error("enroll:POST", "Failed to enroll", error);
 
     if (error instanceof AppError) {
       return NextResponse.json(
@@ -90,7 +103,7 @@ export async function DELETE(
       message: "Successfully unenrolled from course",
     });
   } catch (error: any) {
-    console.error("DELETE /api/courses/[courseId]/enroll error:", error);
+    logger.error("enroll:DELETE", "Failed to unenroll", error);
 
     if (error.code === "P2025") {
       return NextResponse.json(

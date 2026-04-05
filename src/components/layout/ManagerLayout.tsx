@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 import {
   Users,
   BookOpen,
@@ -236,6 +237,7 @@ export function ManagerLayout({
             </div>
 
             <div className="flex items-center gap-3">
+              <NotificationBell />
               {/* Mobile-only theme toggle (desktop toggle lives in sidebar footer) */}
               <div className="lg:hidden">
                 <ThemeToggle />

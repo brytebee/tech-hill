@@ -58,6 +58,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { QuizService } from "@/lib/services/quizService";
+import { NotificationService } from "@/lib/services/notificationService";
+import { logger } from "@/lib/logger";
 
 export async function POST(
   request: NextRequest,
@@ -81,6 +83,18 @@ export async function POST(
       passed
     );
 
+    NotificationService.createNotification({
+      userId: session.user.id,
+      type: "ASSESSMENT",
+      title: passed ? "Quiz Passed! 🎉" : "Quiz Completed",
+      message: passed
+        ? `Great work! You passed the quiz with a score of ${score}%.`
+        : `You scored ${score}%. Review the material and try again if attempts remain.`,
+      linkUrl: `/student/quiz/${quizId}/results`,
+    }).catch((err) =>
+      logger.warn("quiz:submit", "Failed to fire assessment notification", err)
+    );
+
     return NextResponse.json({
       success: true,
       attempt,
@@ -89,7 +103,7 @@ export async function POST(
         : "Quiz completed. You can retake if attempts remain.",
     });
   } catch (error: any) {
-    console.error("Error submitting quiz:", error);
+    logger.error("quiz:submit", "Failed to submit quiz attempt", error);
     return NextResponse.json(
       { error: "Failed to submit quiz" },
       { status: 500 }

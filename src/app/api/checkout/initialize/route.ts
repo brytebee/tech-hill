@@ -6,6 +6,7 @@ import { PromotionService } from "@/lib/services/promotionService";
 import { paymentService } from "@/lib/payment/service";
 import { PaystackService } from "@/lib/payment/paystack";
 import { TransactionType, Currency, Prisma } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -153,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(payment);
   } catch (error: any) {
-    console.error("Checkout initialization error:", error);
+    logger.error("checkout:initialize", "Checkout initialization error:", error);
     return NextResponse.json(
       { message: error.message || "Internal server error" },
       { status: 500 },

@@ -17,6 +17,7 @@ import {
   Settings,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 
 interface StudentLayoutProps {
   children: ReactNode;
@@ -220,6 +221,7 @@ export function StudentLayout({
             </div>
 
             <div className="flex items-center gap-3 pl-4">
+               <NotificationBell />
                {/* Mobile-only theme toggle (desktop toggle lives in sidebar footer) */}
                <div className="lg:hidden">  
                  <ThemeToggle />

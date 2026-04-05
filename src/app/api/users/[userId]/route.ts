@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { UserService } from "@/lib/services/userService";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const updateUserSchema = z.object({
   email: z.string().email().optional(),
@@ -44,7 +45,7 @@ export async function GET(
 
     return NextResponse.json(user);
   } catch (error: any) {
-    console.error("GET /api/users/[userId] error:", error);
+    logger.error("users:userId", "GET /api/users/[userId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -92,7 +93,7 @@ export async function PUT(
 
     return NextResponse.json(user);
   } catch (error: any) {
-    console.error("PUT /api/users/[userId] error:", error);
+    logger.error("users:userId", "PUT /api/users/[userId] error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -150,7 +151,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "User deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /api/users/[userId] error:", error);
+    logger.error("users:userId", "DELETE /api/users/[userId] error:", error);
 
     if (error.code === "P2025") {
       return NextResponse.json({ error: "User not found" }, { status: 404 });

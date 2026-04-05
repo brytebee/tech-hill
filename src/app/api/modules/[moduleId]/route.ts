@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ModuleService } from "@/lib/services/moduleService";
+import { logger } from "@/lib/logger";
 
 // GET /api/modules/[moduleId] - Get module by ID
 export async function GET(
@@ -24,7 +25,7 @@ export async function GET(
 
     return NextResponse.json(module);
   } catch (error: any) {
-    console.error("GET /api/modules/[moduleId] error:", error);
+    logger.error("modules:moduleId", "GET /api/modules/[moduleId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -72,7 +73,7 @@ export async function PUT(
 
     return NextResponse.json(module);
   } catch (error: any) {
-    console.error(`PUT /api/modules/${moduleId} error:`, error);
+    logger.error("modules:moduleId", `PUT /api/modules/${moduleId} error:`, error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -131,7 +132,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: "Module deleted successfully" });
   } catch (error: any) {
-    console.error("DELETE /api/modules/[moduleId] error:", error);
+    logger.error("modules:moduleId", "DELETE /api/modules/[moduleId] error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { NotificationBell } from "@/components/shared/NotificationBell";
 import {
   Users,
   BookOpen,
@@ -229,6 +230,7 @@ export function AdminLayout({
             </div>
 
             <div className="flex items-center gap-3">
+              <NotificationBell />
               {/* Theme Toggle */}
               <div className="border-r border-slate-200 dark:border-slate-800 pr-3 mr-1">
                 <ThemeToggle />

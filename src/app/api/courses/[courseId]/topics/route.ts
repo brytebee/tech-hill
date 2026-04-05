@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { TopicService } from "@/lib/services/topicService";
 import { CourseService } from "@/lib/services/courseService";
 import { z } from "zod";
+import { logger } from "@/lib/logger";
 
 const createTopicSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -69,7 +70,7 @@ export async function GET(
 
     return NextResponse.json({ topics });
   } catch (error: any) {
-    console.error("GET /api/courses/[courseId]/topics error:", error);
+    logger.error("courses:courseId:topics", "GET /api/courses/[courseId]/topics error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -117,7 +118,7 @@ export async function POST(
 
     return NextResponse.json(topic, { status: 201 });
   } catch (error: any) {
-    console.error("POST /api/courses/[courseId]/topics error:", error);
+    logger.error("courses:courseId:topics", "POST /api/courses/[courseId]/topics error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

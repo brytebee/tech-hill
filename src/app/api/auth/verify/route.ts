@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { UserStatus } from "@prisma/client";
+import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: "Account successfully verified" }, { status: 200 });
   } catch (error: any) {
-    console.error("Verification error:", error);
+    logger.error("auth:verify", "Verification error:", error);
     return NextResponse.json({ message: "An unexpected error occurred" }, { status: 500 });
   }
 }

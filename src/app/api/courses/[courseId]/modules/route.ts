@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ModuleService } from "@/lib/services/moduleService";
 import { CourseService } from "@/lib/services/courseService";
+import { logger } from "@/lib/logger";
 
 // GET /api/courses/[courseId]/modules - Get all modules for a course
 export async function GET(
@@ -21,7 +22,7 @@ export async function GET(
 
     return NextResponse.json({ modules });
   } catch (error: any) {
-    console.error("GET /api/courses/[courseId]/modules error:", error);
+    logger.error("courses:courseId:modules", "GET /api/courses/[courseId]/modules error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -79,7 +80,7 @@ export async function POST(
 
     return NextResponse.json(module, { status: 201 });
   } catch (error: any) {
-    console.error("POST /api/courses/[courseId]/modules error:", error);
+    logger.error("courses:courseId:modules", "POST /api/courses/[courseId]/modules error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

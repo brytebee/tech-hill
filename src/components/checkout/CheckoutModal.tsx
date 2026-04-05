@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, CreditCard, Tag, ShieldCheck, Info } from "lucide-react";
+import { Loader2, CreditCard, Tag, ShieldCheck, Info, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 // Mirrors PaystackService.calculateFeePassthrough — kept client-side for live preview
@@ -46,6 +46,7 @@ export function CheckoutModal({
   const [appliedCoupon, setAppliedCoupon]   = useState<string | null>(null);
   const [discount, setDiscount]             = useState(0);
   const [isLoading, setIsLoading]           = useState(false);
+  const [couponError, setCouponError]       = useState<string | null>(null);
 
   const netPrice                            = Math.max(0, price - discount);
   const { grossAmount, fee }                = calcPaystackFee(netPrice);
@@ -57,12 +58,14 @@ export function CheckoutModal({
       setCouponCode("");
       setDiscount(0);
       setAppliedCoupon(null);
+      setCouponError(null);
     }
   }, [isOpen]);
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     setIsApplyingCoupon(true);
+    setCouponError(null);
     try {
       const res = await fetch("/api/coupons/validate", {
         method: "POST",
@@ -70,7 +73,7 @@ export function CheckoutModal({
         body: JSON.stringify({ code: couponCode.trim(), courseId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Invalid coupon code");
+      if (!res.ok) throw new Error(data.error || "Invalid coupon code");
 
       let discountAmount = 0;
       if (data.coupon.discountType === "PERCENTAGE") {
@@ -86,7 +89,7 @@ export function CheckoutModal({
       setAppliedCoupon(couponCode.trim());
       toast.success("Coupon applied!");
     } catch (err: any) {
-      toast.error(err.message);
+      setCouponError(err.message);
       setDiscount(0);
       setAppliedCoupon(null);
     } finally {
@@ -98,6 +101,7 @@ export function CheckoutModal({
     setDiscount(0);
     setAppliedCoupon(null);
     setCouponCode("");
+    setCouponError(null);
   };
 
   const handleCheckout = async () => {
@@ -112,7 +116,7 @@ export function CheckoutModal({
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to initialize checkout");
+      if (!res.ok) throw new Error(data.error || "Failed to initialize checkout");
 
       if (data.free) {
         toast.success("Enrolled successfully!");
@@ -213,6 +217,12 @@ export function CheckoutModal({
                     {isApplyingCoupon ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apply"}
                   </Button>
                 </div>
+                {couponError && (
+                  <p className="text-xs font-medium text-rose-500 mt-1.5 flex items-center gap-1.5 animate-fade-in">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    {couponError}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-sm">

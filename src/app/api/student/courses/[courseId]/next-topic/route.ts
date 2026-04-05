@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { StudentCourseService } from "@/lib/services/student/courseService";
+import { logger } from "@/lib/logger";
 
 // GET /api/student/courses/[courseId]/next-topic - Get next available topic
 export async function GET(
@@ -25,9 +26,7 @@ export async function GET(
 
     return NextResponse.json({ nextTopic });
   } catch (error: any) {
-    console.error(
-      "GET /api/student/courses/[courseId]/next-topic error:",
-      error
+    logger.error("student:courses:courseId:next-topic", "GET /api/student/courses/[courseId]/next-topic error:", error
     );
     return NextResponse.json(
       { error: "Internal server error" },

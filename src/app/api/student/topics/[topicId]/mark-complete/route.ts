@@ -41,6 +41,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ProgressService } from "@/lib/services/progressService";
+import { logger } from "@/lib/logger";
 
 export async function POST(
   request: NextRequest,
@@ -79,7 +80,7 @@ export async function POST(
       canComplete: progress.status === "COMPLETED",
     });
   } catch (error: any) {
-    console.error("Error marking topic complete:", error);
+    logger.error("student:topics:topicId:mark-complete", "Error marking topic complete:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
