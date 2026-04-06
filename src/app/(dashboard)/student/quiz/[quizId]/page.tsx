@@ -120,23 +120,16 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
         isPractice: false,
       },
       orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        score: true,
-        passed: true,
-        startedAt: true,
-        completedAt: true,
-        timeSpent: true,
-        questionsCorrect: true,
-        questionsTotal: true,
-      },
     });
+
+    const activeAttempt = attempts.find(a => !a.completedAt);
+    const completedAttempts = attempts.filter(a => a.completedAt);
 
     // Check if student can take the quiz
     const canTakeQuiz = quiz.maxAttempts
-      ? attempts.length < quiz.maxAttempts
+      ? completedAttempts.length < quiz.maxAttempts
       : true;
-    const hasPassedQuiz = attempts.some((attempt: any) => attempt.passed);
+    const hasPassedQuiz = completedAttempts.some((attempt: any) => attempt.passed);
 
     if (!canTakeQuiz && !hasPassedQuiz) {
       redirect(`/student/quiz/${quizId}/results`);
@@ -220,18 +213,31 @@ export default async function QuizPage({ params, searchParams }: PageProps) {
         (sum: any, q: any) => sum + q.points,
         0
       ),
-      attemptNumber: attempts.length + 1,
+      attemptNumber: completedAttempts.length + 1,
       attemptsRemaining: quiz.maxAttempts
-        ? quiz.maxAttempts - attempts.length
+        ? quiz.maxAttempts - completedAttempts.length
         : null,
       hasPassedQuiz,
     };
+
+    let finalActiveAttempt = activeAttempt;
+    if (!finalActiveAttempt && canTakeQuiz && !hasPassedQuiz) {
+        finalActiveAttempt = await prisma.quizAttempt.create({
+            data: {
+                userId: session.user.id,
+                quizId,
+                score: 0,
+                isPractice: false,
+            }
+        });
+    }
 
     return (
       <StudentLayout>
         <QuizInterface
           quiz={quizData as unknown as Quiz}
-          attempts={attempts as unknown as AttemptData[]}
+          attempts={completedAttempts as unknown as AttemptData[]}
+          activeAttempt={finalActiveAttempt as any}
           userId={session.user.id}
           topicId={topicId}
           metadata={metadata as unknown as QuizMetadata}

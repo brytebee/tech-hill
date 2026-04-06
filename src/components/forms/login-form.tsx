@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,16 +62,16 @@ export function LoginForm({ className }: LoginFormProps) {
         const options = await res.json();
         setHasPasskey(true);
         setPasskeyOptions(options);
-        // Automatically prompt for biometric
-        handlePasskeyLogin(options);
+        // Automatically prompt for biometric and wait for it
+        await handlePasskeyLogin(options);
       } else {
         setHasPasskey(false);
         setPasskeyOptions(null);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error("Failed to check passkey status:", error);
       setStep(2); // Fallback to password
-    } finally {
       setIsLoading(false);
     }
   };
@@ -80,6 +80,8 @@ export function LoginForm({ className }: LoginFormProps) {
     setIsLoading(true);
     setGeneralError("");
     showLoader("Authenticating via Passkey...");
+    
+    let isRedirecting = false;
 
     try {
       const authResp = await startAuthentication({ optionsJSON: options });
@@ -93,7 +95,10 @@ export function LoginForm({ className }: LoginFormProps) {
       if (result?.error) {
         setGeneralError(result.error);
       } else if (result?.ok) {
-        window.location.href = from.startsWith("/") ? from : "/dashboard";
+        // Redirect back to where they came from; passkey is already set up
+        const safeFrom = from.startsWith("/") && !from.includes("setup=passkey") ? from : "/dashboard";
+        isRedirecting = true;
+        window.location.href = safeFrom;
       }
     } catch (error: any) {
       // User cancelled or failed biometric
@@ -102,8 +107,10 @@ export function LoginForm({ className }: LoginFormProps) {
         setGeneralError("Biometric login failed. Please try again or use your password.");
       }
     } finally {
-      setIsLoading(false);
-      hideLoader();
+      if (!isRedirecting) {
+        setIsLoading(false);
+        hideLoader();
+      }
     }
   };
 
@@ -118,6 +125,8 @@ export function LoginForm({ className }: LoginFormProps) {
 
     setIsLoading(true);
     showLoader("Signing you in...");
+    
+    let isRedirecting = false;
 
     try {
       const result = await signIn("credentials", {
@@ -129,17 +138,33 @@ export function LoginForm({ className }: LoginFormProps) {
       if (result?.error) {
         setGeneralError(result.error);
       } else if (result?.ok) {
-        // If they don't have a passkey, nudge them to set one up seamlessly
-        const destination = !hasPasskey
-          ? "/student/settings?setup=passkey"
-          : from.startsWith("/") ? from : "/dashboard";
-        window.location.href = destination;
+        // Fetch session to determine actual user role
+        const session = await getSession();
+        const role = session?.user?.role?.toLowerCase() || "student";
+
+        // Only nudge to passkey setup once per device (avoid redirect loops)
+        const nudgeKey = `passkey_nudge_${session?.user?.id || "unknown"}`;
+        const alreadyNudged = localStorage.getItem(nudgeKey);
+        const comingFromSetup = from.includes("setup=passkey");
+
+        isRedirecting = true;
+
+        if (!hasPasskey && !alreadyNudged && !comingFromSetup) {
+          localStorage.setItem(nudgeKey, "1");
+          window.location.href = `/${role}/settings?setup=passkey`;
+        } else {
+          // Go to their original destination (or dashboard if it was the settings loop)
+          const safeFrom = from.startsWith("/") && !comingFromSetup ? from : "/dashboard";
+          window.location.href = safeFrom;
+        }
       }
     } catch (error: any) {
       setGeneralError("An unexpected error occurred. Please try again.");
     } finally {
-      setIsLoading(false);
-      hideLoader();
+      if (!isRedirecting) {
+        setIsLoading(false);
+        hideLoader();
+      }
     }
   };
 

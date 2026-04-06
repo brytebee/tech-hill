@@ -49,9 +49,16 @@ async function getQuizResultsData(
             module: {
               include: {
                 course: {
-                  select: {
-                    id: true,
-                    title: true,
+                  include: {
+                    modules: {
+                      orderBy: { order: "asc" },
+                      include: {
+                        topics: {
+                          orderBy: { orderIndex: "asc" },
+                          select: { id: true },
+                        },
+                      },
+                    },
                   },
                 },
               },
@@ -87,10 +94,21 @@ async function getQuizResultsData(
       }),
     };
 
+    let nextTopicId: string | undefined = undefined;
+    const course = quiz.topic.module.course;
+    if (course && course.modules) {
+      const flatTopics = course.modules.flatMap((m: any) => m.topics.map((t: any) => t.id));
+      const currentIndex = flatTopics.indexOf(quiz.topic.id);
+      if (currentIndex !== -1 && currentIndex < flatTopics.length - 1) {
+        nextTopicId = flatTopics[currentIndex + 1];
+      }
+    }
+
     return {
       attempt: processAttempt,
       quiz: quiz,
       allAttempts: quiz.attempts,
+      nextTopicId,
     };
   } catch (error: any) {
     console.error("Error fetching quiz results:", error);
@@ -127,6 +145,7 @@ export default async function QuizResultsPage({
         allAttempts={allAttempts as unknown as QuizAttempt[]}
         userId={session.user.id}
         topicId={topicId}
+        nextTopicId={data.nextTopicId}
       />
     </StudentLayout>
   );

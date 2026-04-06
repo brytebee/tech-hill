@@ -92,6 +92,7 @@ model User {
   moduleProgress ModuleProgress[]
   submissions    Submission[]
   certificates   Certificate[]
+  trackEnrollments TrackEnrollment[]
 
   // Commerce & Rewards
   subscriptions Subscription[]
@@ -163,10 +164,13 @@ model Course {
   transactions Transaction[]
   flashSales   FlashSale[]        @relation("CourseFlashSales")
   coupons      CoursesOnCoupons[]
+  trackCourses TrackCourse[]
 
   // Certificate config
   certificatePrice  Decimal? @db.Decimal(10, 2) // Defaults to 2000 in logic if null and not free
   isCertificateFree Boolean  @default(false)
+  templateId        String?
+  template          CertificateTemplate? @relation(fields: [templateId], references: [id])
 
   @@map("courses")
 }
@@ -501,6 +505,9 @@ model QuizAttempt {
   strengthAreas     Json? // Topics/skills where student excelled
   recommendedReview String[] // Topics to review
 
+  // Real-time auto-save
+  draftAnswers Json?
+
   createdAt DateTime @default(now())
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -588,15 +595,24 @@ enum CertificateType {
   MASTERY_ACHIEVEMENT
   SKILL_BADGE
   MILESTONE
+  TRACK_COMPLETION
+}
+
+enum CertificateStatus {
+  PENDING_REVIEW
+  ISSUED
+  REJECTED
 }
 
 model Certificate {
   id       String @id @default(cuid())
   userId   String
-  courseId String
+  courseId String?
+  trackId  String?
 
   certificateNumber String          @unique
   certificateType   CertificateType @default(COURSE_COMPLETION)
+  status            CertificateStatus @default(ISSUED)
   title             String // "Computer Literacy Mastery"
   description       String? // Achievement description
 
@@ -619,10 +635,30 @@ model Certificate {
   revokedReason    String?
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  track  Track?  @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, courseId, certificateType])
+  @@unique([userId, courseId, trackId, certificateType])
   @@map("certificates")
+}
+
+model CertificateTemplate {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  themeName     String   @default("ModernDark") // E.g., "ModernDark", "ClassicGold"
+  primaryColor  String?  // Optional hex override for the theme base
+  logoUrl       String?  // Company or Program Logo
+  signatureUrl  String?  // Official Instructor Signature
+  isDefault     Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  courses       Course[]
+  tracks        Track[]
+
+  @@map("certificate_templates")
 }
 
 // --------------------------------------
@@ -953,4 +989,54 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
+}
+
+// --------------------------------------
+// TRACKS (Learning Paths)
+// --------------------------------------
+
+model Track {
+  id          String   @id @default(cuid())
+  title       String
+  description String?  
+  slug        String   @unique
+  thumbnail   String?
+  isPublished Boolean  @default(false)
+  templateId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  courses     TrackCourse[]
+  enrollments TrackEnrollment[]
+  certificates Certificate[]
+  template    CertificateTemplate? @relation(fields: [templateId], references: [id])
+}
+
+model TrackCourse {
+  id        String @id @default(cuid())
+  trackId   String
+  courseId  String
+  order     Int    
+
+  track  Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, courseId])
+  @@unique([trackId, order])
+}
+
+model TrackEnrollment {
+  id               String   @id @default(cuid())
+  userId           String
+  trackId          String
+  currentCourseId  String?  
+  completedCourses String[] 
+  status           EnrollmentStatus @default(ACTIVE)
+  enrolledAt       DateTime @default(now())
+  completedAt      DateTime?
+
+  user  User  @relation(fields: [userId], references: [id])
+  track Track @relation(fields: [trackId], references: [id])
+
+  @@unique([userId, trackId])
 }

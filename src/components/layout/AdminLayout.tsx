@@ -21,6 +21,7 @@ import {
   BarChart3,
   UserCheck,
   Tag,
+  Award,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -35,6 +36,7 @@ const navigation = [
   { name: "Courses", href: "/admin/courses", icon: BookOpen },
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "Promotions", href: "/admin/promotions", icon: Tag },
+  { name: "Certificates", href: "/admin/certificates", icon: Award },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

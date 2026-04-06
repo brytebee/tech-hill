@@ -32,9 +32,12 @@ import {
   ArrowLeft,
   CheckCircle,
   Plus,
+  Crown,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { UserService } from "@/lib/services/userService";
+import { SubscriptionControls } from "@/components/admin/SubscriptionControls";
 
 async function getUserDetails(userId: string) {
   try {
@@ -182,6 +185,24 @@ export default async function UserDetailsPage({
             </Card>
           ))}
         </div>
+
+        {/* Access Control — Subscription Override */}
+        <SubscriptionControls
+          userId={user.id}
+          userName={`${user.firstName} ${user.lastName}`}
+          activeSubscription={
+            user.subscriptions && user.subscriptions.length > 0
+              ? {
+                  id: user.subscriptions[0].id,
+                  plan: user.subscriptions[0].plan,
+                  status: user.subscriptions[0].status,
+                  startDate: user.subscriptions[0].startDate?.toISOString?.() ?? null,
+                  endDate: user.subscriptions[0].endDate?.toISOString?.() ?? null,
+                  provider: user.subscriptions[0].provider,
+                }
+              : null
+          }
+        />
 
         {/* Identity Core & Data Matrix */}
         <div className="grid lg:grid-cols-2 gap-8">
@@ -457,7 +478,7 @@ export default async function UserDetailsPage({
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight line-clamp-1">
-                        {certificate.course.title}
+                        {certificate.title}
                       </p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
                         CID: {certificate.certificateNumber.slice(0, 12)}...

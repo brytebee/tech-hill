@@ -22,6 +22,10 @@ import {
   User,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
+import dynamic from "next/dynamic";
+
+const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
 export interface Quiz {
   id: string;
@@ -78,6 +82,9 @@ export interface StudentTopicViewerProps {
   topic: Topic;
   enrollment: Enrollment;
   userId: string;
+  nextTopicId?: string;
+  previousTopicId?: string;
+  isLastTopicOfCourse?: boolean;
 }
 
 export interface TopicProgressData {
@@ -120,6 +127,9 @@ export function StudentTopicViewer({
   topic,
   enrollment,
   userId,
+  nextTopicId,
+  previousTopicId,
+  isLastTopicOfCourse,
 }: StudentTopicViewerProps) {
   const router = useRouter();
   const isPreviewOnly = !enrollment || enrollment.status !== "ACTIVE";
@@ -164,14 +174,14 @@ export function StudentTopicViewer({
           const updatedData = await progressResponse.json();
           setProgressData(updatedData);
         } else {
-          alert("Please complete all required assessments before marking this topic as complete.");
+          toast.warning("Please pass all required assessments before marking this topic as complete.");
         }
       } else {
         throw new Error("Failed to mark complete");
       }
     } catch (error: any) {
       console.error("Failed to mark completed:", error);
-      alert("Error updating progress. Please try again.");
+      toast.error("Error updating progress. Please try again.");
     }
   };
 
@@ -180,7 +190,7 @@ export function StudentTopicViewer({
       !progressData?.remainingAttempts[quizId] ||
       progressData.remainingAttempts[quizId] === 0
     ) {
-      alert("No more attempts remaining for this quiz.");
+      toast.warning("No more attempts remaining for this quiz.");
       return;
     }
     router.push(`/student/quiz/${quizId}?topicId=${topic.id}`);
@@ -384,15 +394,14 @@ export function StudentTopicViewer({
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="aspect-video bg-slate-900 flex items-center justify-center group relative overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30 group-hover:opacity-40 transition-opacity duration-700" />
-              <div className="text-center relative z-10">
-                <Button size="icon" className="w-16 h-16 rounded-full bg-blue-600/90 hover:bg-blue-500 text-white shadow-xl shadow-blue-500/30 mb-4 backdrop-blur-md">
-                   <Play className="h-6 w-6 ml-1" />
-                </Button>
-                <p className="text-slate-300 font-medium">Video Player Stand-in</p>
-                <p className="text-xs text-slate-500 mt-1 truncate max-w-sm">{topic.videoUrl}</p>
-              </div>
+            <div className="aspect-video bg-slate-900 w-full relative">
+              <ReactPlayer 
+                url={topic.videoUrl} 
+                controls 
+                width="100%" 
+                height="100%" 
+                style={{ position: "absolute", top: 0, left: 0 }}
+              />
             </div>
           </CardContent>
         </Card>
@@ -587,13 +596,23 @@ export function StudentTopicViewer({
 
       {/* Footer Navigation */}
       <div className="flex items-center justify-between pt-4 pb-8 border-t border-slate-200 dark:border-slate-800 mt-8">
-        <Link href={`/student/courses/${topic.module.course.id}`}>
-          <Button variant="ghost" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Back to Overview</span>
-            <span className="sm:hidden">Back</span>
-          </Button>
-        </Link>
+        {previousTopicId ? (
+          <Link href={`/student/topics/${previousTopicId}`}>
+            <Button variant="ghost" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Previous Topic</span>
+              <span className="sm:hidden">Prev</span>
+            </Button>
+          </Link>
+        ) : (
+          <Link href={`/student/courses/${topic.module.course.id}`}>
+            <Button variant="ghost" className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Back to Overview</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+          </Link>
+        )}
 
         <div className="text-center px-4">
           <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -601,10 +620,33 @@ export function StudentTopicViewer({
           </p>
         </div>
 
-        <Button variant="ghost" disabled className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50">
-          <span className="hidden sm:inline">Next</span>
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
+        {isLastTopicOfCourse ? (
+          <Link href={`/student/courses/${topic.module.course.id}`}>
+            <Button disabled={!isCompleted} className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md font-semibold">
+              <span className="hidden sm:inline">Finish Course</span>
+              <span className="sm:hidden">Finish</span>
+              <CheckCircle className="h-4 w-4 ml-2" />
+            </Button>
+          </Link>
+        ) : nextTopicId ? (
+          <Link href={isCompleted ? `/student/topics/${nextTopicId}` : "#"}>
+            <Button 
+              variant="ghost" 
+              disabled={!isCompleted} 
+              title={!isCompleted ? "Complete this topic to unlock the next one" : ""}
+              className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50"
+            >
+              <span className="hidden sm:inline">Next Topic</span>
+              <span className="sm:hidden">Next</span>
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </Link>
+        ) : (
+          <Button variant="ghost" disabled className="text-slate-600 dark:text-slate-400">
+            <span className="hidden sm:inline">Next</span>
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -18,6 +18,7 @@ import {
   X,
   Home,
   BarChart3,
+  Award,
 } from "lucide-react";
 
 interface ManagerLayoutProps {
@@ -32,6 +33,7 @@ const navigation = [
   { name: "Students", href: "/manager/students", icon: Users },
   { name: "Reports", href: "/manager/reports", icon: BarChart3 },
   { name: "Submissions", href: "/manager/submissions", icon: FileText },
+  { name: "Certificates", href: "/manager/certificates", icon: Award },
 ];
 
 export function ManagerLayout({

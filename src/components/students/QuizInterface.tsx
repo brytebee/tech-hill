@@ -113,6 +113,7 @@ export interface QuizInterfaceProps {
   userId: string;
   topicId?: string;
   metadata: QuizMetadata;
+  activeAttempt: any;
 }
 
 type Answer = string | string[];
@@ -123,10 +124,13 @@ export function QuizInterface({
   userId,
   topicId,
   metadata,
+  activeAttempt,
 }: QuizInterfaceProps) {
   const router = useRouter();
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [answers, setAnswers] = useState<Record<string, Answer>>(
+    (activeAttempt?.draftAnswers as Record<string, Answer>) || {}
+  );
   const [timeLeft, setTimeLeft] = useState(
     quiz.timeLimit ? quiz.timeLimit * 60 : null
   );
@@ -154,15 +158,22 @@ export function QuizInterface({
 
   // Auto-save answers periodically
   useEffect(() => {
-    const saveInterval = setInterval(() => {
+    const saveInterval = setInterval(async () => {
       if (Object.keys(answers).length > 0) {
-        // Auto-save logic could be implemented here
-        console.log("Auto-saving answers...", answers);
+        try {
+          await fetch(`/api/student/quiz/${quiz.id}/draft`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ attemptId: activeAttempt.id, answers })
+          });
+        } catch (error) {
+          console.error("Failed to auto-save:", error);
+        }
       }
-    }, 30000); // Save every 30 seconds
+    }, 15000); // Save every 15 seconds for snappier experience
 
     return () => clearInterval(saveInterval);
-  }, [answers]);
+  }, [answers, quiz.id, activeAttempt?.id]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);

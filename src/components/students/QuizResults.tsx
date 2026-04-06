@@ -29,6 +29,7 @@ import {
   ListRestart
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export interface Question {
   id: string;
@@ -86,6 +87,7 @@ export interface QuizResultsProps {
   allAttempts: QuizAttempt[];
   userId: string;
   topicId?: string;
+  nextTopicId?: string;
 }
 
 function formatTime(seconds: number) {
@@ -230,9 +232,11 @@ export function QuizResults({
   allAttempts,
   userId,
   topicId,
+  nextTopicId,
 }: QuizResultsProps) {
   const router = useRouter();
   const [showAllQuestions, setShowAllQuestions] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
 
   const handleRetakeQuiz = () => {
     router.push(
@@ -248,6 +252,32 @@ export function QuizResults({
   const incorrectAnswers = attempt.answers.length - correctAnswers;
 
   const isPerfectScore = attempt.score === 100;
+
+  const handleMarkCompleteAndContinue = async () => {
+    if (!topicId) return;
+    setIsCompleting(true);
+    try {
+      const response = await fetch(`/api/student/topics/${topicId}/mark-complete`, {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        toast.success("Topic completed!");
+        if (nextTopicId) {
+          router.push(`/student/topics/${nextTopicId}`);
+        } else {
+          router.push(`/student/courses/${quiz.topic.module.course.id}`);
+        }
+      } else {
+        toast.error("Failed to mark complete. Please do it from the topic page.");
+        router.push(`/student/topics/${topicId}`);
+      }
+    } catch (error) {
+      console.error("Error marking complete:", error);
+      toast.error("Something went wrong");
+      setIsCompleting(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in relative z-10">
@@ -272,7 +302,7 @@ export function QuizResults({
           {quiz.topic.title}
         </Link>
         <span className="opacity-50">/</span>
-        <span className="text-slate-900 dark:text-white truncate">Evaluation</span>
+        <span className="text-slate-900 dark:text-white truncate">Quiz Results</span>
       </nav>
 
       {/* Hero Header Outcome Block */}
@@ -302,10 +332,10 @@ export function QuizResults({
             <div className="flex-1 space-y-3">
                <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-center sm:justify-start">
                  <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-sm">
-                   {attempt.passed ? (isPerfectScore ? "Flawless Setup!" : "Evaluation Passed") : "Evaluation Reverted"}
+                   {attempt.passed ? (isPerfectScore ? "Perfect Score! 🏆" : "Quiz Passed!") : "Not Passed Yet"}
                  </h1>
                  <Badge className="bg-white/20 hover:bg-white/30 text-white border-0 font-bold backdrop-blur-md px-3 py-1 shadow-sm w-fit mx-auto sm:mx-0">
-                    {attempt.passed ? "CERTIFIED" : "BLOCKED"}
+                    {attempt.passed ? "PASSED" : "NEEDS REVIEW"}
                  </Badge>
                </div>
                <p className="text-white/80 text-lg font-medium leading-relaxed max-w-xl">
@@ -351,7 +381,7 @@ export function QuizResults({
       <Card className="border border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 overflow-hidden">
         <CardContent className="p-6 sm:p-8">
           <div className="flex items-center justify-between mb-4">
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-widest">Score Vector</span>
+            <span className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-widest">Performance</span>
             <span className="text-xs font-bold text-slate-500 bg-slate-100 dark:bg-slate-800 dark:text-slate-300 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 shadow-inner">
               Minimum Threshold: {quiz.passingScore}%
             </span>
@@ -366,7 +396,7 @@ export function QuizResults({
             >
                <div className="absolute top-full mt-2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
                  <div className="w-px h-2 bg-slate-900 dark:bg-slate-400 mb-1" />
-                 <span className="text-[10px] font-bold text-slate-900 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700 whitespace-nowrap">Gate: {quiz.passingScore}%</span>
+                 <span className="text-[10px] font-bold text-slate-900 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded shadow-sm border border-slate-200 dark:border-slate-700 whitespace-nowrap">Pass Rate: {quiz.passingScore}%</span>
                </div>
             </div>
 
@@ -391,35 +421,42 @@ export function QuizResults({
             <div className="text-center md:text-left flex-1">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
                  {!attempt.passed 
-                    ? "Sub-optimal execution protocol." 
+                    ? "Almost there! Keep trying." 
                     : isPerfectScore 
-                       ? "Exceptional metrics." 
-                       : "Metrics achieved."}
+                       ? "Excellent work! Perfect score." 
+                       : "Great job! You passed."}
               </h3>
               <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-xl">
                  {!attempt.passed 
-                    ? "Study the logic breakdowns below and initiate another attempt to overwrite this run."
-                    : "You are cleared to progress deeper into the course hierarchy."}
+                    ? "Review your answers below and try again to improve your score."
+                    : "You are ready to move on to the next topic."}
               </p>
               {allAttempts.length > 0 && (
                 <p className="text-xs font-bold text-blue-600 dark:text-blue-500 mt-3 inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/10 px-2.5 py-1 rounded-md border border-blue-200 dark:border-blue-900/30">
-                  <ListRestart className="w-3.5 h-3.5"/> State Entry logged as Run {allAttempts.length} of {quiz.maxAttempts || "∞"} allowed.
+                  <ListRestart className="w-3.5 h-3.5"/> This was attempt {allAttempts.length} out of {quiz.maxAttempts || "∞"} allowed.wed.
                 </p>
               )}
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0">
-               <Link href={topicId ? `/student/topics/${topicId}` : `/student/courses/${quiz.topic.module.course.id}`} className="w-full sm:w-auto">
-                 <Button variant="outline" className="h-12 border-2 border-slate-200 dark:border-slate-700 w-full font-bold sm:px-6">
-                   <ArrowLeft className="h-4.5 w-4.5 mr-2" />
-                   Egress to Sandbox
+               {attempt.passed && topicId ? (
+                 <Button onClick={handleMarkCompleteAndContinue} disabled={isCompleting} className="w-full sm:w-auto h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-bold sm:px-6 shadow-md shadow-emerald-500/20">
+                   {isCompleting ? "Saving..." : "Mark Complete & Continue"}
+                   {!isCompleting && <ChevronRight className="h-4.5 w-4.5 ml-2" />}
                  </Button>
-               </Link>
+               ) : (
+                 <Link href={topicId ? `/student/topics/${topicId}` : `/student/courses/${quiz.topic.module.course.id}`} className="w-full sm:w-auto">
+                   <Button variant="outline" className="h-12 border-2 border-slate-200 dark:border-slate-700 w-full font-bold sm:px-6">
+                     <ArrowLeft className="h-4.5 w-4.5 mr-2" />
+                     Back to Topic
+                   </Button>
+                 </Link>
+               )}
 
               {canRetake && (
                 <Button onClick={handleRetakeQuiz} className="h-12 bg-slate-900 hover:bg-slate-800 text-white dark:bg-blue-600 dark:hover:bg-blue-500 w-full sm:w-auto shadow-md shadow-slate-900/20 dark:shadow-blue-900/30 font-bold sm:px-8">
                   <RotateCcw className="h-4.5 w-4.5 mr-2" />
-                  Spin Container
+                  Retake Quiz
                 </Button>
               )}
             </div>
@@ -433,7 +470,7 @@ export function QuizResults({
           <CardTitle className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <span className="flex items-center gap-2.5 text-lg font-bold">
               <BookOpen className="h-5 w-5 text-blue-500" />
-              Runtime Audit Logs
+              Your Answer Review
             </span>
             <Button
               variant="outline"
@@ -441,7 +478,7 @@ export function QuizResults({
               onClick={() => setShowAllQuestions(!showAllQuestions)}
               className="font-bold border-2 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
             >
-              {showAllQuestions ? "Collapse Memory" : "Dump Memory Variables"}
+              {showAllQuestions ? "Hide All Questions" : "Show All Questions"}
             </Button>
           </CardTitle>
         </CardHeader>

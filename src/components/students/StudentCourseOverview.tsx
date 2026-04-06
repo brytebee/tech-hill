@@ -1,7 +1,8 @@
 // src/components/students/StudentCourseOverview.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
 import {
   Card,
   CardContent,
@@ -217,7 +218,7 @@ function ModuleCard({
                         )}
                         {isModuleCompleted && (
                           <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase tracking-widest px-1.5 py-0 border-none h-4">
-                            FINALIZED
+                            COMPLETED
                           </Badge>
                         )}
                     </div>
@@ -227,7 +228,7 @@ function ModuleCard({
                       <Clock className="h-3 w-3" /> {module.duration} MINS
                     </span>
                     <span className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-950/40 px-2.5 py-1 rounded-lg border border-slate-100 dark:border-slate-800">
-                      <Layers className="h-3 w-3" /> {completedTopics}/{module.topics.length} UNITS
+                      <Layers className="h-3 w-3" /> {completedTopics}/{module.topics.length} TOPICS
                     </span>
                     {moduleProgress?.currentScore !== undefined && (
                       <span className="text-emerald-600 dark:text-emerald-400 font-black bg-emerald-500/5 px-2.5 py-1 rounded-lg border border-emerald-500/10 italic">
@@ -239,7 +240,7 @@ function ModuleCard({
               </div>
               <div className="flex flex-col items-end gap-2 pr-4 self-end sm:self-center">
                 <div className="text-xs font-black text-slate-900 dark:text-white tracking-widest uppercase">
-                  {progressPercentage}% SYNC
+                  {progressPercentage}%
                 </div>
                 <div className="w-32 h-1.5 bg-slate-100 dark:bg-slate-950/60 rounded-full overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner">
                   <div
@@ -267,13 +268,18 @@ function ModuleCard({
                 );
                 const isTopicCompleted = topicProgress?.status === "COMPLETED";
                 const isTopicInProgress = topicProgress?.status === "IN_PROGRESS";
+                const previousRequiredTopic = module.topics
+                  .slice(0, index)
+                  .reverse()
+                  .find((t) => t.isRequired);
+
                 const isTopicAccessible =
                   !isLocked &&
                   (index === 0 ||
+                    !previousRequiredTopic ||
                     topicProgresses.some(
                       (p) =>
-                        module.topics[index - 1] &&
-                        p.topicId === module.topics[index - 1].id &&
+                        p.topicId === previousRequiredTopic.id &&
                         p.status === "COMPLETED"
                     ));
 
@@ -340,7 +346,7 @@ function ModuleCard({
                         >
                           <Link href={`/student/topics/${topic.id}`}>
                             <Play className={`h-3 w-3 mr-2 ${isTopicCompleted ? '' : 'fill-current'}`} />
-                            {isTopicCompleted ? "SYNC AGAIN" : "START UNIT"}
+                            {isTopicCompleted ? "REVIEW" : "START"}
                           </Link>
                         </Button>
                       ) : (
@@ -409,9 +415,54 @@ export function StudentCourseOverview({
   };
 
   const lockedModules = getLockedModules();
+  const isCourseCompleted = enrollment.status === "COMPLETED";
+
+  // Trigger confetti when course is loaded and completed
+  useEffect(() => {
+    if (isCourseCompleted) {
+      // Small delay to ensure UI mounts first
+      const timeout = setTimeout(() => {
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
+        });
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [isCourseCompleted]);
 
   return (
-    <div className="space-y-10 animate-fade-in pb-20">
+    <div className="space-y-10 animate-fade-in pb-20 max-w-7xl mx-auto">
+      
+      {/* Celebration Banner */}
+      {isCourseCompleted && (
+        <Card className="border-0 bg-gradient-to-r from-emerald-500 to-teal-600 shadow-xl shadow-emerald-500/20 overflow-hidden relative rounded-[2.5rem]">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
+          <CardContent className="p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8 relative z-10">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
+              <div className="bg-white/20 p-5 rounded-3xl backdrop-blur-sm self-center sm:self-start shrink-0">
+                <Trophy className="h-12 w-12 text-white" />
+              </div>
+              <div className="text-white">
+                <h2 className="text-4xl lg:text-5xl font-black tracking-tight mb-3 uppercase">Course Completed!</h2>
+                <p className="text-emerald-50 text-lg sm:text-xl max-w-2xl font-medium leading-relaxed">
+                  Congratulations! You have successfully finished all the required topics and assessments. Your hard work has paid off.
+                </p>
+              </div>
+            </div>
+            <div className="shrink-0 w-full md:w-auto">
+              <Link href="/student/certificates">
+                <Button className="w-full md:w-auto bg-white hover:bg-slate-50 text-emerald-700 hover:text-emerald-800 font-black tracking-wider uppercase px-8 h-14 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all text-sm">
+                  <Award className="h-5 w-5 mr-3" />
+                  View Certificate
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       
       {/* Dynamic Command Header */}
       <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 border border-slate-800 p-8 lg:p-12 shadow-2xl group transition-all duration-500 hover:shadow-blue-500/10">
@@ -421,7 +472,7 @@ export function StudentCourseOverview({
           <div className="relative z-10">
               <div className="flex flex-wrap items-center gap-3 mb-6">
                 {getDifficultyBadge(course.difficulty)}
-                <Badge className="bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider px-2 py-0.5 border-none shadow-lg shadow-emerald-500/20 animate-pulse">SYNCHRONIZED</Badge>
+                <Badge className="bg-blue-500/20 text-blue-300 font-black text-[10px] uppercase tracking-wider px-2 py-0.5 border border-blue-500/30">ACTIVE</Badge>
               </div>
               <h1 className="text-4xl lg:text-7xl font-black text-white tracking-tight leading-none mb-4 uppercase max-w-4xl">
                 {course.title}
@@ -432,10 +483,10 @@ export function StudentCourseOverview({
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-8 border-y border-white/5 max-w-5xl">
                 {[
-                  { label: "Temporal Span", value: `${course.duration}H`, icon: Clock },
-                  { label: "Unit Count", value: course.modules.flatMap(m => m.topics).length, icon: BookOpen },
-                  { label: "Peer Nodes", value: course._count.enrollments, icon: Users },
-                  { label: "Mastery Req", value: `${course.passingScore}%`, icon: Shield }
+                  { label: "Duration", value: `${course.duration}H`, icon: Clock },
+                  { label: "Total Topics", value: course.modules.flatMap(m => m.topics).length, icon: BookOpen },
+                  { label: "Students", value: course._count.enrollments, icon: Users },
+                  { label: "Passing Score", value: `${course.passingScore}%`, icon: Shield }
                 ].map((stat, i) => (
                     <div key={i} className="flex flex-col gap-2">
                         <span className="flex items-center text-[10px] font-black uppercase tracking-widest text-slate-500">
