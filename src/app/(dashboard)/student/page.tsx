@@ -101,7 +101,7 @@ export default async function StudentDashboard() {
           <div className="relative z-10 max-w-3xl">
             {/* Status pill */}
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 border border-white/30 text-white text-xs font-black uppercase tracking-widest mb-6 backdrop-blur-sm">
-              <Sparkles className="h-3 w-3" /> Cognitive Link Established
+              <Sparkles className="h-3 w-3" /> Ready to Learn
             </div>
             <h2 className="text-4xl lg:text-6xl font-black text-white tracking-tight mb-4 uppercase">
               Welcome Back,{" "}
@@ -111,8 +111,8 @@ export default async function StudentDashboard() {
               .
             </h2>
             <p className="text-blue-100 dark:text-slate-400 text-lg lg:text-xl font-medium mb-8 leading-relaxed">
-              Your educational sequence is active. We've synchronized your
-              progress across {enrollments.length} curriculum nodes.
+              We've synced your progress. You are currently enrolled in{" "}
+              {enrollments.length} course(s).
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/student/courses">

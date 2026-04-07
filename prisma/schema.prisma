@@ -87,11 +87,13 @@ model User {
   createdCourses Course[]     @relation("CourseCreator")
 
   // Assessment & Progress Relations
-  quizAttempts   QuizAttempt[]
-  topicProgress  TopicProgress[]
-  moduleProgress ModuleProgress[]
-  submissions    Submission[]
-  certificates   Certificate[]
+  quizAttempts        QuizAttempt[]
+  topicProgress       TopicProgress[]
+  moduleProgress      ModuleProgress[]
+  submissions         Submission[]      @relation("SubmissionAuthor")
+  reviewedSubmissions Submission[]      @relation("SubmissionReviewer")
+  certificates        Certificate[]
+  trackEnrollments    TrackEnrollment[]
 
   // Commerce & Rewards
   subscriptions Subscription[]
@@ -163,10 +165,13 @@ model Course {
   transactions Transaction[]
   flashSales   FlashSale[]        @relation("CourseFlashSales")
   coupons      CoursesOnCoupons[]
+  trackCourses TrackCourse[]
 
   // Certificate config
-  certificatePrice  Decimal? @db.Decimal(10, 2) // Defaults to 2000 in logic if null and not free
-  isCertificateFree Boolean  @default(false)
+  certificatePrice  Decimal?             @db.Decimal(10, 2) // Defaults to 2000 in logic if null and not free
+  isCertificateFree Boolean              @default(false)
+  templateId        String?
+  template          CertificateTemplate? @relation(fields: [templateId], references: [id])
 
   @@map("courses")
 }
@@ -221,6 +226,10 @@ model Topic {
   isRequired   Boolean @default(true)
   allowSkip    Boolean @default(false) // Can skip if struggling
   isPreview    Boolean @default(false) // If true, can be viewed without enrollment/payment
+
+  // Project Deadline (applies to PRACTICE type topics)
+  dueDate             DateTime? // Absolute deadline for project submission
+  allowLateSubmission Boolean   @default(false) // If false, submissions block after dueDate
 
   // Prerequisites within module
   prerequisiteTopicId String?
@@ -501,6 +510,9 @@ model QuizAttempt {
   strengthAreas     Json? // Topics/skills where student excelled
   recommendedReview String[] // Topics to review
 
+  // Real-time auto-save
+  draftAnswers Json?
+
   createdAt DateTime @default(now())
 
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -542,14 +554,15 @@ model Answer {
   @@map("answers")
 }
 
-// Enhanced Submissions for Assignments
+// GitHub-style project review statuses
 enum SubmissionStatus {
-  DRAFT
-  SUBMITTED
-  UNDER_REVIEW
-  GRADED
-  RETURNED
-  RESUBMITTED
+  DRAFT // Saved but not submitted yet
+  SUBMITTED // Awaiting tutor/peer review
+  UNDER_REVIEW // A reviewer has claimed it
+  CHANGES_REQUIRED // Review done, changes needed before approval
+  APPROVED // Project accepted - unlocks topic completion
+  REJECTED // Permanently invalidated, must resubmit fresh
+  RESUBMITTED // Student addressed changes and resubmitted
 }
 
 model Submission {
@@ -557,26 +570,25 @@ model Submission {
   userId  String
   topicId String
 
-  content     String   @db.Text
-  attachments String[] // File URLs
+  // Student submission content
+  content     String   @db.Text // The project link (GitHub URL, Vercel URL, etc.)
+  description String?  @db.Text // Optional context from the student
+  attachments String[] // Additional file URLs
 
-  // Grading
-  score        Int?
-  maxScore     Int     @default(100)
-  feedback     String? @db.Text
-  rubricScores Json? // Detailed rubric scoring
-
+  // GitHub-style review
   status        SubmissionStatus @default(DRAFT)
   attemptNumber Int              @default(1)
+  reviewNotes   String?          @db.Text // Tutor/peer review comments
+  reviewedById  String? // Who reviewed it
+  reviewedBy    User?            @relation("SubmissionReviewer", fields: [reviewedById], references: [id])
 
   // Timestamps
   submittedAt DateTime?
-  gradedAt    DateTime?
-  returnedAt  DateTime?
+  reviewedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user  User  @relation("SubmissionAuthor", fields: [userId], references: [id], onDelete: Cascade)
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@map("submissions")
@@ -588,15 +600,24 @@ enum CertificateType {
   MASTERY_ACHIEVEMENT
   SKILL_BADGE
   MILESTONE
+  TRACK_COMPLETION
+}
+
+enum CertificateStatus {
+  PENDING_REVIEW
+  ISSUED
+  REJECTED
 }
 
 model Certificate {
-  id       String @id @default(cuid())
+  id       String  @id @default(cuid())
   userId   String
-  courseId String
+  courseId String?
+  trackId  String?
 
-  certificateNumber String          @unique
-  certificateType   CertificateType @default(COURSE_COMPLETION)
+  certificateNumber String            @unique
+  certificateType   CertificateType   @default(COURSE_COMPLETION)
+  status            CertificateStatus @default(ISSUED)
   title             String // "Computer Literacy Mastery"
   description       String? // Achievement description
 
@@ -618,11 +639,31 @@ model Certificate {
   revokedAt        DateTime?
   revokedReason    String?
 
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  track  Track?  @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, courseId, certificateType])
+  @@unique([userId, courseId, trackId, certificateType])
   @@map("certificates")
+}
+
+model CertificateTemplate {
+  id           String  @id @default(cuid())
+  name         String
+  description  String?
+  themeName    String  @default("ModernDark") // E.g., "ModernDark", "ClassicGold"
+  primaryColor String? // Optional hex override for the theme base
+  logoUrl      String? // Company or Program Logo
+  signatureUrl String? // Official Instructor Signature
+  isDefault    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses Course[]
+  tracks  Track[]
+
+  @@map("certificate_templates")
 }
 
 // --------------------------------------
@@ -925,6 +966,7 @@ model PasskeyCredential {
 
   @@map("passkey_credentials")
 }
+
 // --------------------------------------
 // NOTIFICATIONS
 // --------------------------------------
@@ -953,4 +995,55 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
+}
+
+// --------------------------------------
+// TRACKS (Learning Paths)
+// --------------------------------------
+
+model Track {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  slug        String   @unique
+  thumbnail   String?
+  isPublished Boolean  @default(false)
+  price       Decimal  @default(0) @db.Decimal(10, 2)
+  templateId  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  courses      TrackCourse[]
+  enrollments  TrackEnrollment[]
+  certificates Certificate[]
+  template     CertificateTemplate? @relation(fields: [templateId], references: [id])
+}
+
+model TrackCourse {
+  id       String @id @default(cuid())
+  trackId  String
+  courseId String
+  order    Int
+
+  track  Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([trackId, courseId])
+  @@unique([trackId, order])
+}
+
+model TrackEnrollment {
+  id               String           @id @default(cuid())
+  userId           String
+  trackId          String
+  currentCourseId  String?
+  completedCourses String[]
+  status           EnrollmentStatus @default(ACTIVE)
+  enrolledAt       DateTime         @default(now())
+  completedAt      DateTime?
+
+  user  User  @relation(fields: [userId], references: [id])
+  track Track @relation(fields: [trackId], references: [id])
+
+  @@unique([userId, trackId])
 }

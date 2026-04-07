@@ -171,18 +171,32 @@ export async function GET(
         completedAt: attempt.completedAt,
         timeSpent: attempt.timeSpent,
       })),
+      activeAttempt: attempts.find(a => !a.completedAt) || null,
       canTakeQuiz,
       hasPassedQuiz,
       topicProgress,
       metadata: {
         totalQuestions: quiz.questions.length,
         totalPoints: quiz.questions.reduce((sum, q) => sum + q.points, 0),
-        attemptNumber: attempts.length + 1,
+        attemptNumber: attempts.filter(a => a.completedAt).length + 1,
         attemptsRemaining: quiz.maxAttempts
-          ? quiz.maxAttempts - attempts.length
+          ? quiz.maxAttempts - attempts.filter(a => a.completedAt).length
           : null,
       },
     };
+
+    // If there's no active attempt and they can take it, create one now
+    if (!response.activeAttempt && canTakeQuiz && !hasPassedQuiz) {
+       const newAttempt = await prisma.quizAttempt.create({
+         data: {
+           userId: session.user.id,
+           quizId,
+           score: 0,
+           isPractice: false,
+         }
+       });
+       (response as any).activeAttempt = newAttempt;
+    }
 
     return NextResponse.json(response);
   } catch (error: any) {
@@ -442,11 +456,22 @@ export async function POST(
       totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
     const passed = scorePercentage >= quiz.passingScore;
 
-    // Create quiz attempt record
-    const quizAttempt = await prisma.quizAttempt.create({
+    const activeAttempt = await prisma.quizAttempt.findFirst({
+        where: {
+            quizId,
+            userId: session.user.id,
+            completedAt: null,
+        }
+    });
+
+    if (!activeAttempt) {
+        return NextResponse.json({ error: "No active session found" }, { status: 400 });
+    }
+
+    // Update quiz attempt record
+    const quizAttempt = await prisma.quizAttempt.update({
+      where: { id: activeAttempt.id },
       data: {
-        userId: session.user.id,
-        quizId,
         score: scorePercentage,
         passed,
         timeSpent,

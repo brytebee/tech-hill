@@ -6,7 +6,7 @@ import { AdminLayout } from "@/components/layout/AdminLayout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, MoreHorizontal, Eye, BookPlus, Loader2, Users, Clock, DollarSign, Layers } from "lucide-react";
+import { Plus, Edit, Trash2, MoreHorizontal, Eye, BookPlus, Loader2, Users, Clock, DollarSign, Layers, Upload } from "lucide-react";
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -301,12 +301,20 @@ export default function CoursesPage() {
               {courses.length} educational assets currently in circulation
             </p>
           </div>
-          <Link href="/admin/courses/create">
-            <Button className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 h-11 px-6 font-bold rounded-xl transition-all hover:scale-105 active:scale-95">
-              <BookPlus className="h-5 w-5 mr-2" />
-              New Sequence
-            </Button>
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/admin/courses/import">
+              <Button variant="outline" className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 h-11 px-4 font-bold rounded-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center shadow-sm">
+                <Upload className="h-4 w-4 mr-2" />
+                Bulk Import
+              </Button>
+            </Link>
+            <Link href="/admin/courses/create">
+              <Button className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 h-11 px-6 font-bold rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center">
+                <BookPlus className="h-5 w-5 mr-2" />
+                New Sequence
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <DataTable

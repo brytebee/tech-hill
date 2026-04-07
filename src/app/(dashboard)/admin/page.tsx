@@ -60,9 +60,9 @@ export default async function AdminDashboard() {
                         <Users className="h-5 w-5 mr-1" /> Manage Identities
                     </Button>
                 </Link>
-                <Link href="/admin/intelligence">
+                <Link href="/admin/tracks">
                     <Button variant="ghost" className="text-white hover:bg-white/20 font-black h-12 px-6 rounded-xl transition-all uppercase tracking-widest">
-                        Eagle-Eye Drafts <ChevronRight className="ml-2 h-4 w-4" />
+                        Eagle-Eye Tracks <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                 </Link>
             </div>

@@ -189,7 +189,7 @@ export default async function ModuleDetailsPage({
               sub: "Post-prerequisite release",
             },
           ].map((stat, i) => (
-            <Card className="bg-white dark:bg-slate-900/50 dark:backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none transition-all duration-300 hover:shadow-lg">
+            <Card key={i} className="bg-white dark:bg-slate-900/50 dark:backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none transition-all duration-300 hover:shadow-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
                   {stat.label}

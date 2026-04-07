@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { BookOpen, Menu, X } from "lucide-react";
 
 const navLinks = [
+  { label: "Career Paths", href: "/career-paths" },
   { label: "Courses", href: "/courses" },
   { label: "Pricing", href: "/pricing" },
 ];

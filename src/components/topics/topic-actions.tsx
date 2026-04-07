@@ -209,7 +209,7 @@ export function TopicActions({
     <div className="flex flex-wrap gap-2">
       {/* Topic Type & Order Controls */}
       <div className="flex items-center space-x-2">
-        <div className="flex items-center px-2 py-1 bg-gray-100 rounded text-sm">
+        <div className="flex items-center px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded text-sm">
           {getTopicTypeIcon(topic.topicType)}
           <span className="ml-1 font-medium">{topic.topicType}</span>
         </div>

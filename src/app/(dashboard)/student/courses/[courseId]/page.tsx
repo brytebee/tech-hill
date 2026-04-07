@@ -80,8 +80,8 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
       : null,
   };
 
-  // If user is enrolled and active, show the interactive overview
-  if (enrollment && enrollment.status === "ACTIVE") {
+  // If user is enrolled and active or completed, show the interactive overview
+  if (enrollment && (enrollment.status === "ACTIVE" || enrollment.status === "COMPLETED")) {
     const serializedEnrollment = {
       ...enrollment,
       enrolledAt: enrollment.enrolledAt.toISOString(),

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { TopicService } from "@/lib/services/topicService";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
@@ -44,10 +45,47 @@ async function getTopicData(topicId: string, userId: string) {
       await ProgressService.getOrCreateTopicProgress(userId, topicId);
     }
 
+    // Compute next and previous topics
+    const courseId = topic.module.course.id;
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        modules: {
+          orderBy: { order: "asc" },
+          include: {
+            topics: {
+              orderBy: { orderIndex: "asc" },
+              select: { id: true },
+            },
+          },
+        },
+      },
+    });
+
+    let nextTopicId: string | undefined = undefined;
+    let previousTopicId: string | undefined = undefined;
+    let isLastTopicOfCourse = false;
+
+    if (course) {
+      const flatTopics = course.modules.flatMap((m) => m.topics.map((t) => t.id));
+      const currentIndex = flatTopics.indexOf(topic.id);
+      if (currentIndex !== -1) {
+        if (currentIndex > 0) previousTopicId = flatTopics[currentIndex - 1];
+        if (currentIndex < flatTopics.length - 1) {
+          nextTopicId = flatTopics[currentIndex + 1];
+        } else {
+          isLastTopicOfCourse = true;
+        }
+      }
+    }
+
     return {
       topic,
       enrollment,
       canAccess: true,
+      nextTopicId,
+      previousTopicId,
+      isLastTopicOfCourse,
     };
   } catch (error: any) {
     console.error("Error fetching topic data:", error);
@@ -77,6 +115,9 @@ export default async function StudentTopicDetailsPage({ params }: PageProps) {
         topic={data.topic as unknown as Topic}
         enrollment={data.enrollment as unknown as Enrollment}
         userId={session.user.id}
+        nextTopicId={data.nextTopicId}
+        previousTopicId={data.previousTopicId}
+        isLastTopicOfCourse={data.isLastTopicOfCourse}
       />
     </StudentLayout>
   );

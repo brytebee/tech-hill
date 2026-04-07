@@ -33,6 +33,8 @@ import {
 import Link from "next/link";
 import { TopicService } from "@/lib/services/topicService";
 import { TopicActions } from "@/components/topics/topic-actions";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 
 async function getTopic(topicId: string) {
   try {
@@ -122,8 +124,10 @@ export default async function TopicDetailsPage({
             </Button>
           </Link>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{topic.title}</h1>
-            <p className="text-gray-600">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+              {topic.title}
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400">
               {topic.module.title} • {topic.module.course.title}
             </p>
           </div>
@@ -405,11 +409,16 @@ export default async function TopicDetailsPage({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="prose max-w-none">
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="whitespace-pre-wrap text-gray-800 leading-relaxed">
-                  {topic.content}
-                </div>
+            <div className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-lg border border-slate-100 dark:border-slate-700/50">
+              <div className="prose prose-slate dark:prose-invert max-w-none 
+                prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-slate-100 prose-headings:mt-10 prose-headings:mb-5
+                prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-p:leading-loose prose-p:my-6
+                prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+                prose-strong:text-slate-900 dark:prose-strong:text-slate-100 prose-strong:font-bold
+                prose-ul:list-disc prose-ul:pl-6 prose-ul:my-6 prose-li:marker:text-slate-400 dark:prose-li:marker:text-slate-500 prose-li:my-3
+                prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-6"
+              >
+                <ReactMarkdown rehypePlugins={[rehypeRaw]}>{topic.content}</ReactMarkdown>
               </div>
             </div>
           </CardContent>
@@ -439,29 +448,29 @@ export default async function TopicDetailsPage({
                 {topic.quizzes.map((quiz: any, index: any) => (
                   <div
                     key={quiz.id}
-                    className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="p-4 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
                         <div className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-gray-500">
+                          <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
                             {index + 1}.
                           </span>
                           <Link
                             href={`/admin/quizzes/${quiz.id}`}
-                            className="font-semibold text-lg text-blue-600 hover:text-blue-800"
+                            className="font-semibold text-lg text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                           >
                             {quiz.title}
                           </Link>
                         </div>
 
                         {quiz.description && (
-                          <p className="text-gray-600 mt-2 ml-6">
+                          <p className="text-slate-600 dark:text-slate-300 mt-2 ml-6">
                             {quiz.description}
                           </p>
                         )}
 
-                        <div className="flex items-center space-x-4 mt-3 ml-6 text-sm text-gray-500">
+                        <div className="flex items-center space-x-4 mt-3 ml-6 text-sm text-slate-500 dark:text-slate-400">
                           <div className="flex items-center space-x-1">
                             <HelpCircle className="h-3 w-3" />
                             <span>{quiz.questions.length} questions</span>
@@ -495,7 +504,7 @@ export default async function TopicDetailsPage({
                         {/* Quiz Questions Preview */}
                         {quiz.questions.length > 0 && (
                           <div className="mt-4 ml-6">
-                            <h5 className="font-medium text-sm text-gray-700 mb-2">
+                            <h5 className="font-medium text-sm text-slate-700 dark:text-slate-200 mb-2">
                               Questions:
                             </h5>
                             <div className="space-y-1">
@@ -504,19 +513,19 @@ export default async function TopicDetailsPage({
                                 .map((question: any, qIndex: any) => (
                                   <div
                                     key={question.id}
-                                    className="text-sm text-gray-600"
+                                    className="text-sm text-slate-600 dark:text-slate-300"
                                   >
                                     <span className="font-medium">
                                       {qIndex + 1}.
                                     </span>{" "}
                                     {question.questionText}
-                                    <span className="ml-2 text-xs text-gray-500">
+                                    <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">
                                       ({question.points} pts)
                                     </span>
                                   </div>
                                 ))}
                               {quiz.questions.length > 3 && (
-                                <div className="text-sm text-gray-500">
+                                <div className="text-sm text-slate-500 dark:text-slate-400">
                                   ... and {quiz.questions.length - 3} more
                                   questions
                                 </div>
@@ -526,14 +535,14 @@ export default async function TopicDetailsPage({
                         )}
                       </div>
 
-                      <div className="flex space-x-2">
+                      <div className="flex space-x-2 mt-2 sm:mt-0">
                         <Link href={`/admin/quizzes/${quiz.id}`}>
-                          <Button variant="outline" size="sm">
+                          <Button variant="secondary" size="sm">
                             View
                           </Button>
                         </Link>
                         <Link href={`/admin/quizzes/${quiz.id}/builder`}>
-                          <Button variant="outline" size="sm">
+                          <Button variant="secondary" size="sm">
                             <Edit className="h-4 w-4" />
                           </Button>
                         </Link>
