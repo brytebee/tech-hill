@@ -20,10 +20,18 @@ import {
   Unlock as UnlockIcon,
   Lock as LockIcon,
   User,
+  Github,
+  ExternalLink,
+  Send,
+  RefreshCw,
+  XCircle,
+  MessageSquare,
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 
 const ReactPlayer = dynamic(() => import("react-player"), { ssr: false }) as any;
 
@@ -80,8 +88,8 @@ export interface Enrollment {
 
 export interface StudentTopicViewerProps {
   topic: Topic;
-  enrollment: Enrollment;
-  userId: string;
+  enrollment?: Enrollment | null;
+  userId?: string;
   nextTopicId?: string;
   previousTopicId?: string;
   isLastTopicOfCourse?: boolean;
@@ -140,6 +148,15 @@ export function StudentTopicViewer({
   );
   const [isLoading, setIsLoading] = useState(!isPreviewOnly);
 
+  // Project submission state
+  const isProjectTopic = topic.topicType === "PRACTICE";
+  const [submission, setSubmission] = useState<any>(null);
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [deadlinePassed, setDeadlinePassed] = useState(false);
+  const [projectLink, setProjectLink] = useState("");
+  const [projectDescription, setProjectDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   useEffect(() => {
     if (isPreviewOnly) return;
     const fetchProgressData = async () => {
@@ -157,6 +174,30 @@ export function StudentTopicViewer({
     };
     fetchProgressData();
   }, [topic.id, isPreviewOnly]);
+
+  // Fetch existing submission for project topics
+  useEffect(() => {
+    if (isPreviewOnly || !isProjectTopic) return;
+    const fetchSubmission = async () => {
+      try {
+        const res = await fetch(`/api/student/topics/${topic.id}/submit`);
+        const data = await res.json();
+        if (data.dueDate) setDueDate(new Date(data.dueDate));
+        if (data.deadlinePassed) setDeadlinePassed(true);
+        if (data.submission) {
+          setSubmission(data.submission);
+          // Pre-fill the link for resubmission
+          if (["CHANGES_REQUIRED", "REJECTED"].includes(data.submission.status)) {
+            setProjectLink(data.submission.content || "");
+            setProjectDescription(data.submission.description || "");
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching submission", e);
+      }
+    };
+    fetchSubmission();
+  }, [topic.id, isPreviewOnly, isProjectTopic]);
 
   const handleMarkComplete = async () => {
     try {
@@ -182,6 +223,31 @@ export function StudentTopicViewer({
     } catch (error: any) {
       console.error("Failed to mark completed:", error);
       toast.error("Error updating progress. Please try again.");
+    }
+  };
+
+  const handleSubmitProject = async () => {
+    if (!projectLink.trim()) {
+      toast.error("Please enter your project link before submitting.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`/api/student/topics/${topic.id}/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: projectLink, description: projectDescription }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSubmission(data.submission);
+      setProjectLink("");
+      setProjectDescription("");
+      toast.success("Project submitted! Your tutor will review it shortly.");
+    } catch (err: any) {
+      toast.error(err.message || "Submission failed. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -224,7 +290,7 @@ export function StudentTopicViewer({
 
   const isCompleted = progressData?.progress?.status === "COMPLETED";
   const hasAssessments = topic.quizzes.length > 0;
-  const canMarkComplete =
+  const quizzesPassed =
     !hasAssessments ||
     topic.quizzes.every((quiz) =>
       progressData?.progress?.topic?.quizzes?.some(
@@ -233,6 +299,8 @@ export function StudentTopicViewer({
           tq.attempts?.some((attempt: any) => attempt.passed),
       ),
     );
+  const projectApproved = !isProjectTopic || submission?.status === "APPROVED";
+  const canMarkComplete = quizzesPassed && projectApproved;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -259,7 +327,7 @@ export function StudentTopicViewer({
               <div className="flex items-start gap-3 text-blue-800 dark:text-blue-300">
                 <UnlockIcon className="h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold text-base tracking-tight mb-1 flex items-center gap-2">Free Lesson Preview <Badge className="bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100 hover:bg-blue-200">PROMO</Badge></p>
+                  <div className="font-bold text-base tracking-tight mb-1 flex items-center gap-2">Free Lesson Preview <Badge className="bg-blue-200 text-blue-900 dark:bg-blue-800 dark:text-blue-100 hover:bg-blue-200">PROMO</Badge></div>
                   <p className="text-sm opacity-90 leading-relaxed max-w-lg">
                     Enroll now to track your progress, take quizzes, complete assessments, and earn your verified certificate.
                   </p>
@@ -416,10 +484,17 @@ export function StudentTopicViewer({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-8 px-6 sm:px-10 pb-10">
-          <div
-            className="prose prose-slate dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-blue-600 dark:prose-a:text-blue-400 sm:prose-lg"
-            dangerouslySetInnerHTML={{ __html: topic.content }}
-          />
+          <div className="prose prose-slate dark:prose-invert max-w-none 
+            prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-slate-900 dark:prose-headings:text-slate-100 prose-headings:mt-10 prose-headings:mb-5
+            prose-p:text-slate-600 dark:prose-p:text-slate-300 prose-p:leading-loose prose-p:my-6
+            prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline
+            prose-strong:text-slate-900 dark:prose-strong:text-slate-100 prose-strong:font-bold
+            prose-ul:list-disc prose-ul:pl-6 prose-ul:my-6 prose-li:marker:text-slate-400 dark:prose-li:marker:text-slate-500 prose-li:my-3
+            prose-ol:list-decimal prose-ol:pl-6 prose-ol:my-6
+            sm:prose-lg"
+          >
+            <ReactMarkdown rehypePlugins={[rehypeRaw]}>{topic.content}</ReactMarkdown>
+          </div>
         </CardContent>
       </Card>
 
@@ -454,6 +529,169 @@ export function StudentTopicViewer({
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Project Submission Box */}
+      {isProjectTopic && (
+        <Card className="border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden mt-8">
+          <CardHeader className="bg-indigo-50/50 dark:bg-indigo-900/10 border-b border-slate-200 dark:border-slate-800 flex flex-row items-center justify-between pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg text-slate-900 dark:text-white">
+              <Github className="h-5 w-5 text-indigo-500" />
+              Project Submission
+            </CardTitle>
+            {submission && (
+              <Badge
+                variant="outline"
+                className={
+                  submission.status === "APPROVED"
+                    ? "border-green-200 bg-green-50 text-green-700 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400"
+                    : submission.status === "CHANGES_REQUIRED"
+                    ? "border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-900/50 dark:bg-yellow-900/20 dark:text-yellow-400"
+                    : submission.status === "REJECTED"
+                    ? "border-red-200 bg-red-50 text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400"
+                    : "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-900/20 dark:text-blue-400"
+                }
+              >
+                {submission.status.replace("_", " ")}
+              </Badge>
+            )}
+          </CardHeader>
+          <CardContent className="pt-6">
+            {dueDate && (
+              <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg text-sm border border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-slate-500" />
+                  <span className="text-slate-700 dark:text-slate-300">
+                    Deadline: <span className="font-semibold">{dueDate.toLocaleString()}</span>
+                  </span>
+                </div>
+                {deadlinePassed && (
+                  <Badge variant="destructive" className="w-fit">Deadline Passed</Badge>
+                )}
+              </div>
+            )}
+
+            {/* If submission is pending review or approved, show read-only state, unless changes required or rejected */}
+            {submission && !["CHANGES_REQUIRED", "REJECTED"].includes(submission.status) ? (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Submitted Link</h4>
+                  <a
+                    href={submission.content}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 break-all"
+                  >
+                    <ExternalLink className="w-4 h-4 shrink-0" />
+                    {submission.content}
+                  </a>
+                </div>
+                
+                {submission.description && (
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Student Notes</h4>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 whitespace-pre-wrap">
+                      {submission.description}
+                    </p>
+                  </div>
+                )}
+
+                {submission.reviewNotes && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-xl">
+                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-300 mb-2 flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Tutor Feedback
+                    </h4>
+                    <p className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
+                      {submission.reviewNotes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {submission?.reviewNotes && (
+                  <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-xl">
+                    <h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-400 mb-2 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4" />
+                      Tutor Feedback (Changes Required)
+                    </h4>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-300 whitespace-pre-wrap">
+                      {submission.reviewNotes}
+                    </p>
+                  </div>
+                )}
+
+                {deadlinePassed && !submission ? (
+                  <div className="text-center p-6 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <XCircle className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+                    <h4 className="text-slate-700 dark:text-slate-300 font-medium">Submissions Closed</h4>
+                    <p className="text-sm text-slate-500 mt-1">The deadline for this project has passed.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Project URL <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://github.com/yourusername/project"
+                        value={projectLink}
+                        onChange={(e) => setProjectLink(e.target.value)}
+                        required
+                        disabled={isSubmitting || isPreviewOnly}
+                        className="w-full flex h-10 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ring-offset-white file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:ring-offset-slate-950 dark:placeholder:text-slate-400 dark:focus-visible:ring-slate-300"
+                      />
+                      <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                        Link to your GitHub repository, deployed site, or design file.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                        Notes for Reviewer (Optional)
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Any specific areas you'd like feedback on?"
+                        value={projectDescription}
+                        onChange={(e) => setProjectDescription(e.target.value)}
+                        disabled={isSubmitting || isPreviewOnly}
+                        className="flex min-h-[80px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ring-offset-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50 dark:ring-offset-slate-950 dark:placeholder:text-slate-400 dark:focus-visible:ring-slate-300"
+                      />
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        onClick={handleSubmitProject}
+                        disabled={isSubmitting || !projectLink.trim() || isPreviewOnly}
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : submission ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Submit Revision
+                          </>
+                        ) : (
+                          <>
+                            <Send className="mr-2 h-4 w-4" />
+                            Submit Project
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -556,11 +794,15 @@ export function StudentTopicViewer({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="max-w-xl">
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">
-                {isCompleted ? "Topic Completed! 🎉" : hasAssessments ? "Ready to move on?" : "Finished reading?"}
+                {isCompleted ? "Topic Completed! 🎉" : isProjectTopic || hasAssessments ? "Ready to move on?" : "Finished reading?"}
               </h3>
               {!isCompleted && (
                 <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                  {hasAssessments
+                  {isProjectTopic && hasAssessments
+                    ? "Pass all quizzes and get your project approved by a tutor to unlock completion."
+                    : isProjectTopic
+                    ? "Get your project approved by a tutor to unlock completion."
+                    : hasAssessments
                     ? "Pass all assessments above to unlock the completion status for this topic."
                     : "Make sure you completely understand the material before tracking your completion."}
                 </p>
