@@ -13,6 +13,7 @@ interface TrackDetail {
   id: string;
   title: string;
   description: string;
+  price: string | number;
   courses: {
     id: string;
     courseId: string;
@@ -31,6 +32,8 @@ export default function AdminTrackDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCourseId, setSelectedCourseId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUpdatingPrice, setIsUpdatingPrice] = useState(false);
+  const [trackPrice, setTrackPrice] = useState<string>("0");
 
   useEffect(() => {
     fetchData();
@@ -43,6 +46,7 @@ export default function AdminTrackDetailPage() {
         fetch(`/api/courses?limit=100`).then(r => r.json())
       ]);
       setTrack(trackData);
+      setTrackPrice((trackData.price || 0).toString());
       setCourses(coursesData.courses);
       setIsLoading(false);
     } catch (err) {
@@ -82,6 +86,27 @@ export default function AdminTrackDetailPage() {
 
   const handleUpdateAssignment = async () => {
     toast.success("Track sequence updated successfully");
+  };
+
+  const handleUpdatePrice = async () => {
+    setIsUpdatingPrice(true);
+    try {
+      const resp = await fetch(`/api/admin/tracks/${trackId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price: trackPrice })
+      });
+      if (resp.ok) {
+        toast.success("Track price updated successfully");
+        fetchData();
+      } else {
+        toast.error("Failed to update price");
+      }
+    } catch (err) {
+      toast.error("Failed to update price");
+    } finally {
+      setIsUpdatingPrice(false);
+    }
   };
 
   if (isLoading) return <AdminLayout title="Loading..."><Loader2 className="animate-spin" /></AdminLayout>;
@@ -168,14 +193,38 @@ export default function AdminTrackDetailPage() {
                         <CardTitle className="text-md font-bold uppercase">Intelligence Insights</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-xl">
-                            <h5 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">Total Market Value</h5>
-                            <p className="text-2xl font-black text-blue-900 dark:text-white">$4,900</p>
-                        </div>
                         <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-xl">
                             <h5 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Estimated Mastery Time</h5>
-                            <p className="text-2xl font-black text-slate-900 dark:text-white">14.5 Hours</p>
+                            <p className="text-2xl font-black text-slate-900 dark:text-white">
+                               {track.courses.length > 0 ? `${track.courses.length * 15} Hours` : "0 Hours"}
+                            </p>
                         </div>
+                    </CardContent>
+                 </Card>
+
+                 <Card className="border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm border-t-4 border-t-amber-500">
+                    <CardHeader>
+                        <CardTitle className="text-md font-bold uppercase text-amber-600 dark:text-amber-500">Monetization</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                           <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Base Price (₦)</label>
+                           <input 
+                              type="number"
+                              value={trackPrice}
+                              onChange={(e) => setTrackPrice(e.target.value)}
+                              placeholder="0.00"
+                              className="w-full h-11 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 font-bold"
+                           />
+                           <p className="text-[10px] text-slate-400 font-medium">Leave as 0 for free paths. Learners with active subscriptions can enroll regardless of this price.</p>
+                        </div>
+                        <Button 
+                           onClick={handleUpdatePrice} 
+                           disabled={isUpdatingPrice} 
+                           className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black uppercase tracking-widest h-11 rounded-xl"
+                        >
+                           {isUpdatingPrice ? <Loader2 className="animate-spin h-4 w-4" /> : "Commit Pricing"}
+                        </Button>
                     </CardContent>
                  </Card>
             </div>

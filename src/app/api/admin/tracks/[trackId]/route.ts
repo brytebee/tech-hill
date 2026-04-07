@@ -87,3 +87,37 @@ export async function DELETE(
         return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 }
+
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ trackId: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { trackId } = await params;
+    const body = await req.json();
+    
+    // Only extract the fields we want to allow updating currently
+    const { price } = body;
+
+    const dataToUpdate: any = {};
+    if (price !== undefined) {
+      dataToUpdate.price = parseFloat(price) || 0;
+    }
+
+    const updatedTrack = await prisma.track.update({
+      where: { id: trackId },
+      data: dataToUpdate
+    });
+
+    return NextResponse.json(updatedTrack);
+  } catch (error) {
+    return NextResponse.json({ error: "Internal Error" }, { status: 500 });
+  }
+}
+

@@ -2,9 +2,9 @@ import { ImageResponse } from "next/og";
 import { prisma } from "@/lib/db";
 import { ModernDarkTheme, ClassicGoldTheme } from "@/components/certificates/themes/ThemeRegistry";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const certificate = await prisma.certificate.findUnique({
       where: { id },

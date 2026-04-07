@@ -5,15 +5,28 @@ type OllamaResponse = {
   response: string;
 };
 
-async function callOllama(systemContent: string, prompt: string, formatJSON: boolean = false): Promise<string> {
+type OllamaCallOptions = {
+  temperature?: number;
+  numCtx?: number;
+  formatJSON?: boolean;
+};
+
+async function callOllama(
+  systemContent: string,
+  prompt: string,
+  options: OllamaCallOptions = {}
+): Promise<string> {
+  const { temperature = 0.7, numCtx, formatJSON = false } = options;
+
   const reqBody: any = {
     model: MODEL_NAME,
     system: systemContent,
     prompt: prompt,
     stream: false,
     options: {
-      temperature: 0.7,
-    }
+      temperature,
+      ...(numCtx ? { num_ctx: numCtx } : {}),
+    },
   };
 
   if (formatJSON) {
@@ -35,11 +48,21 @@ async function callOllama(systemContent: string, prompt: string, formatJSON: boo
     const data: OllamaResponse = await res.json();
     return data.response;
   } catch (err: any) {
-    if (err.cause?.code === 'ECONNREFUSED') {
-       throw new Error(`Could not connect to Ollama at ${OLLAMA_URL}. Is it running?`);
+    if (err.cause?.code === "ECONNREFUSED") {
+      throw new Error(`Could not connect to Ollama at ${OLLAMA_URL}. Is it running?`);
     }
     throw err;
   }
+}
+
+/**
+ * Safely extracts a JSON object from a string that may contain extra prose.
+ * Prevents JSON.parse from failing when Ollama adds surrounding text.
+ */
+function extractJSON(text: string): string {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error(`No JSON object found in Ollama response:\n${text.slice(0, 300)}`);
+  return match[0];
 }
 
 export type GeneratedTopicData = {
@@ -52,15 +75,26 @@ export async function generateTopicContent(
   topicTitle: string,
   courseTitle: string,
   externalUrl?: string,
-  isProject: boolean = false
+  isProject: boolean = false,
+  liveContext?: string
 ): Promise<GeneratedTopicData> {
+  // Use expanded context window when live RAG data is injected
+  const contextWindow = liveContext ? 8192 : 4096;
+
   console.log(`[Ollama] 🔄 CALL 1: Generating Lesson for "${topicTitle}"...`);
-  
-  const systemLesson = `You are a distinguished senior tech educator and award-winning curriculum developer 
-who has dedicated your career to crafting curricula recognized globally for clarity, 
-pedagogical excellence, and measurable student outcomes.
-You write for secondary school graduates who have ZERO prior tech experience.
-Your tone is warm, confident, and uses vivid, Nigeria-relevant real-world analogies.`;
+
+  const systemLesson =
+    `You are a distinguished senior tech educator and award-winning curriculum developer ` +
+    `who has dedicated your career to crafting curricula recognized globally for clarity, ` +
+    `pedagogical excellence, and measurable student outcomes.\n` +
+    `You write for secondary school graduates who have ZERO prior tech experience.\n` +
+    `Your tone is warm, confident, and uses vivid, Nigeria-relevant real-world analogies.` +
+    (liveContext
+      ? `\n\nCRITICAL DIRECTIVE: Ignore any contradictory internal knowledge. ` +
+        `Using ONLY the real-time documentation context attached below, formulate the requested lesson. ` +
+        `Rely entirely on this fresh context instead of your internal training weights.\n\n` +
+        `--- INGESTED LIVE CONTEXT ---\n${liveContext}\n------------------------------`
+      : "");
 
   const promptLesson = isProject
     ? `Write a structured hands-on Project Brief on "${topicTitle}" for the course "${courseTitle}".
@@ -82,19 +116,29 @@ The lesson must:
 5. Flag any content that may be outdated or AI-specific with: [VERIFY THIS: ...]
 6. Target length: 300-450 words. Return cleanly formatted text (markdown allowed).`;
 
-  let lessonContent = await callOllama(systemLesson, promptLesson);
+  let lessonContent = await callOllama(systemLesson, promptLesson, {
+    temperature: 0.7, // Creative writing: higher temp is appropriate
+    numCtx: contextWindow,
+  });
+
+  // Replace placeholder URL or fallback
   if (externalUrl) {
     lessonContent = lessonContent.replace("[EXTERNAL_URL]", externalUrl);
   } else {
-    // If no external URL provided in config, just remove the placeholder literal
     lessonContent = lessonContent.replace("[EXTERNAL_URL]", "the next module");
+  }
+
+  // Warn if the placeholder wasn't consumed (Llama formatted it differently)
+  if (lessonContent.includes("[EXTERNAL_URL]")) {
+    console.warn(`[Ollama] ⚠️ [EXTERNAL_URL] placeholder was not replaced in "${topicTitle}". Ollama may have rephrased it.`);
   }
 
   console.log(`[Ollama] 🔄 CALL 2: Generating Quiz for "${topicTitle}"...`);
 
-  const systemQuiz = `You are a distinguished senior course developer and assessment architect with 
-decades of experience designing award-winning standardized tests and formative assessments.
-You return ONLY valid, parseable JSON. No prose. No markdown limits like \`\`\`json. Pure JSON String.`;
+  const systemQuiz =
+    `You are a distinguished senior course developer and assessment architect with ` +
+    `decades of experience designing award-winning standardized tests and formative assessments.\n` +
+    `You return ONLY valid, parseable JSON. No prose. No markdown fences like \`\`\`json. Pure JSON only.`;
 
   const promptQuiz = `Based on the lesson content below, generate exactly 3 multiple-choice quiz questions 
 that test conceptual understanding, NOT memorization.
@@ -118,32 +162,42 @@ Return this exact JSON structure:
   }]
 }`;
 
-  const quizJSONText = await callOllama(systemQuiz, promptQuiz, true);
+  const quizRawText = await callOllama(systemQuiz, promptQuiz, {
+    temperature: 0.3, // Assessment: low temp for accuracy
+    numCtx: contextWindow,
+    formatJSON: true,
+  });
+
   let quizData;
   try {
-    quizData = JSON.parse(quizJSONText);
-    // Sanity check
+    const quizJSONStr = extractJSON(quizRawText);
+    quizData = JSON.parse(quizJSONStr);
     if (!quizData.questions || !Array.isArray(quizData.questions)) {
-        throw new Error("Invalid format returned by Ollama JSON mode for quiz.");
+      throw new Error("Invalid format: `questions` array is missing.");
     }
-  } catch (err) {
-    console.error("Failed to parse quiz JSON:", quizJSONText);
-    throw new Error("Ollama returned invalid JSON for quiz.");
+  } catch (err: any) {
+    console.error(`[Ollama] ❌ Failed to parse quiz JSON for "${topicTitle}":`, err.message);
+    console.error("Raw text:", quizRawText.slice(0, 500));
+    throw new Error(`Ollama returned invalid JSON for quiz: ${err.message}`);
   }
 
   console.log(`[Ollama] 🔄 CALL 3: Editorial Review for "${topicTitle}"...`);
 
-  const systemReview = `You are a chief curriculum quality assessor for a premium online learning platform.
-You evaluate educational content for three dimensions:
-- ELEGANCE: Is the language clear, warm, and free of jargon?
-- EFFECTIVENESS: Does the content build genuine understanding, not just surface recall?
-- EFFICIENCY: Is the content appropriately concise without losing depth?
-You return ONLY valid, parseable JSON. No prose. No markdown limits like \`\`\`json.`;
+  const systemReview =
+    `You are a chief curriculum quality assessor for a premium online learning platform.\n` +
+    `You evaluate educational content for three dimensions:\n` +
+    `- ELEGANCE: Is the language clear, warm, and free of jargon?\n` +
+    `- EFFECTIVENESS: Does the content build genuine understanding, not just surface recall?\n` +
+    `- EFFICIENCY: Is the content appropriately concise without losing depth?\n` +
+    `You return ONLY valid, parseable JSON. No prose. No markdown fences.`;
 
-  const promptReview = `Review the following lesson AND its quiz questions. 
+  // Send only the first 500 chars of the lesson to the review stage to conserve context
+  const lessonSummary = lessonContent.slice(0, 500) + (lessonContent.length > 500 ? "\n[...truncated for review scoring]" : "");
 
-LESSON:
-${lessonContent}
+  const promptReview = `Review the following lesson excerpt and its quiz questions. 
+
+LESSON EXCERPT:
+${lessonSummary}
 
 QUIZ:
 ${JSON.stringify(quizData, null, 2)}
@@ -151,24 +205,31 @@ ${JSON.stringify(quizData, null, 2)}
 Return a JSON object only:
 {
   "score": { "elegance": 8, "effectiveness": 8, "efficiency": 8 },
-  "lessonRevised": "...(if any score is < 8, provide improved full lesson text, else hold null)...",
+  "lessonRevised": null,
   "quizRevised": null,
   "flags": ["list of any factual concerns or items needing human review due to date/knowledge limits"]
-}`;
+}
+If any score dimension is < 8, provide the full revised lesson in "lessonRevised". Otherwise set it to null.`;
 
-  const reviewJSONText = await callOllama(systemReview, promptReview, true);
-  let reviewData;
+  const reviewRawText = await callOllama(systemReview, promptReview, {
+    temperature: 0.3, // Review: deterministic scoring
+    numCtx: contextWindow,
+    formatJSON: true,
+  });
+
   let finalLessonContent = lessonContent;
   let finalQuizData = quizData;
   let finalFlags: string[] = [];
 
   try {
-    reviewData = JSON.parse(reviewJSONText);
-    const avgScore = (reviewData.score.elegance + reviewData.score.effectiveness + reviewData.score.efficiency) / 3;
-    
+    const reviewJSONStr = extractJSON(reviewRawText);
+    const reviewData = JSON.parse(reviewJSONStr);
+    const avgScore =
+      (reviewData.score.elegance + reviewData.score.effectiveness + reviewData.score.efficiency) / 3;
+
     if (avgScore < 8 && reviewData.lessonRevised) {
       finalLessonContent = reviewData.lessonRevised;
-      console.log(`[Ollama] ✨ Replaced lesson with revised version (Score: ${avgScore.toFixed(1)})`);
+      console.log(`[Ollama] ✨ Replaced lesson with revised version (avg score: ${avgScore.toFixed(1)})`);
     }
 
     if (reviewData.quizRevised) {
@@ -180,7 +241,8 @@ Return a JSON object only:
       finalFlags = reviewData.flags;
     }
   } catch (err) {
-    console.error("Failed to parse review JSON, using initial drafts.");
+    // Review failure is non-fatal — we use the initial drafts
+    console.warn(`[Ollama] ⚠️ Editorial review parse failed for "${topicTitle}". Using initial drafts.`);
   }
 
   return {

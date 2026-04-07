@@ -2,7 +2,7 @@ import { CourseService } from "@/lib/services/courseService";
 import { PromotionService } from "@/lib/services/promotionService";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Search, Filter, ChevronRight, Zap, Clock, Shield, Star } from "lucide-react";
+import { BookOpen, Search, Filter, ChevronRight, Zap, Clock, Shield, Star, Map } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,30 @@ export default async function CoursesPage() {
             Project-based courses engineered for the Nigerian market. From zero to career-ready with expert mentorship and verified certificates.
           </p>
         </div>
+
+        {/* Career Paths Cross-Promotion Banner */}
+        <Link href="/career-paths" className="group block mb-10">
+          <div className="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-gradient-to-r from-blue-900/30 via-indigo-900/20 to-purple-900/20 backdrop-blur-sm p-5 sm:p-6 hover:border-blue-400/40 transition-all duration-300">
+            {/* Glow */}
+            <div className="absolute right-0 top-0 w-64 h-full bg-gradient-to-l from-blue-500/10 to-transparent pointer-events-none" />
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center flex-shrink-0">
+                  <Map className="w-5 h-5 text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-0.5">Not sure where to start?</p>
+                  <p className="text-white font-black text-base">
+                    Follow a guided <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Career Path</span> — from Zero to Hired.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 text-blue-400 font-black text-sm uppercase tracking-widest group-hover:gap-3 transition-all whitespace-nowrap flex-shrink-0">
+                Explore Paths <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          </div>
+        </Link>
 
         {/* Filter Bar (Simplified for V1) */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-12 p-2 rounded-2xl bg-slate-900/50 border border-slate-800/60 backdrop-blur-md">

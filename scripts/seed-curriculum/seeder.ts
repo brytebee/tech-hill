@@ -1,34 +1,40 @@
-import { PrismaClient, DifficultyLevel, TopicType, QuestionType, QuestionDifficulty } from '@prisma/client';
-import { CURRICULUM } from './curriculum.config';
-import { generateTopicContent, GeneratedTopicData } from './ollama.client';
+import { PrismaClient, DifficultyLevel, QuestionDifficulty } from "@prisma/client";
+import { CURRICULUM, TrackConfig, CourseConfig, ModuleConfig, TopicConfig } from "./curriculum.config";
+import { generateTopicContent, GeneratedTopicData } from "./ollama.client";
+import { IngestionService } from "./ingestion.service";
 
 const prisma = new PrismaClient();
 
 const args = process.argv.slice(2);
-const isClearDemo = args.includes('--clear-demo');
-const creatorArg = args.find(a => a.startsWith('--creator='));
-const creatorEmail = creatorArg ? creatorArg.split('=')[1] : null;
+const isClearDemo = args.includes("--clear-demo");
+const isFast = args.includes("--fast"); // Skip editorial review (Call 3) for speed
+const creatorArg = args.find((a) => a.startsWith("--creator="));
+const creatorEmail = creatorArg ? creatorArg.split("=")[1] : null;
 
 function slugify(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
 }
 
 function formatContentWithFlags(content: string, flags: string[]): string {
   if (!flags || flags.length === 0) return content;
-  
+
   const flagHtml = `
 <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 1rem; margin-bottom: 2rem;">
   <strong style="color: #b45309; display: block; margin-bottom: 0.5rem;">⚠️ Admin Review Required (AI Flag):</strong>
   <ul style="color: #92400e; margin: 0; padding-left: 1.5rem;">
-    ${flags.map(f => `<li>${f}</li>`).join('')}
+    ${flags.map((f) => `<li>${f}</li>`).join("")}
   </ul>
 </div>
   `;
-  return flagHtml + '\n\n' + content;
+  return flagHtml + "\n\n" + content;
 }
 
 async function main() {
   console.log("🌱 Tech Hill Curriculum Seeder Initiated");
+  if (isFast) console.log("⚡ --fast mode: Skipping editorial review (Call 3).");
 
   let creatorId: string;
 
@@ -40,45 +46,46 @@ async function main() {
     }
     creatorId = user.id;
   } else {
-    // Find first admin
     const admin = await prisma.user.findFirst({ where: { role: "ADMIN" } });
     if (admin) {
       creatorId = admin.id;
       console.log(`👤 Using existing admin: ${admin.email}`);
     } else {
-      console.error("❌ No ADMIN user found in DB. Please specify --creator=email@example.com");
+      console.error("❌ No ADMIN user found. Use --creator=email@example.com");
       process.exit(1);
     }
   }
 
+  // ── Clear demo content if requested ──────────────────────────────────────
   if (isClearDemo) {
-    console.log("🧹 --clear-demo flag provided. Searching for dev/lorem courses...");
+    console.log("🧹 --clear-demo: Scanning for lorem ipsum courses...");
     const allCourses = await prisma.course.findMany({
-      include: { modules: { include: { topics: true } } }
+      include: { modules: { include: { topics: true } } },
     });
-    
+
     for (const course of allCourses) {
-      // Check if it looks like demo content (e.g. contains 'lorem')
-      let isDemo = course.title.toLowerCase().includes("lorem") || course.description.toLowerCase().includes("lorem");
-      if (!isDemo && course.modules.length > 0 && course.modules[0].topics.length > 0) {
-        if (course.modules[0].topics[0].content.toLowerCase().includes("lorem")) {
-          isDemo = true;
-        }
+      let isDemo =
+        course.title.toLowerCase().includes("lorem") ||
+        course.description.toLowerCase().includes("lorem");
+
+      if (!isDemo && course.modules[0]?.topics[0]?.content?.toLowerCase().includes("lorem")) {
+        isDemo = true;
       }
-      
+
       if (isDemo) {
-        console.log(`🗑️ Deleting demo course: "${course.title}"`);
+        console.log(`🗑️  Deleting demo course: "${course.title}"`);
         await prisma.course.delete({ where: { id: course.id } });
       }
     }
   }
 
+  // ── Main Seeding Loop ─────────────────────────────────────────────────────
   for (const trackData of CURRICULUM) {
-    console.log(`\n======================================`);
+    console.log(`\n${"=".repeat(50)}`);
     console.log(`🛣️  PROCESSING TRACK: ${trackData.track.title}`);
-    console.log(`======================================\n`);
+    console.log(`${"=".repeat(50)}\n`);
 
-    // Ensure Track exists
+    // Ensure Track exists (upsert by slug)
     let track = await prisma.track.findUnique({ where: { slug: trackData.track.slug } });
     if (!track) {
       track = await prisma.track.create({
@@ -86,23 +93,25 @@ async function main() {
           title: trackData.track.title,
           slug: trackData.track.slug,
           description: `Comprehensive learning path for ${trackData.track.title}`,
-          isPublished: false, 
-        }
+          isPublished: false,
+        },
       });
       console.log(`✅ Created Track: ${track.title}`);
     } else {
       console.log(`⏩ Track exists: ${track.title}`);
     }
 
+    // ── FIX: Reset courseOrder per track ──────────────────────────────────
     let courseOrder = 1;
+
     for (const courseData of trackData.courses) {
       const courseTitle = courseData.title;
+      const courseSlug = slugify(courseTitle);
 
-      // Check if course already exists
       let course = await prisma.course.findFirst({ where: { title: courseTitle } });
+
       if (!course) {
         console.log(`\n📚 MINTING COURSE: "${courseTitle}"`);
-        
         course = await prisma.course.create({
           data: {
             title: courseTitle,
@@ -111,83 +120,124 @@ async function main() {
             difficulty: courseData.difficulty as DifficultyLevel,
             duration: courseData.duration,
             price: courseData.price ?? 0,
-            status: "DRAFT", // Always draft for human review
+            tags: courseData.tags ?? [],
+            learningOutcomes: courseData.learningOutcomes ?? [],
+            status: "DRAFT",
             creatorId,
-            requireSequentialCompletion: true
-          }
+            requireSequentialCompletion: true,
+          },
         });
-
-        // Link course to track
-        await prisma.trackCourse.create({
-          data: {
-            trackId: track.id,
-            courseId: course.id,
-            order: courseOrder,
-          }
-        });
+        console.log(`  ✅ Course created: "${courseTitle}"`);
       } else {
         console.log(`\n📚 SYNCING EXISTING COURSE: "${courseTitle}"`);
       }
 
+      // ── FIX: Always link course to track (upsert to avoid duplicates) ─────
+      await prisma.trackCourse.upsert({
+        where: { trackId_courseId: { trackId: track.id, courseId: course.id } },
+        create: { trackId: track.id, courseId: course.id, order: courseOrder },
+        update: { order: courseOrder }, // Keep order in sync
+      });
+
+      // ── FIX: Bulk preload modules + topics to eliminate N+1 queries ───────
+      const existingModules = await prisma.module.findMany({
+        where: { courseId: course.id },
+        select: { id: true, title: true },
+      });
+      const moduleMap = new Map(existingModules.map((m) => [m.title, m.id]));
+
+      // Preload all topics for this course's known modules
+      const moduleIds = existingModules.map((m) => m.id);
+      const existingTopics =
+        moduleIds.length > 0
+          ? await prisma.topic.findMany({
+              where: { moduleId: { in: moduleIds } },
+              select: { slug: true, moduleId: true },
+            })
+          : [];
+      // Build a set of "moduleId::slug" for O(1) lookups
+      const topicLookup = new Set(existingTopics.map((t) => `${t.moduleId}::${t.slug}`));
+
+      // ── Module Loop ───────────────────────────────────────────────────────
       let moduleOrder = 1;
       for (const modData of courseData.modules) {
-        let mod = await prisma.module.findFirst({ where: { courseId: course.id, title: modData.title } });
-        if (!mod) {
-          mod = await prisma.module.create({
+        let modId = moduleMap.get(modData.title);
+
+        if (!modId) {
+          const newMod = await prisma.module.create({
             data: {
               courseId: course.id,
               title: modData.title,
               order: moduleOrder,
               duration: modData.duration,
               passingScore: 80,
-            }
+            },
           });
+          modId = newMod.id;
+          moduleMap.set(modData.title, modId);
         }
 
+        // ── Topic Loop ────────────────────────────────────────────────────
         let topicOrder = 1;
         for (const topicData of modData.topics) {
-          const topicSlug = slugify(`${courseTitle}-${topicData.title}`);
-          const existingTopic = await prisma.topic.findFirst({ where: { slug: topicSlug, moduleId: mod.id } });
-          
-          if (existingTopic) {
+          // ── FIX: Scope slug to module to avoid cross-course collisions ──
+          const topicSlug = slugify(`${courseSlug}-${modData.title}-${topicData.title}`);
+          const lookupKey = `${modId}::${topicSlug}`;
+
+          if (topicLookup.has(lookupKey)) {
             console.log(`  ⏩ Skipping existing Topic: "${topicData.title}"`);
           } else {
             console.log(`  ➤ Calling Ollama for Topic: "${topicData.title}"...`);
-            
+
             try {
-              // The heavy lifting
+              // Fetch live RAG context if sourceUrls are defined
+              let liveContext: string | undefined;
+              if (topicData.sourceUrls && topicData.sourceUrls.length > 0) {
+                liveContext = await IngestionService.ingestUrlsSeq(topicData.sourceUrls);
+              }
+
               const generatedData: GeneratedTopicData = await generateTopicContent(
                 topicData.title,
                 courseTitle,
-                (topicData as any).externalUrl,
-                (topicData as any).isProject
+                topicData.externalUrl,
+                topicData.isProject ?? false,
+                liveContext
               );
 
-              const formattedContent = formatContentWithFlags(generatedData.lessonContent, generatedData.flags);
+              const formattedContent = formatContentWithFlags(
+                generatedData.lessonContent,
+                generatedData.flags
+              );
 
               // 1. Create Topic
               const topic = await prisma.topic.create({
                 data: {
-                  moduleId: mod.id,
+                  moduleId: modId,
                   title: topicData.title,
                   slug: topicSlug,
                   content: formattedContent,
                   orderIndex: topicOrder,
-                  topicType: (topicData as any).isProject ? "PRACTICE" : "LESSON",
+                  topicType: topicData.isProject ? "PRACTICE" : "LESSON",
                   passingScore: 80,
                   isRequired: true,
-                }
+                },
               });
 
-              // 2. Create Quiz inside Topic
-              if (generatedData.quizData && generatedData.quizData.questions && generatedData.quizData.questions.length > 0) {
+              // Mark as seen in our in-memory set for idempotency within the same run
+              topicLookup.add(lookupKey);
+
+              // 2. Create Quiz
+              if (
+                generatedData.quizData?.questions &&
+                generatedData.quizData.questions.length > 0
+              ) {
                 const quiz = await prisma.quiz.create({
                   data: {
                     topicId: topic.id,
                     title: `Knowledge Check: ${topicData.title}`,
                     passingScore: generatedData.quizData.passingScore || 80,
                     isActive: true,
-                  }
+                  },
                 });
 
                 // 3. Create Questions & Options
@@ -200,9 +250,9 @@ async function main() {
                       explanation: q.explanation,
                       orderIndex: qIndex,
                       questionType: "MULTIPLE_CHOICE",
-                      difficulty: q.difficulty?.toUpperCase() as QuestionDifficulty || "MEDIUM",
-                      points: 10
-                    }
+                      difficulty: (q.difficulty?.toUpperCase() as QuestionDifficulty) || "MEDIUM",
+                      points: 10,
+                    },
                   });
 
                   let oIndex = 1;
@@ -212,8 +262,8 @@ async function main() {
                         questionId: question.id,
                         text: opt.text,
                         isCorrect: opt.isCorrect,
-                        orderIndex: oIndex
-                      }
+                        orderIndex: oIndex,
+                      },
                     });
                     oIndex++;
                   }
@@ -222,10 +272,11 @@ async function main() {
               }
 
               console.log(`  ✅ Inserted Topic & Quiz: "${topicData.title}"`);
-              
             } catch (err: any) {
-              console.error(`  ❌ Failed to generate/insert topic "${topicData.title}":`, err.message);
-              // We catch and continue so one failing topic doesn't kill the whole track
+              console.error(
+                `  ❌ Failed to generate "${topicData.title}": ${err.message}`
+              );
+              // Continue: one bad topic does not kill the whole track
             }
           }
           topicOrder++;
@@ -237,7 +288,7 @@ async function main() {
   }
 
   console.log("\n🎉 Curriculum Seeding Complete!");
-  console.log("Next steps: Go to /admin/courses to review DRAFT content and publish.");
+  console.log("Next: Visit /admin/courses to review DRAFT content and publish.");
 }
 
 main()

@@ -23,6 +23,7 @@ import {
   Tag,
   Award,
   ClipboardCheck,
+  Layers,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -34,6 +35,7 @@ interface AdminLayoutProps {
 const navigation = [
   { name: "Dashboard", href: "/admin", icon: Home },
   { name: "Users", href: "/admin/users", icon: Users },
+  { name: "Tracks", href: "/admin/tracks", icon: Layers },
   { name: "Courses", href: "/admin/courses", icon: BookOpen },
   { name: "Submissions", href: "/admin/submissions", icon: ClipboardCheck },
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
