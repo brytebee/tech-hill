@@ -19,9 +19,9 @@
       }
     ],
     "paths": {
-      "@/lib/*": ["./src/engine/lib/*"],
-      "@/types/*": ["./src/engine/types/*"],
-      "@/hooks/*": ["./src/engine/hooks/*"],
+      "@/lib/*": ["./src/engine/lib/*", "./src/lib/*"],
+      "@/types/*": ["./src/engine/types/*", "./src/types/*"],
+      "@/hooks/*": ["./src/engine/hooks/*", "./src/hooks/*"],
       "@/*": ["./src/*"]
     }
   },
