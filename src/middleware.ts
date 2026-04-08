@@ -22,7 +22,9 @@ export default withAuth(
       pathname.startsWith("/api/auth/verify") ||
       pathname.startsWith("/api/payment") ||
       pathname.startsWith("/api/webhooks") ||
-      pathname.startsWith("/api/health-check");
+      pathname.startsWith("/api/health-check") ||
+      pathname.startsWith("/courses") ||
+      pathname.startsWith("/career-paths");
 
     if (pathname === "/") {
       return null;
@@ -124,7 +126,9 @@ export default withAuth(
           pathname.startsWith("/verify-email") ||
           pathname.startsWith("/api/auth/verify") ||
           pathname.startsWith("/api/webhooks") ||
-          pathname.startsWith("/forgot-password")
+          pathname.startsWith("/forgot-password") ||
+          pathname.startsWith("/courses") ||
+          pathname.startsWith("/career-paths")
         ) {
           return true;
         }
