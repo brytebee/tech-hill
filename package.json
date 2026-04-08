@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed:curriculum": "npx tsx scripts/seed-curriculum/seeder.ts"
+    "seed:curriculum": "npx tsx scripts/seed-curriculum/seeder.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
