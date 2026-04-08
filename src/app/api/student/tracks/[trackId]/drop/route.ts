@@ -20,7 +20,7 @@ export async function POST(
     const enrollment = await prisma.trackEnrollment.findUnique({
       where: { userId_trackId: { userId, trackId } },
       select: { id: true, userId: true, status: true, track: { select: { title: true } } },
-    } as any);
+    } as any) as { id: string; userId: string; status: string; track: { title: string } } | null;
 
     if (!enrollment) {
       return NextResponse.json({ error: "Track enrollment not found." }, { status: 404 });
