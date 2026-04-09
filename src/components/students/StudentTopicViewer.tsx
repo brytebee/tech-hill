@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ProgressService } from "@/lib/services/progressService";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import confetti from "canvas-confetti";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -156,6 +159,7 @@ export function StudentTopicViewer({
   const [projectLink, setProjectLink] = useState("");
   const [projectDescription, setProjectDescription] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   useEffect(() => {
     if (isPreviewOnly) return;
@@ -218,10 +222,13 @@ export function StudentTopicViewer({
 
           // Nudge the learner to the next step without requiring any action
           if (isLastTopicOfCourse) {
-            toast.success("🏆 Course complete! Incredible work.");
-            setTimeout(() => {
-              router.push(`/student/courses/${topic.module.course.id}?completed=true`);
-            }, 1800);
+            confetti({
+              particleCount: 150,
+              spread: 100,
+              origin: { y: 0.6 },
+              colors: ["#2563EB", "#3B82F6", "#60A5FA", "#EAB308", "#10B981"]
+            });
+            setShowCompletionModal(true);
           } else if (nextTopicId) {
             toast.success("✅ Topic complete! Moving to next lesson...");
             setTimeout(() => {
@@ -879,13 +886,16 @@ export function StudentTopicViewer({
         </div>
 
         {isLastTopicOfCourse ? (
-          <Link href={`/student/courses/${topic.module.course.id}`}>
-            <Button disabled={!isCompleted} className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md font-semibold">
-              <span className="hidden sm:inline">Finish Course</span>
-              <span className="sm:hidden">Finish</span>
-              <CheckCircle className="h-4 w-4 ml-2" />
-            </Button>
-          </Link>
+             <Button disabled={!isCompleted} onClick={() => {
+                 if (isCompleted) {
+                     confetti({ particleCount: 150, spread: 100, origin: { y: 0.6 }});
+                     setShowCompletionModal(true);
+                 }
+             }} className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-md font-semibold">
+               <span className="hidden sm:inline">Finish Course</span>
+               <span className="sm:hidden">Finish</span>
+               <CheckCircle className="h-4 w-4 ml-2" />
+             </Button>
         ) : nextTopicId ? (
           isCompleted ? (
             <Link href={`/student/topics/${nextTopicId}`}>
@@ -914,6 +924,40 @@ export function StudentTopicViewer({
           </Button>
         )}
       </div>
+
+      {/* Exquisite Auto-Completion Celebration Modal */}
+      <Dialog open={showCompletionModal} onOpenChange={setShowCompletionModal}>
+        <DialogContent className="sm:max-w-md md:max-w-xl text-center rounded-[2rem] border-0 bg-slate-900 shadow-2xl p-0 overflow-hidden">
+          <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+              <Award className="h-64 w-64 text-emerald-400 rotate-12" />
+          </div>
+          <div className="relative z-10 p-10 pt-12 text-center flex flex-col items-center">
+              <div className="h-24 w-24 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20 shadow-[0_0_40px_rgba(16,185,129,0.3)]">
+                  <Award className="h-12 w-12 text-emerald-400" />
+              </div>
+              <DialogTitle className="text-4xl font-black text-white tracking-tight uppercase mb-3 text-center">Mastery Achieved</DialogTitle>
+              <DialogDescription className="text-lg text-slate-400 font-medium leading-relaxed max-w-sm mx-auto mb-8 text-center">
+                  You have successfully cleared the final module of the "{topic.module.course.title}" curriculum. 
+                  Your completion certificate has been automatically minted and generated.
+              </DialogDescription>
+              <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+                  <Button 
+                      onClick={() => router.push(`/student/courses/${topic.module.course.id}?completed=true`)}
+                      className="bg-emerald-600 hover:bg-emerald-500 text-white h-12 px-8 rounded-xl font-bold uppercase tracking-widest text-xs flex-1 md:flex-initial"
+                  >
+                      <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
+                  </Button>
+                  <Button 
+                      onClick={() => router.push(`/student/achievements`)}
+                      variant="outline" 
+                      className="border-emerald-500/20 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border hover:border-emerald-500/30 h-12 px-8 rounded-xl font-bold uppercase tracking-widest text-xs flex-1 md:flex-initial"
+                  >
+                      View Certificate <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+              </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
