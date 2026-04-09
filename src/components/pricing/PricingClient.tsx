@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Loader2, Zap, Star, Mail, ChevronRight, Info } from "lucide-react";
+import { Check, Loader2, Zap, Star, Mail, ChevronRight, Info, BookOpen, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import Link from "next/link";
 
 // Mirror server-side fee calculator for live display
 function calcPaystackFee(net: number) {
@@ -21,52 +22,14 @@ interface Plan {
   features: string[];
 }
 
-const TRACKS = [
-  {
-    slug: "digital-literacy",
-    label: "Digital Literacy",
-    emoji: "💡",
-    tagline: "For absolute beginners",
-    color: "from-emerald-500 to-teal-600",
-    border: "hover:border-emerald-500/60",
-    glow: "shadow-emerald-500/10",
-  },
-  {
-    slug: "frontend-engineering",
-    label: "Frontend Engineering",
-    emoji: "⚡",
-    tagline: "HTML → React → Next.js",
-    color: "from-blue-500 to-indigo-600",
-    border: "hover:border-blue-500/60",
-    glow: "shadow-blue-500/10",
-    popular: true,
-  },
-  {
-    slug: "professional-training",
-    label: "Professional Training",
-    emoji: "🏢",
-    tagline: "Corporate & career skills",
-    color: "from-violet-500 to-purple-700",
-    border: "hover:border-violet-500/60",
-    glow: "shadow-violet-500/10",
-  },
-];
-
 export function PricingClient({ plans }: { plans: Plan[] }) {
   const [billing, setBilling] = useState<"MONTHLY" | "YEARLY">("MONTHLY");
-  const [selectedTrack, setSelectedTrack] = useState("frontend-engineering");
   const [loadingId, setLoadingId] = useState<string | null>(null);
 
-  // Derive track plan and pro plan from the DB plans list
-  const trackPlan = plans.find(
-    (p) =>
-      p.name.toLowerCase().includes(selectedTrack.replace("-", " ").split("-")[0]) &&
-      p.interval === billing,
-  ) ?? plans.filter((p) => p.interval === billing)[0];
-
+  // Find the primary subscription plan for the current interval
   const proPlan = plans.find(
-    (p) => p.name.toLowerCase().includes("pro") && p.interval === billing,
-  ) ?? plans.filter((p) => p.interval === billing).at(-1);
+    (p) => (p.name.toLowerCase().includes("pro") || p.name.toLowerCase().includes("all access")) && p.interval === billing
+  ) || plans.find(p => p.interval === billing);
 
   const subscribe = async (plan: Plan) => {
     setLoadingId(plan.id);
@@ -85,8 +48,6 @@ export function PricingClient({ plans }: { plans: Plan[] }) {
     }
   };
 
-  const activeTrack = TRACKS.find((t) => t.slug === selectedTrack)!;
-
   return (
     <div className="py-24 sm:py-32 relative overflow-hidden">
       {/* Background */}
@@ -98,32 +59,31 @@ export function PricingClient({ plans }: { plans: Plan[] }) {
 
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <p className="text-sm font-semibold text-blue-400 uppercase tracking-widest mb-4">Pricing</p>
+          <p className="text-sm font-semibold text-blue-400 uppercase tracking-widest mb-4">Investment Tiers</p>
           <h1 className="text-4xl sm:text-5xl font-black text-white tracking-tight mb-5">
-            Pick your track. Start building.
+            Your Future, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">Priced for Impact.</span>
           </h1>
           <p className="text-slate-400 text-lg leading-relaxed">
-            No free trial — only real courses and live weekly coding sessions.
-            Free courses are available inside without a subscription.
+            Choose the level of commitment that fits your goals. From individual mastery to all-access career transformation.
           </p>
         </div>
 
-        {/* Billing Toggle */}
-        <div className="flex justify-center mb-14">
-          <div className="relative flex rounded-full bg-slate-800/60 p-1.5 border border-slate-700/50 backdrop-blur-sm">
+        {/* Billing Toggle (Only affects the Pro Card) */}
+        <div className="flex justify-center mb-16">
+          <div className="relative flex rounded-full bg-slate-800/60 p-1.5 border border-slate-700/50 backdrop-blur-sm shadow-xl">
             {(["MONTHLY", "YEARLY"] as const).map((interval) => (
               <button
                 key={interval}
                 onClick={() => setBilling(interval)}
-                className={`relative rounded-full px-7 py-2 text-sm font-semibold transition-all duration-300 ${
+                className={`relative rounded-full px-8 py-2.5 text-sm font-bold transition-all duration-300 ${
                   billing === interval
-                    ? "bg-white dark:bg-slate-900 text-blue-600 shadow-sm"
+                    ? "bg-white text-blue-700 shadow-lg scale-105"
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                {interval === "MONTHLY" ? "Monthly" : "Annual"}
+                {interval === "MONTHLY" ? "Monthly" : "Annually"}
                 {interval === "YEARLY" && (
-                  <span className="ml-2 text-[10px] font-bold text-emerald-400">
+                  <span className="ml-2 py-0.5 px-2 bg-emerald-500/20 text-emerald-400 text-[10px] rounded-full border border-emerald-500/30">
                     SAVE 20%
                   </span>
                 )}
@@ -132,269 +92,170 @@ export function PricingClient({ plans }: { plans: Plan[] }) {
           </div>
         </div>
 
-        {/* ── Track Selector ── */}
-        <div className="mb-4 text-center">
-          <p className="text-sm font-semibold text-slate-500 uppercase tracking-widest mb-5">
-            Choose your track
-          </p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {TRACKS.map((t) => (
-              <button
-                key={t.slug}
-                onClick={() => setSelectedTrack(t.slug)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold border transition-all duration-200 ${
-                  selectedTrack === t.slug
-                    ? `bg-gradient-to-r ${t.color} text-white border-transparent shadow-lg`
-                    : "bg-slate-800/60 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-white"
-                }`}
-              >
-                <span>{t.emoji}</span>
-                {t.label}
-                {t.popular && (
-                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-yellow-400">
-                    <Star className="w-3 h-3 fill-yellow-400" /> HOT
-                  </span>
-                )}
-              </button>
-            ))}
+        {/* ── 3-Tier Pricing Model ── */}
+        <div className="grid lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
+          
+          {/* Tier 1: A La Carte */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-8 flex flex-col hover:border-slate-700 transition-all duration-300 group">
+            <div className="mb-8">
+              <h3 className="text-slate-400 text-sm font-black uppercase tracking-widest mb-2">Standalone Mastery</h3>
+              <div className="text-3xl font-black text-white mb-2">Pay-As-You-Go</div>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Purchase specific courses or career paths individually for lifetime access.
+              </p>
+            </div>
+            
+            <ul className="space-y-4 mb-10 flex-1">
+              {[
+                "Lifetime access to content",
+                "Self-paced learning",
+                "Digital certificates",
+                "Community forum access",
+                "No recurring billing"
+              ].map(feat => (
+                <li key={feat} className="flex items-start gap-3 text-sm text-slate-300">
+                  <Check className="w-4 h-4 mt-0.5 text-slate-500 shrink-0" />
+                  <span>{feat}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Button variant="outline" className="w-full h-12 font-bold border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white group-hover:border-slate-500 transition-all" asChild>
+              <Link href="/courses">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Browse Catalog
+              </Link>
+            </Button>
+          </div>
+
+          {/* Tier 2: The Pro All-Access (Centerpiece) */}
+          <div className="relative rounded-3xl border-2 border-blue-500/50 bg-[#0a1222] p-8 flex flex-col shadow-2xl shadow-blue-500/10 ring-4 ring-blue-500/5 py-10 lg:-mt-4 lg:mb-4">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+              <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-[11px] font-black px-4 py-1.5 rounded-full shadow-lg uppercase tracking-wider ring-4 ring-[#080e1a]">
+                <Zap className="w-3.5 h-3.5 fill-white" /> Recommended
+              </span>
+            </div>
+
+            <div className="mb-8">
+              <h3 className="text-blue-400 text-sm font-black uppercase tracking-widest mb-2">Tech Hill Pro</h3>
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-5xl font-black text-white tracking-tighter">
+                  ₦{proPlan ? Number(proPlan.price).toLocaleString() : "..."}
+                </span>
+                <span className="text-slate-400 font-bold">
+                  /{billing === "MONTHLY" ? "mo" : "yr"}
+                </span>
+              </div>
+              <p className="text-blue-100/70 text-sm leading-relaxed">
+                Full access to every track, every course, and all live sessions.
+              </p>
+              
+              {proPlan && calcPaystackFee(Number(proPlan.price)).fee > 0 && (
+                <p className="text-[10px] text-slate-500 mt-2 flex items-center gap-1">
+                  <Info className="w-3 h-3" />
+                  + ₦{calcPaystackFee(Number(proPlan.price)).fee.toLocaleString()} Paystack processing fee
+                </p>
+              )}
+            </div>
+
+            <ul className="space-y-4 mb-10 flex-1">
+              {(proPlan?.features || [
+                "Unlocks ALL Career Paths",
+                "All Individual Courses included",
+                "Weekly Live Coding Sessions",
+                "Access to Class Archives",
+                "Priority Mentor Support",
+                "Exclusive Discord Server"
+              ]).map((feat, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-white">
+                  <Check className="w-5 h-5 mt-0.5 text-blue-400 shrink-0 bg-blue-500/10 rounded-full p-1" />
+                  <span className="font-medium text-slate-200">{feat}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Button 
+              onClick={() => proPlan && subscribe(proPlan)}
+              disabled={!!loadingId}
+              className="w-full h-14 font-black text-lg rounded-2xl bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {loadingId === proPlan?.id ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                <>Get Pro Access <ChevronRight className="w-5 h-5 ml-1" /></>
+              )}
+            </Button>
+          </div>
+
+          {/* Tier 3: Mentorship / Enterprise */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-8 flex flex-col hover:border-violet-500/30 transition-all duration-300">
+            <div className="mb-8">
+              <h3 className="text-violet-400 text-sm font-black uppercase tracking-widest mb-2">Elite Track</h3>
+              <div className="text-3xl font-black text-white mb-2">1-on-1 Mentorship</div>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Dedicated coaching and tailored roadmaps for professionals and corporate teams.
+              </p>
+            </div>
+
+            <ul className="space-y-4 mb-10 flex-1">
+              {[
+                "Personalized learning roadmap",
+                "3x weekly private sessions",
+                "Direct WhatsApp with instructor",
+                "Portfolio & CV architecture",
+                "Job interview mock trials",
+                "Corporate team training"
+              ].map(feat => (
+                <li key={feat} className="flex items-start gap-3 text-sm text-slate-300">
+                  <Check className="w-4 h-4 mt-0.5 text-violet-500 shrink-0" />
+                  <span>{feat}</span>
+                </li>
+              ))}
+            </ul>
+
+            <Button variant="outline" className="w-full h-12 font-bold border-violet-900/50 text-violet-300 hover:bg-violet-900/20 hover:text-white transition-all" asChild>
+              <a href="mailto:hello@techhill.io?subject=Mentorship Enquiry">
+                <Mail className="w-4 h-4 mr-2" />
+                Get a Quote
+              </a>
+            </Button>
           </div>
         </div>
 
-        {/* ── Pricing Cards ── */}
-        <div className="grid md:grid-cols-3 gap-6 mt-12 items-stretch">
+        {/* ── Trust Indicators / FAQ Strip ── */}
+        <div className="mt-24 space-y-16">
+          <div className="flex flex-wrap justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
+             {/* Add payment logos here if available in assets */}
+          </div>
 
-          {/* ── Track Subscription Card ── */}
-          {trackPlan ? (
-            <PricingCard
-              plan={trackPlan}
-              label={`${activeTrack.emoji} ${activeTrack.label} Track`}
-              tagline={activeTrack.tagline}
-              billing={billing}
-              isPopular={activeTrack.popular}
-              gradient={activeTrack.color}
-              loadingId={loadingId}
-              onSubscribe={subscribe}
-              highlights={[
-                "All courses in this track",
-                "Weekly live coding session",
-                "Session recording (7 days)",
-                "Track community access",
-                "Progress tracking & certificates",
-              ]}
-            />
-          ) : (
-            <EmptyCard label="Track plan not available yet" />
-          )}
-
-          {/* ── Pro All-Access Card ── */}
-          {proPlan ? (
-            <PricingCard
-              plan={proPlan}
-              label="⚡ Pro All-Access"
-              tagline="Every track. Every live session."
-              billing={billing}
-              isPro
-              gradient="from-blue-600 to-indigo-700"
-              loadingId={loadingId}
-              onSubscribe={subscribe}
-              highlights={[
-                "All 3 tracks (+ future tracks)",
-                "All weekly live sessions",
-                "Full recording archive",
-                "Priority community support",
-                "All certificates included",
-                "Early access to new tracks",
-              ]}
-            />
-          ) : (
-            <EmptyCard label="Pro plan not available yet" />
-          )}
-
-          {/* ── Enterprise / 1-on-1 Card ── */}
-          <EnterpriseCard />
-        </div>
-
-        {/* ── Fee note ── */}
-        <div className="mt-10 flex items-start justify-center gap-2 text-slate-500 text-xs max-w-xl mx-auto text-center">
-          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-slate-600" />
-          <p>
-            A Paystack processing fee (1.5% + ₦100, max ₦2,000) is added at checkout
-            and is paid by the customer. Displayed prices are before processing fees.
-          </p>
-        </div>
-
-        {/* ── FAQ Strip ── */}
-        <div className="mt-20 border-t border-slate-800 pt-16 grid md:grid-cols-3 gap-10">
-          {[
-            {
-              q: "Are courses permanently available?",
-              a: "Access runs for the length of your active subscription. If you cancel, you lose access to premium content but can re-subscribe any time.",
-            },
-            {
-              q: "How do free courses work?",
-              a: "Some courses are offered as zero-price or promotional. These can be enrolled in without a subscription — no card required.",
-            },
-            {
-              q: "What are the live sessions?",
-              a: "Weekly, track-specific coding sessions streamed on YouTube. Recordings are available to subscribers for 7 days, then archived for Pro members.",
-            },
-          ].map((item) => (
-            <div key={item.q}>
-              <h3 className="text-sm font-semibold text-white mb-2">{item.q}</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">{item.a}</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12 border-t border-slate-800/50 pt-16 px-4">
+            <div>
+              <h4 className="flex items-center gap-2 text-white font-bold mb-4">
+                <UserCheck className="w-5 h-5 text-emerald-400" /> Professional Grade
+              </h4>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Our curriculum isn't aggregate content. It's built by engineers working in the industry, designed to take you from hello world to production.
+              </p>
             </div>
-          ))}
+            <div>
+              <h4 className="flex items-center gap-2 text-white font-bold mb-4">
+                <Star className="w-5 h-5 text-yellow-400" /> Live Feedback
+              </h4>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                Unlike static MOOCs, Tech Hill subscribers get weekly face-time during live sessions to debug code and ask complex architectural questions.
+              </p>
+            </div>
+            <div>
+              <h4 className="flex items-center gap-2 text-white font-bold mb-4">
+                <Zap className="w-5 h-5 text-blue-400" /> Fast Integration
+              </h4>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                We focus on the tools that matter: Next.js, TypeScript, PostgreSQL, and AI-driven development workflows. No fluff, just the stack that pays.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────
-
-function PricingCard({
-  plan,
-  label,
-  tagline,
-  billing,
-  highlights,
-  isPopular,
-  isPro,
-  gradient,
-  loadingId,
-  onSubscribe,
-}: {
-  plan: Plan;
-  label: string;
-  tagline: string;
-  billing: "MONTHLY" | "YEARLY";
-  highlights: string[];
-  isPopular?: boolean;
-  isPro?: boolean;
-  gradient: string;
-  loadingId: string | null;
-  onSubscribe: (plan: Plan) => void;
-}) {
-  const net = Number(plan.price);
-  const { fee } = calcPaystackFee(net);
-
-  const cardClass = isPro
-    ? "relative bg-gradient-to-b from-blue-600 to-indigo-800 border-blue-500 text-white shadow-2xl shadow-blue-500/20 ring-2 ring-blue-400/30"
-    : "relative bg-slate-900/80 border-slate-700/60 text-white shadow-xl hover:border-slate-600 transition-colors";
-
-  return (
-    <div className={`rounded-2xl border p-8 flex flex-col ${cardClass}`}>
-      {isPopular && !isPro && (
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center gap-1.5 bg-orange-500 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-lg">
-            <Zap className="w-3 h-3" /> Popular
-          </span>
-        </div>
-      )}
-      {isPro && (
-        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-          <span className="inline-flex items-center gap-1.5 bg-white text-blue-700 text-[11px] font-bold px-3 py-1 rounded-full shadow-lg">
-            <Star className="w-3 h-3 fill-blue-500 text-blue-500" /> Best Value
-          </span>
-        </div>
-      )}
-
-      <div className={`inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest mb-1 bg-gradient-to-r ${gradient} bg-clip-text text-transparent`}>
-        {label}
-      </div>
-      <p className={`text-sm mb-6 ${isPro ? "text-blue-100" : "text-slate-400"}`}>{tagline}</p>
-
-      <div className="mb-8">
-        <div className="flex items-baseline gap-1">
-          <span className="text-5xl font-extrabold">₦{net.toLocaleString()}</span>
-          <span className={`text-sm font-medium ${isPro ? "text-blue-200" : "text-slate-400"}`}>
-            /{billing === "MONTHLY" ? "mo" : "yr"}
-          </span>
-        </div>
-        <p className={`text-xs mt-1.5 ${isPro ? "text-blue-200" : "text-slate-500"}`}>
-          + ₦{fee.toLocaleString()} processing fee at checkout
-        </p>
-        {billing === "YEARLY" && (
-          <p className="text-xs text-emerald-400 mt-1">≈ 20% saved vs monthly</p>
-        )}
-      </div>
-
-      <Button
-        onClick={() => onSubscribe(plan)}
-        disabled={!!loadingId}
-        className={`w-full h-11 font-semibold mb-8 ${
-          isPro
-            ? "bg-white text-blue-700 hover:bg-slate-50"
-            : `bg-gradient-to-r ${gradient} text-white hover:opacity-90`
-        }`}
-      >
-        {loadingId === plan.id ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <>Get started <ChevronRight className="w-4 h-4 ml-1" /></>
-        )}
-      </Button>
-
-      <ul className="space-y-3 flex-1">
-        {highlights.map((item) => (
-          <li key={item} className="flex items-start gap-2.5 text-sm">
-            <Check className={`w-4 h-4 mt-0.5 shrink-0 ${isPro ? "text-blue-200" : "text-blue-400"}`} />
-            <span className={isPro ? "text-blue-50" : "text-slate-300"}>{item}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function EnterpriseCard() {
-  return (
-    <div className="rounded-2xl border border-slate-700/60 bg-slate-900/40 p-8 flex flex-col justify-between hover:border-violet-500/40 transition-colors">
-      <div>
-        <div className="text-xs font-bold uppercase tracking-widest text-violet-400 mb-1">
-          🎯 1-on-1 Training
-        </div>
-        <p className="text-sm text-slate-400 mb-6">Focused, multi-session mentorship</p>
-
-        <div className="mb-8">
-          <div className="text-3xl font-extrabold text-white">Custom</div>
-          <p className="text-xs text-slate-500 mt-1.5">Negotiated quote — reach out to discuss</p>
-        </div>
-
-        <ul className="space-y-3 mb-8">
-          {[
-            "Multiple sessions per week",
-            "Dedicated mentor assigned",
-            "Custom curriculum for your goals",
-            "Code review & portfolio guidance",
-            "Direct access to instructor",
-            "Flexible scheduling",
-          ].map((item) => (
-            <li key={item} className="flex items-start gap-2.5 text-sm">
-              <Check className="w-4 h-4 mt-0.5 shrink-0 text-violet-400" />
-              <span className="text-slate-300">{item}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <a href="mailto:hello@techhill.io?subject=1-on-1 Training Enquiry">
-        <Button
-          variant="outline"
-          className="w-full border-violet-500/50 text-violet-300 hover:bg-violet-900/30 hover:text-violet-100 hover:border-violet-400 transition-colors"
-        >
-          <Mail className="w-4 h-4 mr-2" />
-          Get a Quote
-        </Button>
-      </a>
-    </div>
-  );
-}
-
-function EmptyCard({ label }: { label: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/20 p-8 flex items-center justify-center">
-      <p className="text-slate-500 text-sm text-center">{label}</p>
     </div>
   );
 }

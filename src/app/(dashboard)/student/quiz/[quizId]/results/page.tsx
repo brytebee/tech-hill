@@ -28,6 +28,7 @@ async function getQuizResultsData(
       where: { id: quizId },
       include: {
         attempts: {
+          where: { userId },
           include: {
             answers: {
               include: {

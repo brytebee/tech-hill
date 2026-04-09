@@ -1,8 +1,10 @@
 // src/components/students/StudentCourseOverview.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import confetti from "canvas-confetti";
+import { toast } from "sonner";
 import {
   Card,
   CardContent,
@@ -417,6 +419,50 @@ export function StudentCourseOverview({
   const lockedModules = getLockedModules();
   const isCourseCompleted = enrollment.status === "COMPLETED";
 
+  // Live completion percentage derived from real topic progress records
+  // (more accurate than the stale enrollment.overallProgress field)
+  const allTopicIds = course.modules.flatMap((m) => m.topics.map((t) => t.id));
+  const completedTopicIds = allTopicIds.filter(
+    (id) => topicProgressMap.get(id)?.status === "COMPLETED"
+  );
+  const liveProgress =
+    allTopicIds.length > 0
+      ? Math.round((completedTopicIds.length / allTopicIds.length) * 100)
+      : enrollment.overallProgress;
+
+  // Allow finishing when all topics are done and course not yet completed
+  const isFinishable = !isCourseCompleted && liveProgress === 100;
+
+  const router = useRouter();
+  const [isFinishing, setIsFinishing] = useState(false);
+
+  const handleFinishCourse = useCallback(async () => {
+    setIsFinishing(true);
+    try {
+      const res = await fetch(`/api/student/courses/${course.id}/complete`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        toast.success("🏆 Course complete! Congratulations!");
+        // Trigger confetti then refresh to show celebration banner
+        confetti({
+          particleCount: 200,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"],
+        });
+        setTimeout(() => router.refresh(), 1800);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Could not complete course. Try again.");
+      }
+    } catch {
+      toast.error("Network error. Please try again.");
+    } finally {
+      setIsFinishing(false);
+    }
+  }, [course.id, router]);
+
   // Trigger confetti when course is loaded and completed
   useEffect(() => {
     if (isCourseCompleted) {
@@ -522,18 +568,33 @@ export function StudentCourseOverview({
             <div className="w-full bg-slate-100 dark:bg-slate-950/60 rounded-full h-5 overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner p-1">
                 <div
                   className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-full rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(37,99,235,0.5)]"
-                  style={{ width: `${enrollment.overallProgress}%` }}
+                  style={{ width: `${liveProgress}%` }}
                 />
             </div>
             <div className="flex flex-wrap justify-between gap-4 text-[10px] font-black text-slate-500 uppercase tracking-widest mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
               <span className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-400" /> LINK ESTABLISHED: <span className="text-slate-900 dark:text-white italic">{new Date(enrollment.enrolledAt).toLocaleDateString()}</span>
               </span>
-              <span className="flex items-center gap-2 bg-[var(--tw-color-blue-50)] dark:bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/10">
-                {enrollment.completedAt
-                  ? <span className="text-emerald-500 italic flex items-center gap-1.5"><Trophy className="h-3 w-3" /> MASTERY ACHIEVED</span>
-                  : <span className="text-blue-600 dark:text-blue-400 italic">{course.modules.length - lockedModules.size} OF {course.modules.length} NODES UNLOCKED</span>}
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-2 bg-[var(--tw-color-blue-50)] dark:bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/10">
+                  {isCourseCompleted
+                    ? <span className="text-emerald-500 italic flex items-center gap-1.5"><Trophy className="h-3 w-3" /> MASTERY ACHIEVED</span>
+                    : <span className="text-blue-600 dark:text-blue-400 italic">{course.modules.length - lockedModules.size} OF {course.modules.length} NODES UNLOCKED</span>}
+                </span>
+                {isFinishable && (
+                  <Button
+                    onClick={handleFinishCourse}
+                    disabled={isFinishing}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase tracking-widest text-[10px] h-9 px-5 rounded-xl shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+                  >
+                    {isFinishing ? (
+                      <span className="flex items-center gap-2"><Trophy className="h-3.5 w-3.5 animate-pulse" /> Claiming...</span>
+                    ) : (
+                      <span className="flex items-center gap-2"><Trophy className="h-3.5 w-3.5" /> Claim Completion</span>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
         </div>
       </div>

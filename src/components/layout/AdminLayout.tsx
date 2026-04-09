@@ -24,6 +24,7 @@ import {
   Award,
   ClipboardCheck,
   Layers,
+  CreditCard,
 } from "lucide-react";
 
 interface AdminLayoutProps {
@@ -41,6 +42,7 @@ const navigation = [
   { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
   { name: "Promotions", href: "/admin/promotions", icon: Tag },
   { name: "Certificates", href: "/admin/certificates", icon: Award },
+  { name: "Plans", href: "/admin/plans", icon: CreditCard },
   { name: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
@@ -63,10 +65,12 @@ export function AdminLayout({
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session || session.user.role !== "ADMIN") {
+    if (status === "unauthenticated") {
+      signOut({ callbackUrl: "/login?reason=session_expired" });
+    } else if (session && session.user.role !== "ADMIN") {
       router.push("/unauthorized");
     }
-  }, [session, status, router]);
+  }, [status, session, router]);
 
   if (status === "loading") {
     return (

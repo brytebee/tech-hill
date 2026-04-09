@@ -209,11 +209,27 @@ export function StudentTopicViewer({
       if (response.ok) {
         const data = await response.json();
         if (data.canComplete) {
+          // Optimistically update local progress state for instant UI feedback
           const progressResponse = await fetch(
             `/api/student/topics/${topic.id}/progress`,
           );
           const updatedData = await progressResponse.json();
           setProgressData(updatedData);
+
+          // Nudge the learner to the next step without requiring any action
+          if (isLastTopicOfCourse) {
+            toast.success("🏆 Course complete! Incredible work.");
+            setTimeout(() => {
+              router.push(`/student/courses/${topic.module.course.id}?completed=true`);
+            }, 1800);
+          } else if (nextTopicId) {
+            toast.success("✅ Topic complete! Moving to next lesson...");
+            setTimeout(() => {
+              router.push(`/student/topics/${nextTopicId}`);
+            }, 1500);
+          } else {
+            toast.success("✅ Topic marked as complete!");
+          }
         } else {
           toast.warning("Please pass all required assessments before marking this topic as complete.");
         }
@@ -871,18 +887,26 @@ export function StudentTopicViewer({
             </Button>
           </Link>
         ) : nextTopicId ? (
-          <Link href={isCompleted ? `/student/topics/${nextTopicId}` : "#"}>
-            <Button 
-              variant="ghost" 
-              disabled={!isCompleted} 
-              title={!isCompleted ? "Complete this topic to unlock the next one" : ""}
-              className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white dark:hover:bg-slate-800/50"
+          isCompleted ? (
+            <Link href={`/student/topics/${nextTopicId}`}>
+              <Button className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 font-bold px-6 transition-all hover:scale-105 active:scale-95">
+                <span className="hidden sm:inline">Next Lesson</span>
+                <span className="sm:hidden">Next</span>
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </Link>
+          ) : (
+            <Button
+              variant="ghost"
+              disabled
+              title="Complete this topic to unlock the next one"
+              className="text-slate-400 dark:text-slate-600 cursor-not-allowed"
             >
-              <span className="hidden sm:inline">Next Topic</span>
+              <span className="hidden sm:inline">Next Lesson</span>
               <span className="sm:hidden">Next</span>
               <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
-          </Link>
+          )
         ) : (
           <Button variant="ghost" disabled className="text-slate-600 dark:text-slate-400">
             <span className="hidden sm:inline">Next</span>

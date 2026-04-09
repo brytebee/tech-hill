@@ -83,8 +83,10 @@ export default function AdminTracksPage() {
                    <div className="flex items-center gap-1.5"><Users className="h-3 w-3" /> {track._count.enrollments} Enrolled</div>
                 </div>
                 <CardFooter className="p-4 mt-auto flex justify-between gap-2">
-                   <Button variant="outline" size="sm" className="flex-1 font-bold rounded-lg h-9 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800">
-                     <Edit className="h-3 w-3 mr-2" /> Modify Path
+                   <Button variant="outline" size="sm" className="flex-1 font-bold rounded-lg h-9 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800" asChild>
+                     <Link href={`/admin/tracks/${track.id}/edit`}>
+                       <Edit className="h-3 w-3 mr-2" /> Modify Path
+                     </Link>
                    </Button>
                    <Button size="sm" className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-lg h-9 px-4" asChild>
                       <Link href={`/admin/tracks/${track.id}`}>

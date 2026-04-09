@@ -67,13 +67,25 @@ export async function POST(
 
     // Get next order number
     const existingModules = await ModuleService.getModulesByCourse(courseId);
-    const nextOrder =
-      Math.max(...existingModules.map((m: any) => m.order), 0) + 1;
+    const sortedModules = existingModules.sort((a: any, b: any) => a.order - b.order);
+    const nextOrder = sortedModules.length > 0
+      ? sortedModules[sortedModules.length - 1].order + 1
+      : 1;
+
+    // Auto-enforce sequential locking: unless the caller explicitly passes
+    // prerequisiteModuleId: null to opt out, new modules always require
+    // the completion of the immediately preceding module first.
+    const lastModule = sortedModules.length > 0 ? sortedModules[sortedModules.length - 1] : null;
+    const autoPrerequisiteId =
+      lastModule && !Object.prototype.hasOwnProperty.call(body, "prerequisiteModuleId")
+        ? lastModule.id
+        : body.prerequisiteModuleId ?? null;
 
     const moduleData = {
       ...body,
       courseId,
       order: nextOrder,
+      prerequisiteModuleId: autoPrerequisiteId,
     };
 
     const module = await ModuleService.createModule(moduleData);
