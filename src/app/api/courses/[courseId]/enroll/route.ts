@@ -39,17 +39,6 @@ export async function POST(
       courseId,
     });
 
-    // Fire enrollment notification (non-blocking — never fails the response)
-    NotificationService.createNotification({
-      userId: session.user.id,
-      type: "ENROLLMENT",
-      title: "Course Enrolled!",
-      message: `You are now enrolled in "${course.title}". Start learning now!`,
-      linkUrl: `/student/courses/${courseId}`,
-    }).catch((err) =>
-      logger.warn("enroll", "Failed to fire enrollment notification", err)
-    );
-
     return NextResponse.json(enrollment, { status: 201 });
   } catch (error: any) {
     logger.error("enroll:POST", "Failed to enroll", error);

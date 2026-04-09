@@ -65,7 +65,7 @@ async function getCoursesData(
     const page = parseInt(searchParams.page || "1");
     const limit = 12;
 
-    const [coursesResult, enrollments] = await Promise.all([
+    const [coursesResult, enrollments, subscription] = await Promise.all([
       CourseService.getCourses(
         {
           status: "PUBLISHED",
@@ -104,6 +104,16 @@ async function getCoursesData(
           },
         },
       }),
+      prisma.subscription.findFirst({
+        where: {
+          userId,
+          status: "ACTIVE",
+          OR: [
+            { endDate: null },
+            { endDate: { gte: new Date() } },
+          ],
+        },
+      }),
     ]);
 
     const enrollmentMap = new Map();
@@ -131,6 +141,7 @@ async function getCoursesData(
       totalCourses: coursesResult.pagination.total,
       currentPage: page,
       enrollments,
+      hasSubscription: !!subscription,
     };
   } catch (error: any) {
     console.error("Error fetching courses data:", error);
@@ -140,6 +151,7 @@ async function getCoursesData(
       totalCourses: 0,
       currentPage: 1,
       enrollments: [],
+      hasSubscription: false,
     };
   }
 }
@@ -173,7 +185,7 @@ function getDifficultyBadge(difficulty: string) {
   }
 }
 
-function CourseCard({ course, userId }: { course: any; userId: string }) {
+function CourseCard({ course, userId, hasSubscription }: { course: any; userId: string; hasSubscription: boolean }) {
   return (
     <Card className="group relative flex flex-col bg-white dark:bg-slate-900/50 dark:backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none hover:shadow-2xl hover:border-blue-500/30 transition-all duration-500 rounded-3xl overflow-hidden">
       {/* Decorative Gradient Background */}
@@ -274,9 +286,11 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
               <Link href={`/student/courses/${course.id}`} className="flex-1">
                 <Button className="w-full h-11 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 font-black rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest">
                   <Play className="h-4 w-4 mr-2 fill-current" />
-                  {course.enrollment?.overallProgress > 0
-                    ? "RESUME"
-                    : "START"}
+                  {course.enrollment?.status === "COMPLETED" 
+                    ? "REVIEW" 
+                    : course.enrollment?.overallProgress > 0
+                      ? "RESUME"
+                      : "START"}
                 </Button>
               </Link>
               <EnrollButton
@@ -300,6 +314,7 @@ function CourseCard({ course, userId }: { course: any; userId: string }) {
                 courseTitle={course.title}
                 price={course.currentPrice}
                 isEnrolled={false}
+                hasSubscription={hasSubscription}
                 className="flex-1 h-11 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest"
               >
                 ENROLL
@@ -393,7 +408,7 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = await searchParams;
 
-  const { courses, totalPages, totalCourses, currentPage, enrollments } =
+  const { courses, totalPages, totalCourses, currentPage, enrollments, hasSubscription } =
     await getCoursesData(session.user.id, resolvedSearchParams);
 
   const enrolledCount = enrollments.filter(
@@ -442,6 +457,7 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
                   key={course.id}
                   course={course}
                   userId={session.user.id}
+                  hasSubscription={hasSubscription}
                 />
               ))}
             </div>
