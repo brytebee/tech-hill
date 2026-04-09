@@ -19,6 +19,10 @@ export async function POST(
 
     return NextResponse.json({ success: true, enrollment });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Internal Error" }, { status: 500 });
+    const status = error.statusCode || 500;
+    if (status === 500) {
+      console.error("[TRACK_ENROLL_ERROR]", error);
+    }
+    return NextResponse.json({ error: error.message || "Internal Error" }, { status });
   }
 }
