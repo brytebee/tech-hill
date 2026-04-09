@@ -48,6 +48,7 @@ export async function GET(request: NextRequest) {
       where: {
         userId: session.user.id,
         trackId: { in: trackIds },
+        status: { in: ["ACTIVE", "COMPLETED"] },
       },
       select: { trackId: true, status: true },
     });

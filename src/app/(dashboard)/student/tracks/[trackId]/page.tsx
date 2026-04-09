@@ -46,6 +46,10 @@ export default function StudentTrackLearningPage() {
     const fetchProgress = async () => {
         try {
             const resp = await fetch(`/api/student/tracks/${trackId}`);
+            if (resp.status === 403 || resp.status === 404) {
+                router.replace("/student/tracks");
+                return;
+            }
             if (!resp.ok) throw new Error("Failed to load");
             const data = await resp.json();
             setTrack(data);

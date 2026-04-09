@@ -21,7 +21,10 @@ export default async function StudentProgressPage() {
   if (!session) redirect("/login");
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { userId: session.user.id },
+    where: { 
+      userId: session.user.id,
+      status: { in: ["ACTIVE", "COMPLETED"] }
+    },
     include: {
       course: {
         select: {
