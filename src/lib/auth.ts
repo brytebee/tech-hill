@@ -172,6 +172,7 @@ export const authOptions: NextAuthOptions = {
           role: user.role,
           status: user.status,
           tokenVersion: updateResult.tokenVersion,
+          profileImage: user.profileImage,
         };
       },
     }),
@@ -259,6 +260,7 @@ export const authOptions: NextAuthOptions = {
             role: user.role,
             status: user.status,
             tokenVersion: updateResult.tokenVersion,
+            profileImage: user.profileImage,
           };
         }
 
@@ -267,13 +269,21 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role;
         token.status = user.status;
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.version = user.tokenVersion;
+        token.profileImage = (user as any).profileImage;
+      }
+
+      // Handle dynamic session updates from the client (useSession update)
+      if (trigger === "update" && session) {
+        if (session.firstName) token.firstName = session.firstName;
+        if (session.lastName) token.lastName = session.lastName;
+        if (typeof session.profileImage !== "undefined") token.profileImage = session.profileImage;
       }
 
       // ⚡️ SECURITY: Single Device Check with 2-Minute Cache
@@ -303,6 +313,7 @@ export const authOptions: NextAuthOptions = {
         token.role = validationData.role;
         token.status = validationData.status;
         token.hasActiveSubscription = validationData.hasActiveSubscription;
+        token.profileImage = validationData.profileImage; // Sync profile image changes from DB
 
         // Update the cache timestamp
         token.lastChecked = now;
@@ -323,6 +334,7 @@ export const authOptions: NextAuthOptions = {
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
         session.user.hasActiveSubscription = token.hasActiveSubscription as boolean | undefined;
+        session.user.profileImage = token.profileImage as string | null | undefined;
       }
       return session;
     },

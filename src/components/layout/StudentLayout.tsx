@@ -172,8 +172,12 @@ export function StudentLayout({
           <div className="p-4 mt-auto border-t border-slate-200 dark:border-slate-800">
             {/* User info */}
             <div className="flex items-center gap-3 px-2 py-2 mb-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow-sm">
-                <User className="h-5 w-5 text-slate-500 dark:text-slate-400" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow-sm overflow-hidden shrink-0">
+                {(session?.user as any)?.profileImage ? (
+                    <img src={(session.user as any).profileImage} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                    <User className="h-5 w-5 text-slate-500 dark:text-slate-400" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
@@ -234,8 +238,12 @@ export function StudentLayout({
                </div>
                
                <div className="hidden sm:flex items-center gap-2">
-                 <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center">
-                   <User className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                 <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
+                    {(session?.user as any)?.profileImage ? (
+                        <img src={(session.user as any).profileImage} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                        <User className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                    )}
                  </div>
                  <span className="text-sm font-semibold max-w-[120px] truncate">
                    {session.user.firstName}

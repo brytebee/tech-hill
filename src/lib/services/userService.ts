@@ -271,6 +271,7 @@ export class UserService {
         tokenVersion: true, 
         status: true, 
         role: true,
+        profileImage: true,
         subscriptions: {
           where: {
             status: "ACTIVE",
@@ -286,6 +287,7 @@ export class UserService {
       tokenVersion: user.tokenVersion,
       status: user.status,
       role: user.role,
+      profileImage: user.profileImage,
       hasActiveSubscription: user.subscriptions.length > 0
     };
   }

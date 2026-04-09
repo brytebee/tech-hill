@@ -186,8 +186,12 @@ export function AdminLayout({
           {/* Footer */}
           <div className="p-4 mt-auto border-t border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3 px-2 py-2 mb-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-red-100 to-rose-50 dark:from-red-900/40 dark:to-rose-900/20 flex items-center justify-center border border-red-200 dark:border-red-800/50 shadow-sm">
-                <Shield className="h-5 w-5 text-red-500 dark:text-red-400" />
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-red-100 to-rose-50 dark:from-red-900/40 dark:to-rose-900/20 flex items-center justify-center border border-red-200 dark:border-red-800/50 shadow-sm overflow-hidden shrink-0">
+                {(session?.user as any)?.profileImage ? (
+                    <img src={(session.user as any).profileImage} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                    <Shield className="h-5 w-5 text-red-500 dark:text-red-400" />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
@@ -246,8 +250,12 @@ export function AdminLayout({
                 <ThemeToggle />
               </div>
               <div className="hidden sm:flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border border-red-200 dark:border-red-800/50">
-                  <Shield className="h-4 w-4 text-red-500 dark:text-red-400" />
+                <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center border border-red-200 dark:border-red-800/50 overflow-hidden shrink-0">
+                  {(session?.user as any)?.profileImage ? (
+                      <img src={(session.user as any).profileImage} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                      <Shield className="h-4 w-4 text-red-500 dark:text-red-400" />
+                  )}
                 </div>
                 <span className="text-sm font-semibold text-slate-700 dark:text-slate-300 max-w-[120px] truncate">
                   {session.user.firstName}
