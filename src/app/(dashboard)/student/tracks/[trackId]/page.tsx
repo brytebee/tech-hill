@@ -42,8 +42,8 @@ export default function StudentTrackLearningPage() {
 
     const fetchProgress = async () => {
         try {
-            // Need a specific student-facing track progress API or use TrackService via server action/api
-            const resp = await fetch(`/api/admin/tracks/${trackId}`); // Reusing admin GET for demo prototype
+            const resp = await fetch(`/api/student/tracks/${trackId}`);
+            if (!resp.ok) throw new Error("Failed to load");
             const data = await resp.json();
             setTrack(data);
         } catch (err) {
@@ -56,8 +56,10 @@ export default function StudentTrackLearningPage() {
     if (isLoading) return <StudentLayout><div className="p-20 flex justify-center"><Loader2 className="animate-spin h-10 w-10 text-blue-600" /></div></StudentLayout>;
     if (!track) return <StudentLayout><div className="p-20 text-center">Path not found</div></StudentLayout>;
 
-    const completedCount = track.enrollment?.completedCourses.length || 0;
-    const totalCount = track.courses.length;
+    const courses = track.courses ?? [];
+    const completedCourses = track.enrollment?.completedCourses ?? [];
+    const completedCount = completedCourses.length;
+    const totalCount = courses.length || 1; // prevent division by zero
     const progressPercent = Math.round((completedCount / totalCount) * 100);
 
     return (
@@ -84,10 +86,10 @@ export default function StudentTrackLearningPage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-6">
-                    {track.courses.map((tc, idx) => {
-                        const isCompleted = track.enrollment?.completedCourses.includes(tc.course.id);
+                    {courses.map((tc, idx) => {
+                        const isCompleted = completedCourses.includes(tc.course.id);
                         const isCurrent = track.enrollment?.currentCourseId === tc.course.id || (!track.enrollment?.currentCourseId && !isCompleted && idx === 0);
-                        const isLocked = !isCompleted && !isCurrent && idx > (track.enrollment?.completedCourses.length || 0);
+                        const isLocked = !isCompleted && !isCurrent && idx > completedCount;
 
                         return (
                             <Card key={tc.course.id} className={`border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden transition-all duration-300 ${isLocked ? 'opacity-60 grayscale' : 'hover:shadow-xl hover:translate-x-2'}`}>
