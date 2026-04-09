@@ -53,6 +53,10 @@ export async function GET(
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
+    if (!enrollment || !["ACTIVE", "COMPLETED"].includes(enrollment.status)) {
+      return NextResponse.json({ error: "You must be actively enrolled to access this career path" }, { status: 403 });
+    }
+
     return NextResponse.json({ ...track, enrollment });
   } catch (error: any) {
     logger.error("student:tracks:trackId", "GET error:", error);

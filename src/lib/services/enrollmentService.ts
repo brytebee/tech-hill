@@ -153,7 +153,10 @@ export class EnrollmentService {
   // Get user enrollments
   static async getUserEnrollments(userId: string) {
     return await prisma.enrollment.findMany({
-      where: { userId },
+      where: { 
+        userId,
+        status: { in: ["ACTIVE", "COMPLETED"] }
+      },
       include: {
         course: {
           select: {
