@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { ProgressStatus } from "@prisma/client";
 import { CertificateService } from "./certificateService";
 import { TrackService } from "./trackService";
+import { NotificationService } from "./notificationService";
 
 export class ProgressService {
   // Get or create topic progress
@@ -466,6 +467,19 @@ export class ProgressService {
         );
       } catch (err) {
         console.error("Failed to issue certificate:", err);
+      }
+
+      // Send completion notification
+      try {
+        await NotificationService.createNotification({
+          userId,
+          type: "SYSTEM",
+          title: "Course Completed! 🎉",
+          message: `Congratulations! You have successfully completed "${course.title}".`,
+          linkUrl: `/student/achievements`,
+        });
+      } catch (err) {
+        console.error("Failed to send course completion notification:", err);
       }
 
       // FIX 1: Check if this completed course is part of any active Track enrollment

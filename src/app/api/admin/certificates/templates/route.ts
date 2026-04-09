@@ -57,6 +57,13 @@ export async function POST(req: Request) {
       },
     });
 
+    if (body.courseId && body.courseId !== "default") {
+      await prisma.course.update({
+        where: { id: body.courseId },
+        data: { templateId: template.id },
+      });
+    }
+
     return NextResponse.json(template);
   } catch (error) {
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

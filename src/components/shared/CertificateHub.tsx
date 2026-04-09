@@ -14,11 +14,13 @@ export function CertificateHub() {
   const [activeTab, setActiveTab] = useState<"ledger" | "templates">("ledger");
   const [certificates, setCertificates] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Template Form State
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
-  const [newTemplate, setNewTemplate] = useState({ 
+  const [newTemplate, setNewTemplate] = useState({
+    courseId: "default",
     name: "", 
     description: "",
     themeName: "ModernDark",
@@ -34,12 +36,17 @@ export function CertificateHub() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [certRes, tempRes] = await Promise.all([
+      const [certRes, tempRes, courseRes] = await Promise.all([
         fetch("/api/admin/certificates"),
-        fetch("/api/admin/certificates/templates")
+        fetch("/api/admin/certificates/templates"),
+        fetch("/api/courses")
       ]);
       if (certRes.ok) setCertificates(await certRes.json());
       if (tempRes.ok) setTemplates(await tempRes.json());
+      if (courseRes.ok) {
+        const c = await courseRes.json();
+        setCourses(c.courses || c); // Depending on how /api/courses returns
+      }
     } catch (error) {
       toast.error("Failed to load certificate data");
     } finally {
@@ -60,6 +67,7 @@ export function CertificateHub() {
         toast.success("Template created successfully");
         setIsCreatingTemplate(false);
         setNewTemplate({ 
+          courseId: "default",
           name: "", 
           description: "",
           themeName: "ModernDark",
@@ -204,8 +212,26 @@ export function CertificateHub() {
                  <form onSubmit={handleCreateTemplate} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold">Template Name</label>
-                        <Input required value={newTemplate.name} onChange={e => setNewTemplate({...newTemplate, name: e.target.value})} placeholder="e.g. Modern Dark Track Mastery" />
+                        <label className="text-sm font-bold">Target Course</label>
+                        <select 
+                          className="w-full h-10 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 px-3 rounded-md text-sm"
+                          value={newTemplate.courseId} 
+                          required
+                          onChange={(e) => {
+                            const selectedCourse = courses.find((c: any) => c.id === e.target.value);
+                            setNewTemplate({
+                              ...newTemplate, 
+                              courseId: e.target.value,
+                              name: selectedCourse ? selectedCourse.title : "",
+                              description: selectedCourse ? `Official certification for mastery of ${selectedCourse.title}.` : ""
+                            });
+                          }}
+                        >
+                          <option value="default" disabled>Select a course...</option>
+                          {courses.map((c: any) => (
+                            <option key={c.id} value={c.id}>{c.title}</option>
+                          ))}
+                        </select>
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-bold">Description</label>
