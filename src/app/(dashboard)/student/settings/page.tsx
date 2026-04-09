@@ -1,6 +1,7 @@
 // app/(dashboard)/student/settings/page.tsx
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { PasskeySettings } from "@/components/shared/passkey-settings";
+import { ProfileSettingsForm } from "@/components/shared/profile-settings-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShieldCheck, Bell, Activity, Key, LogOut, Laptop, Smartphone, Fingerprint } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +66,9 @@ export default function StudentSettingsPage() {
                      </div>
                  </div>
               </div>
+
+              {/* Profile Config */}
+              <ProfileSettingsForm />
 
               {/* Passkeys Integration Component */}
               <Card className="rounded-3xl border-slate-200 dark:border-slate-800 bg-white dark:bg-[#060a12]/50 dark:backdrop-blur-xl shadow-lg border border-blue-500/10 overflow-hidden">
