@@ -64,6 +64,18 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
     (enrol: any) => enrol.userId === session.user.id,
   );
 
+  // Check if the user has an active subscription (used to bypass checkout modal)
+  const hasSubscription = !!(await prisma.subscription.findFirst({
+    where: {
+      userId: session.user.id,
+      status: "ACTIVE",
+      OR: [
+        { endDate: null },
+        { endDate: { gt: new Date() } },
+      ],
+    },
+  }));
+
   // Fetch dynamic pricing (sales/discounts)
   const pricing = await PromotionService.getCurrentPrice(courseId);
 
@@ -105,63 +117,9 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
     );
   }
 
-  // Subscription override: if the student has an active subscription,
-  // auto-enroll them without requiring payment. This makes subscriptions
-  // a blanket access pass for all published courses.
-  if (!enrollment) {
-    const activeSubscription = await prisma.subscription.findFirst({
-      where: {
-        userId: session.user.id,
-        status: "ACTIVE",
-        OR: [
-          { endDate: null },
-          { endDate: { gt: new Date() } },
-        ],
-      },
-    });
-
-    if (activeSubscription) {
-      // Auto-create enrollment via Prisma
-      const { prisma: db } = await import("@/lib/db");
-      const autoEnrollment = await db.enrollment.create({
-        data: {
-          userId: session.user.id,
-          courseId,
-          status: "ACTIVE",
-          enrolledAt: new Date(),
-          lastAccessAt: new Date(),
-          overallProgress: 0,
-        },
-      });
-
-      // Re-fetch progress data for fresh enrollment
-      const freshProgress = await ProgressService.getCourseProgressData(session.user.id, courseId);
-
-      const serializedEnrollment = {
-        ...autoEnrollment,
-        enrolledAt: autoEnrollment.enrolledAt.toISOString(),
-        completedAt: autoEnrollment.completedAt?.toISOString() ?? undefined,
-        lastAccessAt: autoEnrollment.lastAccessAt?.toISOString() ?? undefined,
-      } as unknown as Enrollment;
-
-      return (
-        <StudentLayout
-          title={serializedCourse.title}
-          description={serializedCourse.shortDescription as string}
-        >
-          <StudentCourseOverview
-            course={serializedCourse as unknown as Course}
-            enrollment={serializedEnrollment}
-            userId={session.user.id}
-            progressData={freshProgress}
-          />
-        </StudentLayout>
-      );
-    }
-  }
-
-
-  // Otherwise, show the public details view with preview options
+  // Otherwise, show the public details view with an enroll button.
+  // Subscribed users get hasSubscription=true so the EnrollButton skips the checkout modal;
+  // the backend EnrollmentService enforces Focus Check and all other business rules.
   return (
     <StudentLayout
       title={serializedCourse.title}
@@ -185,6 +143,7 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
               }
             : null
         }
+        hasSubscription={hasSubscription}
         basePath="/student"
       />
     </StudentLayout>

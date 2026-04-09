@@ -60,7 +60,20 @@ export async function GET(request: NextRequest) {
       enrollmentStatus: enrollmentMap.get(track.id) ?? null,
     }));
 
-    return NextResponse.json(enriched);
+    // Add subscription status to let the client skip any payment UI
+    const activeSubscription = await prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        status: "ACTIVE",
+        OR: [
+          { endDate: null },
+          { endDate: { gte: new Date() } },
+        ],
+      },
+      select: { id: true },
+    });
+
+    return NextResponse.json({ tracks: enriched, hasSubscription: !!activeSubscription });
   } catch (error: any) {
     logger.error("student:tracks", "GET /api/student/tracks error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
