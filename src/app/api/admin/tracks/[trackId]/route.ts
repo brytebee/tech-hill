@@ -102,13 +102,14 @@ export async function PATCH(
     const { trackId } = await params;
     const body = await req.json();
     
-    // Only extract the fields we want to allow updating currently
-    const { price } = body;
+    const { title, description, slug, isPublished, price } = body;
 
     const dataToUpdate: any = {};
-    if (price !== undefined) {
-      dataToUpdate.price = parseFloat(price) || 0;
-    }
+    if (price !== undefined) dataToUpdate.price = parseFloat(price) || 0;
+    if (title !== undefined) dataToUpdate.title = title;
+    if (description !== undefined) dataToUpdate.description = description;
+    if (slug !== undefined) dataToUpdate.slug = slug;
+    if (isPublished !== undefined) dataToUpdate.isPublished = isPublished === true || isPublished === "true";
 
     const updatedTrack = await prisma.track.update({
       where: { id: trackId },

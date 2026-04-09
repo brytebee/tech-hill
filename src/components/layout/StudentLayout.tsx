@@ -15,6 +15,7 @@ import {
   X,
   Home,
   Settings,
+  Layers,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/shared/NotificationBell";
@@ -28,9 +29,11 @@ interface StudentLayoutProps {
 const navigation = [
   { name: "Dashboard", href: "/student", icon: Home },
   { name: "My Courses", href: "/student/courses", icon: BookOpen },
+  { name: "Career Paths", href: "/student/tracks", icon: Layers },
   { name: "Progress", href: "/student/progress", icon: TrendingUp },
   { name: "Achievements", href: "/student/achievements", icon: Award },
-  { name: "Profile", href: "/student/profile", icon: Settings },
+  { name: "Profile", href: "/student/profile", icon: User },
+  { name: "Security", href: "/student/settings", icon: Settings },
 ];
 
 export function StudentLayout({
@@ -52,10 +55,13 @@ export function StudentLayout({
 
   useEffect(() => {
     if (status === "loading") return;
-    if (!session) {
-      router.push("/login");
+    if (status === "unauthenticated") {
+      // Session was invalidated server-side (e.g. another device logged in,
+      // admin suspended account, or token version mismatch). Hard-sign-out
+      // flushes the stale JWT cookie so the polling loop stops immediately.
+      signOut({ callbackUrl: "/login?reason=session_expired" });
     }
-  }, [session, status, router]);
+  }, [status]);
 
   if (status === "loading") {
     return (

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { notFound } from "next/navigation";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { CourseService } from "@/lib/services/courseService";
 import {
@@ -103,6 +104,62 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
       </StudentLayout>
     );
   }
+
+  // Subscription override: if the student has an active subscription,
+  // auto-enroll them without requiring payment. This makes subscriptions
+  // a blanket access pass for all published courses.
+  if (!enrollment) {
+    const activeSubscription = await prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        status: "ACTIVE",
+        OR: [
+          { endDate: null },
+          { endDate: { gt: new Date() } },
+        ],
+      },
+    });
+
+    if (activeSubscription) {
+      // Auto-create enrollment via Prisma
+      const { prisma: db } = await import("@/lib/db");
+      const autoEnrollment = await db.enrollment.create({
+        data: {
+          userId: session.user.id,
+          courseId,
+          status: "ACTIVE",
+          enrolledAt: new Date(),
+          lastAccessAt: new Date(),
+          overallProgress: 0,
+        },
+      });
+
+      // Re-fetch progress data for fresh enrollment
+      const freshProgress = await ProgressService.getCourseProgressData(session.user.id, courseId);
+
+      const serializedEnrollment = {
+        ...autoEnrollment,
+        enrolledAt: autoEnrollment.enrolledAt.toISOString(),
+        completedAt: autoEnrollment.completedAt?.toISOString() ?? undefined,
+        lastAccessAt: autoEnrollment.lastAccessAt?.toISOString() ?? undefined,
+      } as unknown as Enrollment;
+
+      return (
+        <StudentLayout
+          title={serializedCourse.title}
+          description={serializedCourse.shortDescription as string}
+        >
+          <StudentCourseOverview
+            course={serializedCourse as unknown as Course}
+            enrollment={serializedEnrollment}
+            userId={session.user.id}
+            progressData={freshProgress}
+          />
+        </StudentLayout>
+      );
+    }
+  }
+
 
   // Otherwise, show the public details view with preview options
   return (

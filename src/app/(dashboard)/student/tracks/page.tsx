@@ -41,9 +41,10 @@ export default function StudentTracksPage() {
 
   const fetchTracks = async () => {
     try {
-      const response = await fetch("/api/admin/tracks"); // Sharing API for now if permitted
+      const response = await fetch("/api/student/tracks");
+      if (!response.ok) throw new Error("Failed to load");
       const data = await response.json();
-      setTracks(data.filter((t: any) => t.isPublished));
+      setTracks(data);
     } catch (error) {
       toast.error("Failed to load learning paths");
     } finally {
@@ -122,14 +123,23 @@ export default function StudentTracksPage() {
                 </CardContent>
 
                 <CardFooter className="p-8 pt-0 flex flex-col sm:flex-row gap-4">
-                   <Button 
-                      onClick={() => handleEnroll(track.id)}
-                      disabled={isEnrolling === track.id}
-                      className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase text-[11px] tracking-widest h-12 rounded-2xl shadow-xl shadow-slate-900/20 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all"
-                   >
-                      {isEnrolling === track.id ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-                      Enroll In Mastery Path <ArrowRight className="ml-2 h-4 w-4" />
-                   </Button>
+                   {(track as any).enrollmentStatus ? (
+                     <Button
+                       onClick={() => router.push(`/student/tracks/${track.id}`)}
+                       className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[11px] tracking-widest h-12 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+                     >
+                       <CheckCircle className="mr-2 h-4 w-4" /> Continue Learning <ArrowRight className="ml-2 h-4 w-4" />
+                     </Button>
+                   ) : (
+                     <Button
+                        onClick={() => handleEnroll(track.id)}
+                        disabled={isEnrolling === track.id}
+                        className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase text-[11px] tracking-widest h-12 rounded-2xl shadow-xl shadow-slate-900/20 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all"
+                     >
+                        {isEnrolling === track.id ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                        Enroll In Mastery Path <ArrowRight className="ml-2 h-4 w-4" />
+                     </Button>
+                   )}
                 </CardFooter>
               </Card>
             ))}

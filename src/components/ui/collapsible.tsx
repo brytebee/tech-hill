@@ -27,13 +27,15 @@ const CollapsibleTrigger = React.forwardRef<
       )}
       {...props}
     >
-      {showIcon && iconPosition === "left" && (
-        <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
-      )}
-      <div className="flex-1">{children}</div>
-      {showIcon && iconPosition === "right" && (
-        <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
-      )}
+      <span className="flex items-center justify-between w-full h-full gap-2">
+        {showIcon && iconPosition === "left" && (
+          <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
+        )}
+        <span className="flex-1">{children}</span>
+        {showIcon && iconPosition === "right" && (
+          <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200 [&[data-state=open]]:rotate-180" />
+        )}
+      </span>
     </CollapsiblePrimitive.Trigger>
   )
 );
