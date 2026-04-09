@@ -6,10 +6,11 @@ import { StudentLayout } from "@/components/layout/StudentLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle, PlayCircle, Award, ArrowRight, Loader2, Info } from "lucide-react";
+import { CheckCircle2, Circle, PlayCircle, Award, ArrowRight, Loader2, Flag } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useModal } from "@/hooks/use-modal";
 
 interface TrackProgress {
     id: string;
@@ -35,6 +36,8 @@ export default function StudentTrackLearningPage() {
     const router = useRouter();
     const [track, setTrack] = useState<TrackProgress | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isForfeit, setIsForfeit] = useState(false);
+    const { showConfirm } = useModal();
 
     useEffect(() => {
         fetchProgress();
@@ -53,6 +56,29 @@ export default function StudentTrackLearningPage() {
         }
     };
 
+    const handleForfeit = () => {
+        showConfirm({
+            title: "Forfeit Career Path",
+            description: `Are you sure you want to forfeit this path? Your progress will be recorded but you will be free to enroll in standalone courses.`,
+            confirmText: "Yes, Forfeit Path",
+            variant: "warning",
+            onConfirm: async () => {
+                setIsForfeit(true);
+                try {
+                    const resp = await fetch(`/api/student/tracks/${trackId}`, { method: "DELETE" });
+                    const data = await resp.json();
+                    if (!resp.ok) throw new Error(data.error || "Failed to forfeit");
+                    toast.success("Career path forfeited. You can now enroll in standalone courses.");
+                    router.push("/student/tracks");
+                } catch (err: any) {
+                    toast.error(err.message || "Failed to forfeit path");
+                } finally {
+                    setIsForfeit(false);
+                }
+            },
+        });
+    };
+
     if (isLoading) return <StudentLayout><div className="p-20 flex justify-center"><Loader2 className="animate-spin h-10 w-10 text-blue-600" /></div></StudentLayout>;
     if (!track) return <StudentLayout><div className="p-20 text-center">Path not found</div></StudentLayout>;
 
@@ -68,9 +94,22 @@ export default function StudentTrackLearningPage() {
                 <div className="mb-12 bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-3xl rounded-full -mr-20 -mt-20" />
                     <div className="relative z-10">
-                        <div className="flex items-center gap-3 mb-4">
-                            <span className="bg-blue-600 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Mastery Journey</span>
-                            {progressPercent === 100 && <span className="bg-emerald-500 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Completed</span>}
+                        <div className="flex items-center justify-between gap-3 mb-4">
+                            <div className="flex items-center gap-3">
+                                <span className="bg-blue-600 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Mastery Journey</span>
+                                {progressPercent === 100 && <span className="bg-emerald-500 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Completed</span>}
+                            </div>
+                            {track.enrollment?.status === "ACTIVE" && progressPercent < 100 && (
+                                <Button
+                                    variant="ghost"
+                                    onClick={handleForfeit}
+                                    disabled={isForfeit}
+                                    className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 rounded-xl"
+                                >
+                                    {isForfeit ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Flag className="h-3 w-3 mr-1" />}
+                                    Forfeit Path
+                                </Button>
+                            )}
                         </div>
                         <h1 className="text-4xl font-black uppercase tracking-tight mb-2">{track.title}</h1>
                         <p className="text-slate-400 font-medium max-w-xl mb-8">{track.description}</p>

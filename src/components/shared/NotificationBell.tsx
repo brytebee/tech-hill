@@ -94,10 +94,13 @@ export function NotificationBell() {
           return [...fresh, ...prev].slice(0, 50); // cap at 50
         });
 
-        // Toast the most recent one
+        // Only toast high-signal notifications — never ENROLLMENT (too noisy)
+        const TOASTABLE_TYPES = ["SYSTEM", "ASSESSMENT"];
         if (incoming.length > 0) {
           const latest = incoming[incoming.length - 1];
-          toast(latest.title, { description: latest.message });
+          if (TOASTABLE_TYPES.includes(latest.type)) {
+            toast(latest.title, { description: latest.message });
+          }
         }
       });
 
