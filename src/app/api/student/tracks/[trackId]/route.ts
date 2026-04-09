@@ -59,3 +59,42 @@ export async function GET(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+// DELETE /api/student/tracks/[trackId] — forfeit / drop a career path enrollment
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ trackId: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { trackId } = await params;
+
+    const enrollment = await prisma.trackEnrollment.findUnique({
+      where: { userId_trackId: { userId: session.user.id, trackId } },
+    });
+
+    if (!enrollment) {
+      return NextResponse.json({ error: "No active enrollment found for this path" }, { status: 404 });
+    }
+
+    if (enrollment.status === "DROPPED") {
+      return NextResponse.json({ error: "Enrollment already forfeited" }, { status: 409 });
+    }
+
+    await prisma.trackEnrollment.update({
+      where: { userId_trackId: { userId: session.user.id, trackId } },
+      data: { status: "DROPPED" },
+    });
+
+    logger.info("student:tracks:forfeit", `User ${session.user.id} forfeited track ${trackId}`);
+
+    return NextResponse.json({ success: true, message: "Career path forfeited successfully" });
+  } catch (error: any) {
+    logger.error("student:tracks:trackId", "DELETE error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
