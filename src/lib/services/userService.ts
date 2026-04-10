@@ -88,7 +88,17 @@ export class UserService {
           },
         },
         enrollments: {
-          include: {
+          select: {
+            id: true,
+            status: true,
+            overallProgress: true,
+            enrolledAt: true,
+            completedAt: true,
+            lastAccessAt: true,
+            totalTimeSpent: true,
+            finalGrade: true,
+            attemptNumber: true,
+            canRetake: true,
             course: {
               select: {
                 id: true,
@@ -96,6 +106,7 @@ export class UserService {
                 shortDescription: true,
                 status: true,
                 difficulty: true,
+                duration: true,
               },
             },
           },
