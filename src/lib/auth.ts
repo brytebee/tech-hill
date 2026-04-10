@@ -276,46 +276,38 @@ export const authOptions: NextAuthOptions = {
         token.firstName = user.firstName;
         token.lastName = user.lastName;
         token.version = user.tokenVersion;
-        token.profileImage = (user as any).profileImage;
       }
 
-      // Handle dynamic session updates from the client (useSession update)
+      // Handle dynamic session updates from the client (useSession().update())
       if (trigger === "update" && session) {
         if (session.firstName) token.firstName = session.firstName;
         if (session.lastName) token.lastName = session.lastName;
-        if (typeof session.profileImage !== "undefined") token.profileImage = session.profileImage;
+        // Force a DB re-fetch on the very next request to guarantee full sync
+        token.lastChecked = 0;
       }
 
       // ⚡️ SECURITY: Single Device Check with 2-Minute Cache
-      // To prevent a DB query on every request, we cache the validation for 2 minutes.
       const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
       const now = Date.now();
 
       if (token.sub && (!token.lastChecked || (now - (token.lastChecked as number)) > CACHE_TTL)) {
         const validationData = await UserService.getUserSessionValidationData(token.sub);
-        
-        // If user deleted or missing
+
         if (!validationData) {
           return { ...token, error: "SessionExpired" };
         }
 
-        // If user logged in elsewhere (token versions do not match)
         if (validationData.tokenVersion !== token.version) {
           return { ...token, error: "SessionExpired" };
         }
 
-        // If user is suspended
         if (validationData.status !== "ACTIVE") {
           return { ...token, error: "SessionExpired" };
         }
 
-        // Sync role, status, and subscription if they changed mid-session
         token.role = validationData.role;
         token.status = validationData.status;
         token.hasActiveSubscription = validationData.hasActiveSubscription;
-        token.profileImage = validationData.profileImage; // Sync profile image changes from DB
-
-        // Update the cache timestamp
         token.lastChecked = now;
       }
 
@@ -323,19 +315,24 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token.error === "SessionExpired") {
-        // Return null or invalid session to force logout on client
         return null as any;
       }
 
-      if (token) {
-        session.user.id = token.sub!;
-        session.user.role = token.role as string;
-        session.user.status = token.status as string;
-        session.user.firstName = token.firstName as string;
-        session.user.lastName = token.lastName as string;
-        session.user.hasActiveSubscription = token.hasActiveSubscription as boolean | undefined;
-        session.user.profileImage = token.profileImage as string | null | undefined;
+      if (token && session.user) {
+        return {
+          ...session,
+          user: {
+            ...session.user,
+            id: token.sub as string,
+            role: token.role as string,
+            status: token.status as string,
+            firstName: token.firstName as string,
+            lastName: token.lastName as string,
+            hasActiveSubscription: token.hasActiveSubscription as boolean | undefined,
+          }
+        };
       }
+
       return session;
     },
   },

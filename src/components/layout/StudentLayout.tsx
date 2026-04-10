@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { NotificationBell } from "@/components/shared/NotificationBell";
+import { ProfileAvatar } from "@/components/shared/profile-avatar";
 
 interface StudentLayoutProps {
   children: ReactNode;
@@ -75,14 +76,17 @@ export function StudentLayout({
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#060a12] text-slate-900 dark:text-slate-100 selection:bg-blue-500/30 transition-colors duration-300">
-      
       {/* Mobile sidebar */}
-      <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? "" : "hidden"}`}>
+      <div
+        className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? "" : "hidden"}`}
+      >
         <div
           className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity ${sidebarOpen ? "opacity-100" : "opacity-0"}`}
           onClick={() => setSidebarOpen(false)}
         />
-        <div className={`fixed inset-y-0 left-0 w-[280px] bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-300 ease-in-out transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div
+          className={`fixed inset-y-0 left-0 w-[280px] bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 shadow-2xl transition-all duration-300 ease-in-out transform ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+        >
           <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-800/60">
             <Link href="/" className="flex items-center gap-2 group">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
@@ -92,7 +96,12 @@ export function StudentLayout({
                 Tech Hill
               </span>
             </Link>
-            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="text-slate-500 dark:text-slate-400">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarOpen(false)}
+              className="text-slate-500 dark:text-slate-400"
+            >
               <X className="h-5 w-5" />
             </Button>
           </div>
@@ -106,12 +115,14 @@ export function StudentLayout({
                     href={item.href}
                     onClick={() => setSidebarOpen(false)}
                     className={`flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all ${
-                      isActive 
-                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400" 
+                      isActive
+                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50 hover:text-slate-900 dark:hover:text-slate-200"
                     }`}
                   >
-                    <item.icon className={`h-5 w-5 mr-3 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"}`} />
+                    <item.icon
+                      className={`h-5 w-5 mr-3 ${isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"}`}
+                    />
                     {item.name}
                   </Link>
                 );
@@ -119,10 +130,16 @@ export function StudentLayout({
             </nav>
             <div className="border-t border-slate-200 dark:border-slate-800 pt-4 pb-2 space-y-2">
               <div className="flex items-center justify-between px-4 py-2">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Theme</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                  Theme
+                </span>
                 <ThemeToggle />
               </div>
-              <Button onClick={() => signOut()} variant="ghost" className="w-full justify-start text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300">
+              <Button
+                onClick={() => signOut()}
+                variant="ghost"
+                className="w-full justify-start text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+              >
                 <LogOut className="h-5 w-5 mr-3" />
                 Sign Out
               </Button>
@@ -156,12 +173,14 @@ export function StudentLayout({
                     key={item.name}
                     href={item.href}
                     className={`flex items-center px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive 
-                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shadow-sm" 
+                      isActive
+                        ? "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 shadow-sm"
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200"
                     }`}
                   >
-                    <item.icon className={`h-5 w-5 mr-3 transition-colors ${isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"}`} />
+                    <item.icon
+                      className={`h-5 w-5 mr-3 transition-colors ${isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-400 dark:text-slate-500"}`}
+                    />
                     {item.name}
                   </Link>
                 );
@@ -173,25 +192,33 @@ export function StudentLayout({
             {/* User info */}
             <div className="flex items-center gap-3 px-2 py-2 mb-3">
               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-slate-800 dark:to-slate-700 flex items-center justify-center border border-slate-200 dark:border-slate-600 shadow-sm overflow-hidden shrink-0">
-                {(session?.user as any)?.profileImage ? (
-                    <img src={(session.user as any).profileImage} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                    <User className="h-5 w-5 text-slate-500 dark:text-slate-400" />
-                )}
+                {/* Avatar */}
+                <ProfileAvatar
+                  fallback={<User className="h-5 w-5 text-slate-500 dark:text-slate-400" />}
+                  imgClassName="w-full h-full object-cover rounded-full"
+                />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
                   {session.user.firstName} {session.user.lastName}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">Student</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  Student
+                </p>
               </div>
             </div>
             {/* Theme toggle row */}
             <div className="flex items-center justify-between px-2 py-2 mb-1 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Theme</span>
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Theme
+              </span>
               <ThemeToggle />
             </div>
-            <Button onClick={() => signOut()} variant="ghost" className="w-full justify-start text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-300">
+            <Button
+              onClick={() => signOut()}
+              variant="ghost"
+              className="w-full justify-start text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-300"
+            >
               <LogOut className="h-4 w-4 mr-3" />
               Sign Out
             </Button>
@@ -201,7 +228,6 @@ export function StudentLayout({
 
       {/* Main content area */}
       <div className="lg:pl-72 flex flex-col min-h-screen">
-        
         {/* Sticky Header — always has a subtle bg so ThemeToggle is never invisible */}
         <header
           className={`sticky top-0 z-40 transition-all duration-300 ${
@@ -212,7 +238,12 @@ export function StudentLayout({
         >
           <div className="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-4 border-r border-slate-200 dark:border-slate-800 pr-4 lg:hidden">
-              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)} className="text-slate-500 dark:text-slate-400">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarOpen(true)}
+                className="text-slate-500 dark:text-slate-400"
+              >
                 <Menu className="h-5 w-5" />
               </Button>
               {scrolled && (
@@ -231,24 +262,23 @@ export function StudentLayout({
             </div>
 
             <div className="flex items-center gap-3 pl-4">
-               <NotificationBell />
-               {/* Mobile-only theme toggle (desktop toggle lives in sidebar footer) */}
-               <div className="lg:hidden">  
-                 <ThemeToggle />
-               </div>
-               
-               <div className="hidden sm:flex items-center gap-2">
-                 <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
-                    {(session?.user as any)?.profileImage ? (
-                        <img src={(session.user as any).profileImage} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : (
-                        <User className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                    )}
-                 </div>
-                 <span className="text-sm font-semibold max-w-[120px] truncate">
-                   {session.user.firstName}
-                 </span>
-               </div>
+              <NotificationBell />
+              {/* Mobile-only theme toggle (desktop toggle lives in sidebar footer) */}
+              <div className="lg:hidden">
+                <ThemeToggle />
+              </div>
+
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 overflow-hidden shrink-0">
+                  <ProfileAvatar
+                    fallback={<User className="h-4 w-4 text-slate-500 dark:text-slate-400" />}
+                    imgClassName="w-full h-full object-cover rounded-full"
+                  />
+                </div>
+                <span className="text-sm font-semibold max-w-[120px] truncate">
+                  {session.user.firstName}
+                </span>
+              </div>
             </div>
           </div>
         </header>
@@ -263,9 +293,7 @@ export function StudentLayout({
             </div>
           )}
           <div className="px-4 sm:px-6 lg:px-8 py-8 w-full">
-            <div className="max-w-7xl mx-auto">
-              {children}
-            </div>
+            <div className="max-w-7xl mx-auto">{children}</div>
           </div>
         </main>
       </div>
