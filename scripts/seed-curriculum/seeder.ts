@@ -220,6 +220,10 @@ async function main() {
                   topicType: topicData.isProject ? "PRACTICE" : "LESSON",
                   passingScore: 80,
                   isRequired: true,
+                  // Gated Further Research — unlocks in UI after quiz pass (≥80%)
+                  furtherReadingLinks: topicData.furtherReading
+                    ? (topicData.furtherReading as unknown as import("@prisma/client").Prisma.InputJsonValue)
+                    : undefined,
                 },
               });
 
