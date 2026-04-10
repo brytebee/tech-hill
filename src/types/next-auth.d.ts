@@ -46,6 +46,7 @@ declare module "next-auth" {
       role: string;
       status: string;
       hasActiveSubscription?: boolean;
+      profileImage?: string | null;
     };
   }
 
@@ -58,6 +59,7 @@ declare module "next-auth" {
     status: string;
     tokenVersion: number;
     hasActiveSubscription?: boolean;
+    profileImage?: string | null;
   }
 }
 
@@ -67,6 +69,7 @@ declare module "next-auth/jwt" {
     status: string;
     firstName: string;
     lastName: string;
-    version: number; // mapped from tokenVersion
+    version: number;
+    userProfileImage?: string | null;
   }
 }

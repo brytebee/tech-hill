@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { CloudinaryUploader } from "@/components/ui/cloudinary-uploader";
 import { User, Phone, MapPin, Calendar, Loader2, Save, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
+import { clearAvatarCache } from "@/components/shared/profile-avatar";
 
 export function ProfileSettingsForm() {
   const { data: session, update } = useSession();
@@ -84,7 +85,9 @@ export function ProfileSettingsForm() {
       });
 
       toast.success("Profile demographics updated successfully");
-      router.refresh();
+      // Bust the module-level avatar cache so the layout fetches the new image
+      clearAvatarCache(session?.user?.id);
+      window.location.reload();
     } catch (error: any) {
       toast.error(error.message || "Failed to update preferences");
     } finally {
@@ -137,8 +140,7 @@ export function ProfileSettingsForm() {
                   </p>
                   <div className="bg-slate-50 dark:bg-slate-900/50 p-2 rounded-xl border border-slate-200 dark:border-slate-800">
                       <CloudinaryUploader 
-                          onSuccess={handleImageSuccess}
-                          folder={`tech-hill/profiles/${session?.user?.id || 'unknown'}`}
+                          onUploadSuccess={handleImageSuccess}
                       />
                   </div>
               </div>
