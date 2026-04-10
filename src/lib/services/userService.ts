@@ -167,6 +167,7 @@ export class UserService {
         role: true,
         status: true,
         password: true,
+        profileImage: true,
       },
     });
   }

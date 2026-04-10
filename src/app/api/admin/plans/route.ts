@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     logger.error("admin:plans:post", "[CREATE_PLAN_ERROR]", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, message: "Validation error", errors: error.errors },
+        { success: false, message: "Validation error", errors: error.issues },
         { status: 400 }
       );
     }
