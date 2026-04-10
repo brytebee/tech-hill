@@ -21,14 +21,14 @@ export async function PUT(
   req: Request,
   { params }: { params: Promise<{ planId: string }> }
 ) {
+  let planId = "";
   try {
-    const { planId } = await params;
+    planId = (await params).planId;
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "ADMIN") {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const { planId } = params;
     const body = await req.json();
     const validatedData = planUpdateSchema.parse(body);
 
@@ -51,7 +51,7 @@ export async function PUT(
     logger.error("admin:plans:put", "[UPDATE_PLAN_ERROR]", { error, planId });
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, message: "Validation error", errors: error.errors },
+        { success: false, message: "Validation error", errors: error.issues },
         { status: 400 }
       );
     }
