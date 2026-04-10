@@ -334,63 +334,236 @@ export default async function UserDetailsPage({
         </div>
 
         {/* Matrix Enrollments (Courses) */}
-        {user.enrollments && user.enrollments.length > 0 && (
-          <Card className="bg-white dark:bg-slate-900/50 dark:backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl overflow-hidden">
-            <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Matrix Linkages</CardTitle>
-                        <CardDescription className="text-slate-500 font-medium">Active educational sequence synchronizations</CardDescription>
-                    </div>
-                    <div className="h-12 w-12 rounded-2xl bg-blue-600/10 flex items-center justify-center text-blue-600">
-                        <BookOpen className="h-6 w-6" />
-                    </div>
+        {user.enrollments && user.enrollments.length > 0 && (() => {
+          const active     = user.enrollments.filter(e => e.status === "ACTIVE");
+          const completed  = user.enrollments.filter(e => e.status === "COMPLETED");
+          const dropped    = user.enrollments.filter(e => e.status === "DROPPED");
+          const onHold     = user.enrollments.filter(e => ["ON_HOLD", "SUSPENDED"].includes(e.status));
+
+          const enrollmentBadge = (status: string) => {
+            const map: Record<string, string> = {
+              ACTIVE:    "bg-blue-500 text-white",
+              COMPLETED: "bg-emerald-500 text-white",
+              DROPPED:   "bg-rose-500 text-white",
+              ON_HOLD:   "bg-amber-500 text-white",
+              SUSPENDED: "bg-slate-500 text-white",
+            };
+            return map[status] || "bg-slate-400 text-white";
+          };
+
+          const fmtMins = (mins: number) => {
+            if (!mins) return "0m";
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            return h > 0 ? `${h}h ${m}m` : `${m}m`;
+          };
+
+          return (
+            <Card className="bg-white dark:bg-slate-900/50 dark:backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-sm rounded-3xl overflow-hidden">
+              <CardHeader className="p-8 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+                      Enrollment Intelligence
+                    </CardTitle>
+                    <CardDescription className="text-slate-500 font-medium">
+                      Complete lifecycle view — active, completed, and dropped courses
+                    </CardDescription>
+                  </div>
+                  {/* Summary stats */}
+                  <div className="flex gap-3 flex-wrap shrink-0">
+                    {[
+                      { label: "Active",    count: active.length,    color: "blue"    },
+                      { label: "Done",      count: completed.length, color: "emerald" },
+                      { label: "Dropped",   count: dropped.length,   color: "rose"    },
+                    ].map(s => (
+                      <div key={s.label} className={`text-center px-3 py-1.5 rounded-xl bg-${s.color}-500/10`}>
+                        <div className={`text-xl font-black text-${s.color}-600 dark:text-${s.color}-400 leading-none`}>{s.count}</div>
+                        <div className={`text-[9px] font-black uppercase tracking-widest text-${s.color}-500 mt-0.5`}>{s.label}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-            </CardHeader>
-            <CardContent className="p-8">
-              <div className="space-y-4">
-                {user.enrollments.map((enrollment) => (
-                  <div
-                    key={enrollment.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 transition-all hover:bg-white dark:hover:bg-slate-900 hover:border-blue-500/30 hover:shadow-xl"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h4 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                            {enrollment.course.title}
-                        </h4>
-                        {enrollment.completedAt && (
-                          <Badge className="bg-emerald-500 text-white font-black text-[8px] uppercase tracking-tighter px-1.5 py-0 border-none">COMPLETE</Badge>
-                        )}
-                      </div>
-                      <p className="text-sm font-medium text-slate-500 line-clamp-1 mb-2">
-                        {enrollment.course.shortDescription}
-                      </p>
-                      <div className="flex items-center gap-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                        <span className="flex items-center gap-1.5 italic">
-                           <Calendar className="h-3 w-3" /> INITIALIZED: {new Date(enrollment.enrolledAt).toLocaleDateString()}
-                        </span>
-                        <Badge variant="outline" className="text-[8px] font-black border-slate-200 dark:border-slate-700">
-                          {enrollment.course.difficulty}
-                        </Badge>
-                      </div>
-                    </div>
-                    <div className="flex flex-row sm:flex-col items-center sm:items-end gap-6 sm:gap-2 mt-4 sm:mt-0 w-full sm:w-auto border-t sm:border-t-0 pt-4 sm:pt-0 border-slate-100 dark:border-slate-800">
-                      <div className="text-2xl font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none">
-                        {enrollment.overallProgress}<span className="text-sm opacity-60">%</span>
-                      </div>
-                      <div className="flex-1 sm:flex-none">
-                          <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-blue-600" style={{ width: `${enrollment.overallProgress}%` }} />
+              </CardHeader>
+              <CardContent className="p-8 space-y-8">
+
+                {/* ACTIVE */}
+                {active.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500"/> In Progress ({active.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {active.map(enrollment => (
+                        <div key={enrollment.id}
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/40 hover:border-blue-500/30 hover:shadow-xl transition-all">
+                          <div className="flex-1 min-w-0">
+                            <h5 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight mb-1 truncate">
+                              {enrollment.course.title}
+                            </h5>
+                            <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest flex-wrap">
+                              <span>Enrolled: {new Date(enrollment.enrolledAt).toLocaleDateString()}</span>
+                              {enrollment.lastAccessAt && (
+                                <span>Last seen: {new Date(enrollment.lastAccessAt).toLocaleDateString()}</span>
+                              )}
+                              <span>Time: {fmtMins(enrollment.totalTimeSpent)}</span>
+                              <Badge variant="outline" className="text-[8px] font-black border-slate-200 dark:border-slate-700">
+                                {enrollment.course.difficulty}
+                              </Badge>
+                            </div>
                           </div>
-                      </div>
+                          <div className="flex flex-row sm:flex-col items-center sm:items-end gap-4 sm:gap-2 mt-4 sm:mt-0 w-full sm:w-auto border-t sm:border-t-0 pt-4 sm:pt-0 border-slate-100 dark:border-slate-800">
+                            <div className="text-2xl font-black text-blue-600 dark:text-blue-400 tabular-nums leading-none">
+                              {enrollment.overallProgress}<span className="text-sm opacity-60">%</span>
+                            </div>
+                            <div className="w-24 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-blue-600 rounded-full transition-all" style={{ width: `${enrollment.overallProgress}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                )}
+
+                {/* COMPLETED */}
+                {completed.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"/> Completed ({completed.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {completed.map(enrollment => (
+                        <div key={enrollment.id}
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 rounded-2xl border border-emerald-200/60 dark:border-emerald-900/30 bg-emerald-50/50 dark:bg-emerald-950/10 hover:shadow-xl transition-all">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h5 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                                {enrollment.course.title}
+                              </h5>
+                              <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-widest flex-wrap">
+                              <span>Completed: {enrollment.completedAt ? new Date(enrollment.completedAt).toLocaleDateString() : "—"}</span>
+                              <span>Time spent: {fmtMins(enrollment.totalTimeSpent)}</span>
+                              {enrollment.finalGrade && <span className="text-emerald-600 dark:text-emerald-400">Score: {enrollment.finalGrade}%</span>}
+                            </div>
+                          </div>
+                          <div className="flex flex-row sm:flex-col items-center sm:items-end gap-4 sm:gap-2 mt-4 sm:mt-0">
+                            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">100<span className="text-sm opacity-60">%</span></div>
+                            <div className="w-24 h-1.5 bg-emerald-100 dark:bg-emerald-900/40 rounded-full overflow-hidden">
+                              <div className="h-full w-full bg-emerald-500 rounded-full" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* DROPPED — rich analytics */}
+                {dropped.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500"/> Unenrolled / Dropped ({dropped.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {dropped.map(enrollment => (
+                        <div key={enrollment.id}
+                          className="p-5 rounded-2xl border border-rose-200/60 dark:border-rose-900/30 bg-rose-50/40 dark:bg-rose-950/10">
+                          {/* Row 1: title + DROPPED badge */}
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <XCircle className="h-4 w-4 text-rose-500 shrink-0" />
+                                <h5 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight truncate">
+                                  {enrollment.course.title}
+                                </h5>
+                              </div>
+                              <p className="text-xs text-slate-500 truncate">{enrollment.course.shortDescription}</p>
+                            </div>
+                            <Badge className="bg-rose-500 text-white font-black text-[9px] uppercase tracking-widest border-none shrink-0">
+                              DROPPED
+                            </Badge>
+                          </div>
+
+                          {/* Row 2: analytics grid */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-rose-100 dark:border-rose-900/20">
+                            <div className="text-center">
+                              <div className="text-xl font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                                {enrollment.overallProgress}%
+                              </div>
+                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Completed</div>
+                              <div className="mt-1.5 w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div className="h-full bg-rose-400 rounded-full" style={{ width: `${enrollment.overallProgress}%` }} />
+                              </div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xl font-black text-slate-900 dark:text-white tabular-nums">
+                                {fmtMins(enrollment.totalTimeSpent)}
+                              </div>
+                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Time Spent</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs font-black text-slate-700 dark:text-slate-300">
+                                {enrollment.lastAccessAt
+                                  ? new Date(enrollment.lastAccessAt).toLocaleDateString()
+                                  : "Never"}
+                              </div>
+                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Last Active</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-xs font-black text-slate-700 dark:text-slate-300">
+                                {new Date(enrollment.enrolledAt).toLocaleDateString()}
+                              </div>
+                              <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Enrolled On</div>
+                            </div>
+                          </div>
+
+                          {/* Drop insight label */}
+                          <p className="text-[10px] font-bold text-slate-400 mt-2 italic">
+                            {enrollment.overallProgress === 0
+                              ? "⚠ Dropped without starting — possibly wrong course or onboarding friction."
+                              : enrollment.overallProgress < 25
+                              ? "⚠ Dropped early (< 25%) — check if Module 1 content needs improvement."
+                              : enrollment.overallProgress < 75
+                              ? "ℹ Dropped midway — learner showed real intent. Consider re-engagement."
+                              : "✓ Dropped near completion (≥ 75%). High value learner — worth reaching out."}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* ON HOLD / SUSPENDED */}
+                {onHold.length > 0 && (
+                  <div>
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"/> On Hold / Suspended ({onHold.length})
+                    </h4>
+                    <div className="space-y-3">
+                      {onHold.map(enrollment => (
+                        <div key={enrollment.id}
+                          className="flex items-center justify-between p-4 rounded-2xl border border-amber-200/60 dark:border-amber-900/30 bg-amber-50/40 dark:bg-amber-950/10">
+                          <div>
+                            <h5 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight mb-1">{enrollment.course.title}</h5>
+                            <span className="text-[10px] font-black text-amber-600 uppercase">{enrollment.status}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xl font-black text-amber-600 tabular-nums">{enrollment.overallProgress}%</div>
+                            <div className="text-[9px] text-slate-400 uppercase">Progress</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {/* Architect Nodes (Created Courses) */}
         {user.createdCourses && user.createdCourses.length > 0 && (
