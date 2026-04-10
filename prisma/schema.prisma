@@ -219,6 +219,7 @@ model Topic {
   topicType   TopicType @default(LESSON)
   videoUrl    String? // For video topics
   attachments String[] // File URLs for resources
+  furtherReadingLinks Json?   // [{title, url, description}] — unlocks after quiz pass
 
   // Assessment Requirements
   passingScore Int     @default(80) // Topic passing percentage
