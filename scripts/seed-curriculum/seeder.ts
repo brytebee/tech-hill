@@ -1,6 +1,6 @@
 import { PrismaClient, DifficultyLevel, QuestionDifficulty } from "@prisma/client";
 import { CURRICULUM, TrackConfig, CourseConfig, ModuleConfig, TopicConfig } from "./curriculum.config";
-import { generateTopicContent, GeneratedTopicData } from "./ollama.client";
+import { generateTopicContent, GeneratedTopicData, generateQuizOnly } from "./ollama.client";
 import { IngestionService } from "./ingestion.service";
 
 const prisma = new PrismaClient();
@@ -30,6 +30,63 @@ function formatContentWithFlags(content: string, flags: string[]): string {
 </div>
   `;
   return flagHtml + "\n\n" + content;
+}
+
+/**
+ * Creates a Quiz + Questions + Options in the DB for a given topicId.
+ * If `preGeneratedQuizData` is provided (new-topic path), it's used directly.
+ * Otherwise (patch path), it calls Ollama Call 2 using the stored lesson content.
+ */
+async function generateAndSaveQuiz(
+  topicId: string,
+  topicTitle: string,
+  lessonContent: string,
+  preGeneratedQuizData?: any
+): Promise<void> {
+  const quizData = preGeneratedQuizData ?? (await generateQuizOnly(topicTitle, lessonContent));
+
+  if (!quizData?.questions?.length) {
+    console.warn(`  ⚠️ No quiz questions returned for "${topicTitle}" — skipping quiz creation.`);
+    return;
+  }
+
+  const quiz = await prisma.quiz.create({
+    data: {
+      topicId,
+      title: `Knowledge Check: ${topicTitle}`,
+      passingScore: quizData.passingScore || 80,
+      isActive: true,
+    },
+  });
+
+  let qIndex = 1;
+  for (const q of quizData.questions) {
+    const question = await prisma.question.create({
+      data: {
+        quizId: quiz.id,
+        questionText: q.text,
+        explanation: q.explanation,
+        orderIndex: qIndex,
+        questionType: "MULTIPLE_CHOICE",
+        difficulty: (q.difficulty?.toUpperCase() as QuestionDifficulty) || "MEDIUM",
+        points: 10,
+      },
+    });
+
+    let oIndex = 1;
+    for (const opt of q.options) {
+      await prisma.option.create({
+        data: {
+          questionId: question.id,
+          text: opt.text,
+          isCorrect: opt.isCorrect,
+          orderIndex: oIndex,
+        },
+      });
+      oIndex++;
+    }
+    qIndex++;
+  }
 }
 
 async function main() {
@@ -152,11 +209,22 @@ async function main() {
         moduleIds.length > 0
           ? await prisma.topic.findMany({
               where: { moduleId: { in: moduleIds } },
-              select: { slug: true, moduleId: true },
+              select: {
+                id: true,
+                slug: true,
+                moduleId: true,
+                content: true,
+                _count: { select: { quizzes: true } },
+              },
             })
           : [];
-      // Build a set of "moduleId::slug" for O(1) lookups
-      const topicLookup = new Set(existingTopics.map((t) => `${t.moduleId}::${t.slug}`));
+      // Build a map of "moduleId::slug" → { topicId, hasQuiz, content } for O(1) lookups + quiz patching
+      const topicLookup = new Map(
+        existingTopics.map((t) => [
+          `${t.moduleId}::${t.slug}`,
+          { topicId: t.id, hasQuiz: t._count.quizzes > 0, content: t.content },
+        ])
+      );
 
       // ── Module Loop ───────────────────────────────────────────────────────
       let moduleOrder = 1;
@@ -184,8 +252,26 @@ async function main() {
           const topicSlug = slugify(`${courseSlug}-${modData.title}-${topicData.title}`);
           const lookupKey = `${modId}::${topicSlug}`;
 
-          if (topicLookup.has(lookupKey)) {
-            console.log(`  ⏩ Skipping existing Topic: "${topicData.title}"`);
+          const existingEntry = topicLookup.get(lookupKey);
+
+          if (existingEntry && existingEntry.hasQuiz) {
+            // Topic exists and already has a quiz — fully skip
+            console.log(`  ⏩ Skipping (exists + quiz present): "${topicData.title}"`);
+          } else if (existingEntry && !existingEntry.hasQuiz) {
+            // Topic exists but was seeded without a quiz — patch it
+            console.log(`  🩹 Patching missing quiz for: "${topicData.title}"...`);
+            try {
+              await generateAndSaveQuiz(
+                existingEntry.topicId,
+                topicData.title,
+                existingEntry.content
+              );
+              console.log(`  ✅ Quiz patched: "${topicData.title}"`);
+              // Update in-memory map so subsequent iterations reflect the patch
+              existingEntry.hasQuiz = true;
+            } catch (err: any) {
+              console.error(`  ❌ Failed to patch quiz for "${topicData.title}": ${err.message}`);
+            }
           } else {
             console.log(`  ➤ Calling Ollama for Topic: "${topicData.title}"...`);
 
@@ -227,52 +313,18 @@ async function main() {
                 },
               });
 
-              // Mark as seen in our in-memory set for idempotency within the same run
-              topicLookup.add(lookupKey);
+              // Mark as seen in our in-memory map for idempotency within the same run
+              topicLookup.set(lookupKey, { topicId: topic.id, hasQuiz: false, content: formattedContent });
 
-              // 2. Create Quiz
+              // 2. Create Quiz & Questions
               if (
                 generatedData.quizData?.questions &&
                 generatedData.quizData.questions.length > 0
               ) {
-                const quiz = await prisma.quiz.create({
-                  data: {
-                    topicId: topic.id,
-                    title: `Knowledge Check: ${topicData.title}`,
-                    passingScore: generatedData.quizData.passingScore || 80,
-                    isActive: true,
-                  },
-                });
-
-                // 3. Create Questions & Options
-                let qIndex = 1;
-                for (const q of generatedData.quizData.questions) {
-                  const question = await prisma.question.create({
-                    data: {
-                      quizId: quiz.id,
-                      questionText: q.text,
-                      explanation: q.explanation,
-                      orderIndex: qIndex,
-                      questionType: "MULTIPLE_CHOICE",
-                      difficulty: (q.difficulty?.toUpperCase() as QuestionDifficulty) || "MEDIUM",
-                      points: 10,
-                    },
-                  });
-
-                  let oIndex = 1;
-                  for (const opt of q.options) {
-                    await prisma.option.create({
-                      data: {
-                        questionId: question.id,
-                        text: opt.text,
-                        isCorrect: opt.isCorrect,
-                        orderIndex: oIndex,
-                      },
-                    });
-                    oIndex++;
-                  }
-                  qIndex++;
-                }
+                await generateAndSaveQuiz(topic.id, topicData.title, formattedContent, generatedData.quizData);
+                // Mark as having quiz in our in-memory map
+                const entry = topicLookup.get(lookupKey);
+                if (entry) entry.hasQuiz = true;
               }
 
               console.log(`  ✅ Inserted Topic & Quiz: "${topicData.title}"`);

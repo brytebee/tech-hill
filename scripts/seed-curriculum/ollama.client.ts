@@ -251,3 +251,60 @@ If any score dimension is < 8, provide the full revised lesson in "lessonRevised
     flags: finalFlags,
   };
 }
+
+/**
+ * Standalone quiz generator — runs only Ollama Call 2.
+ * Used when a topic already exists in the DB but has no quiz (patch mode).
+ * Accepts the existing lesson content as context so no lesson is regenerated.
+ */
+export async function generateQuizOnly(
+  topicTitle: string,
+  lessonContent: string
+): Promise<any> {
+  console.log(`[Ollama] 🔄 CALL 2 (patch): Generating Quiz for "${topicTitle}"...`);
+
+  const systemQuiz =
+    `You are a distinguished senior course developer and assessment architect with ` +
+    `decades of experience designing award-winning standardized tests and formative assessments.\n` +
+    `You return ONLY valid, parseable JSON. No prose. No markdown fences like \`\`\`json. Pure JSON only.`;
+
+  const promptQuiz = `Based on the lesson content below, generate exactly 3 multiple-choice quiz questions 
+that test conceptual understanding, NOT memorization.
+
+LESSON CONTENT:
+${lessonContent}
+
+Return this exact JSON structure:
+{
+  "passingScore": 80,
+  "questions": [{
+    "text": "...",
+    "explanation": "Why this answer is correct and the others are not...",
+    "difficulty": "EASY",
+    "options": [
+      { "text": "...", "isCorrect": false },
+      { "text": "...", "isCorrect": true },
+      { "text": "...", "isCorrect": false },
+      { "text": "...", "isCorrect": false }
+    ]
+  }]
+}`;
+
+  const quizRawText = await callOllama(systemQuiz, promptQuiz, {
+    temperature: 0.3,
+    numCtx: 4096,
+    formatJSON: true,
+  });
+
+  try {
+    const quizJSONStr = extractJSON(quizRawText);
+    const quizData = JSON.parse(quizJSONStr);
+    if (!quizData.questions || !Array.isArray(quizData.questions)) {
+      throw new Error("Invalid format: `questions` array is missing.");
+    }
+    return quizData;
+  } catch (err: any) {
+    console.error(`[Ollama] ❌ Failed to parse quiz JSON for "${topicTitle}":`, err.message);
+    throw new Error(`Ollama returned invalid JSON for quiz: ${err.message}`);
+  }
+}
