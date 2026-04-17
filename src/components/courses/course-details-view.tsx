@@ -808,6 +808,111 @@ export function CourseDetailsView({
             </Card>
           </div>
 
+          {/* Earning Potential Hero Card */}
+          {course.earningPotential && (() => {
+            const ep = typeof course.earningPotential === "string" ? JSON.parse(course.earningPotential) : course.earningPotential;
+            return (
+              <div className="mt-12 animate-fade-in">
+                <div className="flex items-center gap-2 mb-4">
+                  <TrendingUp className="h-5 w-5 text-emerald-500" />
+                  <span className="text-sm font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest leading-none">
+                    Your Earning Potential
+                  </span>
+                </div>
+                
+                <Card className="bg-gradient-to-br from-emerald-50 to-teal-50/50 dark:from-emerald-950/20 dark:to-teal-950/10 border-emerald-200/50 dark:border-emerald-800/30 shadow-xl shadow-emerald-500/5 rounded-[2rem] overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="grid lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-emerald-200/50 dark:divide-emerald-900/50">
+                      
+                      {/* Left: Salary Breakdown */}
+                      <div className="p-8 lg:col-span-2 space-y-6">
+                        <div className="grid sm:grid-cols-2 gap-6">
+                          
+                          {ep.remoteSalaryUSD && (
+                            <div className="bg-white/60 dark:bg-slate-900/40 p-5 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/30">
+                              <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">
+                                Remote Global Role
+                              </h4>
+                              <div className="text-2xl font-black text-slate-900 dark:text-white mb-1">
+                                ${ep.remoteSalaryUSD.min.toLocaleString()} - ${ep.remoteSalaryUSD.max.toLocaleString()}<span className="text-sm font-bold text-slate-400">/mo</span>
+                              </div>
+                              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                {ep.remoteSalaryUSD.context}
+                              </p>
+                            </div>
+                          )}
+
+                          {ep.freelanceRateUSD && (
+                            <div className="bg-white/60 dark:bg-slate-900/40 p-5 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/30">
+                              <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">
+                                Freelance ({ep.freelanceRateUSD.platform})
+                              </h4>
+                              <div className="text-2xl font-black text-slate-900 dark:text-white mb-1">
+                                ${ep.freelanceRateUSD.min} - ${ep.freelanceRateUSD.max}<span className="text-sm font-bold text-slate-400">/hr</span>
+                              </div>
+                              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                Global contracting rate
+                              </p>
+                            </div>
+                          )}
+
+                          {ep.localSalaryNGN && (
+                            <div className="bg-white/60 dark:bg-slate-900/40 p-5 rounded-2xl border border-emerald-100/50 dark:border-emerald-800/30 sm:col-span-2">
+                              <h4 className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-1">
+                                Local Tech Hub (Nigeria)
+                              </h4>
+                              <div className="text-2xl font-black text-slate-900 dark:text-white mb-1">
+                                ₦{ep.localSalaryNGN.min.toLocaleString()} - ₦{ep.localSalaryNGN.max.toLocaleString()}<span className="text-sm font-bold text-slate-400">/mo</span>
+                              </div>
+                              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                {ep.localSalaryNGN.context}
+                              </p>
+                            </div>
+                          )}
+
+                        </div>
+                      </div>
+
+                      {/* Right: Real Story */}
+                      <div className="p-8 bg-emerald-600 dark:bg-emerald-900 text-white flex flex-col justify-center relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                          <TrendingUp className="h-32 w-32" />
+                        </div>
+                        {ep.realStory && (
+                          <div className="relative z-10">
+                            <div className="text-xs font-black text-emerald-200 uppercase tracking-widest mb-4 flex items-center gap-2">
+                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-300 animate-pulse" />
+                              Real Learner Win
+                            </div>
+                            <blockquote className="text-lg font-medium leading-relaxed italic mb-6">
+                              "{ep.realStory.quote}"
+                            </blockquote>
+                            <div>
+                              <div className="font-bold">{ep.realStory.name}</div>
+                              <div className="text-xs text-emerald-200/80">{ep.realStory.location}</div>
+                            </div>
+                          </div>
+                        )}
+                        {ep.timeToFirstGigWeeks && (
+                          <div className="mt-auto pt-6 border-t border-emerald-500/50 relative z-10">
+                            <div className="text-[10px] font-black text-emerald-200 uppercase tracking-widest mb-1">
+                              Target Trajectory
+                            </div>
+                            <div className="font-bold flex items-center gap-2">
+                              <Clock className="w-4 h-4" />
+                              {ep.timeToFirstGigWeeks} weeks to first paid gig
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
           {/* Course Matrix */}
           {renderModulesSection()}
         </div>

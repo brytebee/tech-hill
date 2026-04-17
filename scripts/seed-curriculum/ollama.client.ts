@@ -191,13 +191,10 @@ Return this exact JSON structure:
     `- EFFICIENCY: Is the content appropriately concise without losing depth?\n` +
     `You return ONLY valid, parseable JSON. No prose. No markdown fences.`;
 
-  // Send only the first 500 chars of the lesson to the review stage to conserve context
-  const lessonSummary = lessonContent.slice(0, 500) + (lessonContent.length > 500 ? "\n[...truncated for review scoring]" : "");
+  const promptReview = `Review the following lesson and its quiz questions. 
 
-  const promptReview = `Review the following lesson excerpt and its quiz questions. 
-
-LESSON EXCERPT:
-${lessonSummary}
+LESSON:
+${lessonContent}
 
 QUIZ:
 ${JSON.stringify(quizData, null, 2)}
@@ -209,7 +206,7 @@ Return a JSON object only:
   "quizRevised": null,
   "flags": ["list of any factual concerns or items needing human review due to date/knowledge limits"]
 }
-If any score dimension is < 8, provide the full revised lesson in "lessonRevised". Otherwise set it to null.`;
+If any score dimension is < 8, provide the full revised lesson (as a string) in "lessonRevised". Otherwise set it to null. Ensure lessonRevised is a direct string, NOT an object.`;
 
   const reviewRawText = await callOllama(systemReview, promptReview, {
     temperature: 0.3, // Review: deterministic scoring
@@ -228,8 +225,13 @@ If any score dimension is < 8, provide the full revised lesson in "lessonRevised
       (reviewData.score.elegance + reviewData.score.effectiveness + reviewData.score.efficiency) / 3;
 
     if (avgScore < 8 && reviewData.lessonRevised) {
-      finalLessonContent = reviewData.lessonRevised;
-      console.log(`[Ollama] ✨ Replaced lesson with revised version (avg score: ${avgScore.toFixed(1)})`);
+      if (typeof reviewData.lessonRevised === 'string') {
+        finalLessonContent = reviewData.lessonRevised;
+        console.log(`[Ollama] ✨ Replaced lesson with revised version (avg score: ${avgScore.toFixed(1)})`);
+      } else if (typeof reviewData.lessonRevised === 'object' && reviewData.lessonRevised.text) {
+        finalLessonContent = reviewData.lessonRevised.text;
+        console.log(`[Ollama] ✨ Replaced lesson with revised version (extracted from object)`);
+      }
     }
 
     if (reviewData.quizRevised) {

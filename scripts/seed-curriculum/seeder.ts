@@ -18,6 +18,60 @@ function slugify(text: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
+/**
+ * Seeder-local evolution hook.
+ * Called when a NEW REQUIRED topic is inserted into an existing course.
+ * Re-opens any COMPLETED enrollments and notifies affected students.
+ */
+async function reopenCompletedEnrollments(
+  courseId: string,
+  moduleId: string,
+  topicTitle: string,
+  courseTitle: string
+) {
+  const completed = await prisma.enrollment.findMany({
+    where: { courseId, status: "COMPLETED" },
+  });
+  if (completed.length === 0) return;
+
+  for (const enrollment of completed) {
+    const userId = enrollment.userId;
+
+    await prisma.enrollment.update({
+      where: { id: enrollment.id },
+      data: { status: "ACTIVE", completedAt: null, overallProgress: 95 },
+    });
+
+    // Revert the affected module from COMPLETED → IN_PROGRESS
+    const mp = await prisma.moduleProgress.findUnique({
+      where: { userId_moduleId: { userId, moduleId } },
+    });
+    if (mp && mp.status === "COMPLETED") {
+      await prisma.moduleProgress.update({
+        where: { id: mp.id },
+        data: { status: "IN_PROGRESS", completedAt: null, progressPercentage: 90 },
+      });
+    }
+
+    // Notify the student
+    try {
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: "COURSE_UPDATE",
+          title: `📚 New lesson added to "${courseTitle}"`,
+          message: `We've expanded "${courseTitle}" with new required content: "${topicTitle}". Keep growing! 🚀`,
+          linkUrl: `/student/courses/${courseId}`,
+        },
+      });
+    } catch (_) {}
+  }
+
+  console.log(
+    `  🔔 Reopened ${completed.length} completed enrollment(s) for "${courseTitle}" (new required topic added)`
+  );
+}
+
 function formatContentWithFlags(content: string, flags: string[]): string {
   if (!flags || flags.length === 0) return content;
 
@@ -179,6 +233,7 @@ async function main() {
             price: courseData.price ?? 0,
             tags: courseData.tags ?? [],
             learningOutcomes: courseData.learningOutcomes ?? [],
+            earningPotential: courseData.earningPotential ? (courseData.earningPotential as any) : undefined,
             status: "DRAFT",
             creatorId,
             requireSequentialCompletion: true,
@@ -187,13 +242,30 @@ async function main() {
         console.log(`  ✅ Course created: "${courseTitle}"`);
       } else {
         console.log(`\n📚 SYNCING EXISTING COURSE: "${courseTitle}"`);
+        if (courseData.earningPotential) {
+          await prisma.course.update({
+            where: { id: course.id },
+            data: { earningPotential: courseData.earningPotential as any },
+          });
+        }
       }
 
-      // ── FIX: Always link course to track (upsert to avoid duplicates) ─────
+      // ── FIX: Always link course to track and handle unique constraint collisions ─────
+      // If another course currently holds this order in the track, move it out of the way
+      const conflict = await prisma.trackCourse.findUnique({
+        where: { trackId_order: { trackId: track.id, order: courseOrder } },
+      });
+      if (conflict && conflict.courseId !== course.id) {
+        await prisma.trackCourse.update({
+          where: { id: conflict.id },
+          data: { order: -(1000 + Math.floor(Math.random() * 1000000)) },
+        });
+      }
+
       await prisma.trackCourse.upsert({
         where: { trackId_courseId: { trackId: track.id, courseId: course.id } },
         create: { trackId: track.id, courseId: course.id, order: courseOrder },
-        update: { order: courseOrder }, // Keep order in sync
+        update: { order: courseOrder }, // Now safe to update because the slot is guaranteed free
       });
 
       // ── FIX: Bulk preload modules + topics to eliminate N+1 queries ───────
@@ -312,6 +384,9 @@ async function main() {
                     : undefined,
                 },
               });
+
+              // Option 2+4: Re-open any COMPLETED enrollments since we just added a required topic
+              await reopenCompletedEnrollments(course.id, modId, topicData.title, courseTitle);
 
               // Mark as seen in our in-memory map for idempotency within the same run
               topicLookup.set(lookupKey, { topicId: topic.id, hasQuiz: false, content: formattedContent });

@@ -110,6 +110,13 @@ model User {
   // Notifications
   notifications Notification[]
 
+  // Gamification & Identity
+  xp               Int         @default(0)
+  streakDays       Int         @default(0)
+  lastActivityDate DateTime?   // To track daily logins/activity
+  badges           UserBadge[]
+
+  @@index([xp(sort: Desc)])
   @@map("users")
 }
 
@@ -142,6 +149,7 @@ model Course {
   // Content
   syllabus         String?  @db.Text
   learningOutcomes String[]
+  earningPotential Json?    // { freelanceRateUSD, localSalaryNGN, remoteSalaryUSD, timeToFirstGigWeeks, realStory }
 
   // Assessment Requirements
   passingScore                Int     @default(80) // Overall course passing percentage
@@ -996,6 +1004,45 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@map("notifications")
+}
+
+// --------------------------------------
+// GAMIFICATION: BADGES
+// --------------------------------------
+
+enum BadgeCategory {
+  ACHIEVEMENT
+  MILESTONE
+  SKILL
+  SPECIAL
+}
+
+model IdentityBadge {
+  id          String        @id @default(cuid())
+  title       String        @unique
+  description String        @db.Text
+  icon        String        // e.g., "Flame", "Zap", "Award" (Lucide icon name mapped on frontend)
+  category    BadgeCategory @default(ACHIEVEMENT)
+  xpThreshold Int?          // If set, automatically awarded when XP reaches this
+  createdAt   DateTime      @default(now())
+
+  users       UserBadge[]
+
+  @@map("identity_badges")
+}
+
+model UserBadge {
+  id            String        @id @default(cuid())
+  userId        String
+  badgeId       String
+  earnedAt      DateTime      @default(now())
+  
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge         IdentityBadge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId]) // A user can only earn a specific badge once
+  @@index([userId])
+  @@map("user_badges")
 }
 
 // --------------------------------------

@@ -1,6 +1,7 @@
 // lib/services/userService.ts
 import { prisma } from "@/lib/db";
 import { UserRole, UserStatus, Prisma } from "@prisma/client";
+import { GamificationService } from "./gamificationService";
 import bcrypt from "bcryptjs";
 
 export interface CreateUserData {
@@ -265,7 +266,7 @@ export class UserService {
   // Update last login
   // Update last login and increment token version (invalidating other sessions)
   static async updateLastLogin(id: string) {
-    return await prisma.user.update({
+    const result = await prisma.user.update({
       where: { id },
       data: {
         lastLoginAt: new Date(),
@@ -273,6 +274,11 @@ export class UserService {
       },
       select: { tokenVersion: true }, // return new version
     });
+
+    // Gamification Hook: Update streak on login
+    await GamificationService.updateDailyStreak(id);
+
+    return result;
   }
 
   // Get user session validation data (token version, status, role, active subscriptions)
