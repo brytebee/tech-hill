@@ -220,16 +220,28 @@ export default async function StudentDashboard() {
                   {enrollments.slice(0, 3).map((enrollment: any) => (
                     <div
                       key={enrollment.id}
-                      className="group p-5 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/30 transition-all hover:bg-blue-50/50 dark:hover:bg-slate-800/50 hover:border-blue-200 dark:hover:border-slate-700 hover:shadow-sm"
+                      className="group p-4 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/30 transition-all hover:bg-blue-50/50 dark:hover:bg-slate-800/50 hover:border-blue-200 dark:hover:border-slate-700 hover:shadow-sm"
                     >
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1 mr-3">
-                          <h4 className="font-black text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors leading-tight text-sm">
-                            {enrollment.course.title}
-                          </h4>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
-                            {enrollment.overallProgress}% MASTERY ACQUIRED
-                          </span>
+                      <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-3 flex-1 mr-3">
+                          {/* Course Thumbnail */}
+                          <div className="h-12 w-12 rounded-xl overflow-hidden shrink-0 bg-slate-200 dark:bg-slate-700">
+                            {enrollment.course.thumbnail ? (
+                              <img src={enrollment.course.thumbnail} alt={enrollment.course.title} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+                                <BookOpen className="h-5 w-5 text-white/50" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-black text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors leading-tight text-sm">
+                              {enrollment.course.title}
+                            </h4>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">
+                              {enrollment.overallProgress}% MASTERY ACQUIRED
+                            </span>
+                          </div>
                         </div>
                         <Link href={`/student/courses/${enrollment.course.id}`}>
                           <Button
@@ -308,19 +320,33 @@ export default async function StudentDashboard() {
                   return (
                     <div
                       key={course.id}
-                      className="group p-5 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/30 transition-all hover:bg-blue-50/50 dark:hover:bg-slate-800/50 hover:border-blue-200 dark:hover:border-slate-700 hover:shadow-sm"
+                      className="group p-4 border border-slate-100 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-800/30 transition-all hover:bg-blue-50/50 dark:hover:bg-slate-800/50 hover:border-blue-200 dark:hover:border-slate-700 hover:shadow-sm"
                     >
-                      <div className="flex justify-between items-start mb-2">
-                        <h4 className="font-black text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors leading-tight line-clamp-1 text-sm flex-1 mr-3">
-                          {course.title}
-                        </h4>
-                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-200 dark:border-blue-500/20 italic shrink-0">
-                          ₦{Number(course.price).toLocaleString()}
-                        </span>
+                      <div className="flex items-start gap-3 mb-3">
+                        {/* Course Thumbnail */}
+                        <div className="h-12 w-12 rounded-xl overflow-hidden shrink-0 bg-slate-200 dark:bg-slate-700">
+                          {course.thumbnail ? (
+                            <img src={course.thumbnail} alt={course.title} className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="h-full w-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+                              <BookOpen className="h-5 w-5 text-white/50" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start gap-2 mb-1">
+                            <h4 className="font-black text-slate-900 dark:text-white group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors leading-tight line-clamp-1 text-sm">
+                              {course.title}
+                            </h4>
+                            <span className="text-[10px] font-black text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded-lg border border-blue-200 dark:border-blue-500/20 italic shrink-0">
+                              ₦{Number(course.price).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed line-clamp-2">
+                            {course.shortDescription || course.description}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 font-medium leading-relaxed line-clamp-2">
-                        {course.shortDescription || course.description}
-                      </p>
                       <div className="flex justify-between items-center">
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                           <Clock className="w-3 h-3" />{" "}

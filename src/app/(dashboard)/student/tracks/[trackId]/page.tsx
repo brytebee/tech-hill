@@ -137,14 +137,31 @@ export default function StudentTrackLearningPage() {
                         return (
                             <Card key={tc.course.id} className={`border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden transition-all duration-300 ${isLocked ? 'opacity-60 grayscale' : 'hover:shadow-xl hover:translate-x-2'}`}>
                                 <CardContent className="p-0 flex flex-col md:flex-row items-center">
-                                    <div className={`p-8 flex items-center justify-center ${isCompleted ? 'bg-emerald-50 dark:bg-emerald-950/20' : isCurrent ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-slate-50 dark:bg-slate-900'}`}>
-                                        {isCompleted ? (
-                                            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
-                                        ) : isLocked ? (
-                                            <Circle className="h-10 w-10 text-slate-300" />
+                                    {/* Course thumbnail column */}
+                                    <div className={`relative w-full md:w-36 md:h-full shrink-0 overflow-hidden ${isCompleted ? 'bg-emerald-50 dark:bg-emerald-950/20' : isCurrent ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-slate-50 dark:bg-slate-900'}`} style={{minHeight: '6rem'}}>
+                                        {tc.course.thumbnail ? (
+                                            <img src={tc.course.thumbnail} alt={tc.course.title} className="w-full h-full object-cover opacity-90" style={{minHeight: '6rem'}} />
                                         ) : (
-                                            <PlayCircle className="h-10 w-10 text-blue-500 animate-pulse" />
-                                        ) }
+                                            <div className="w-full h-full flex items-center justify-center" style={{minHeight: '6rem'}}>
+                                                {isCompleted ? (
+                                                    <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                                                ) : isLocked ? (
+                                                    <Circle className="h-10 w-10 text-slate-300" />
+                                                ) : (
+                                                    <PlayCircle className="h-10 w-10 text-blue-500 animate-pulse" />
+                                                )}
+                                            </div>
+                                        )}
+                                        {/* Status icon overlay */}
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                            {isCompleted ? (
+                                                <CheckCircle2 className="h-8 w-8 text-emerald-400 drop-shadow-lg" />
+                                            ) : isLocked ? (
+                                                <Circle className="h-8 w-8 text-slate-300 drop-shadow-lg" />
+                                            ) : (
+                                                <PlayCircle className="h-8 w-8 text-blue-400 animate-pulse drop-shadow-lg" />
+                                            )}
+                                        </div>
                                     </div>
                                     <div className="p-8 flex-1">
                                         <div className="flex items-center gap-3 mb-1">

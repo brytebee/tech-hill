@@ -17,7 +17,15 @@ export async function GET(request: NextRequest) {
 
     const tracks = await prisma.track.findMany({
       where: { isPublished: true },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        slug: true,
+        thumbnail: true,
+        price: true,
+        isPublished: true,
+        createdAt: true,
         courses: {
           include: {
             course: {

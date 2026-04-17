@@ -189,30 +189,40 @@ function getDifficultyBadge(difficulty: string) {
 function CourseCard({ course, userId, hasSubscription }: { course: any; userId: string; hasSubscription: boolean }) {
   return (
     <Card className="group relative flex flex-col bg-white dark:bg-slate-900/50 dark:backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none hover:shadow-2xl hover:border-blue-500/30 transition-all duration-500 rounded-3xl overflow-hidden">
-      {/* Decorative Gradient Background */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-blue-50 dark:bg-blue-500/10 rounded-full blur-3xl -mr-12 -mt-12 group-hover:bg-blue-100 dark:group-hover:bg-blue-500/20 transition-all duration-500" />
-      
-      <CardHeader className="pb-4 relative z-10">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex gap-2">
-            {getDifficultyBadge(course.difficulty)}
-            {course.activeFlashSale && (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-orange-500 text-white font-black text-[10px] uppercase tracking-widest animate-pulse shadow-lg shadow-orange-500/20">
-                    <Zap className="h-3 w-3 fill-current" /> SALE -{course.activeFlashSale.discountPercentage}%
-                </div>
-            )}
-          </div>
-          {course.isEnrolled ? (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/30 font-black text-[10px] uppercase tracking-widest">
-                <UserCheck className="h-3 w-3" /> ENROLLED
-            </div>
+      {/* Premium Thumbnail Hero */}
+      <Link href={`/student/courses/${course.id}`} className="block">
+        <div className="relative w-full aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800">
+          {course.thumbnail ? (
+            <img
+              src={course.thumbnail}
+              alt={course.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+            />
           ) : (
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-black text-[10px] uppercase tracking-widest">
-                <Activity className="h-3 w-3" /> AVAILABLE
+            <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+              <BookOpen className="h-12 w-12 text-white/30" />
             </div>
           )}
+          {/* Overlay badges on image */}
+          <div className="absolute top-3 left-3 flex gap-2">
+            {getDifficultyBadge(course.difficulty)}
+            {course.activeFlashSale && (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-500 text-white font-black text-[10px] uppercase tracking-widest animate-pulse shadow-lg">
+                <Zap className="h-3 w-3 fill-current" /> -{course.activeFlashSale.discountPercentage}%
+              </div>
+            )}
+          </div>
+          <div className="absolute top-3 right-3">
+            {course.isEnrolled ? (
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-600/90 backdrop-blur-sm text-white font-black text-[10px] uppercase tracking-widest">
+                <UserCheck className="h-3 w-3" /> ENROLLED
+              </div>
+            ) : null}
+          </div>
         </div>
-        
+      </Link>
+
+      <CardHeader className="pb-4 relative z-10">
         <Link href={`/student/courses/${course.id}`}>
           <CardTitle className="text-xl font-black text-slate-900 dark:text-white line-clamp-2 leading-tight group-hover:text-blue-600 transition-colors cursor-pointer">
             {course.title}

@@ -110,27 +110,41 @@ export default async function StudentProgressPage() {
               return (
                 <Link key={enrollment.id} href={`/student/courses/${enrollment.course.id}`}>
                   <Card className="border-slate-200 dark:border-slate-800 hover:border-blue-500/40 hover:shadow-lg transition-all cursor-pointer group">
-                    <CardContent className="py-5 px-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-black text-slate-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
-                              {enrollment.course.title}
-                            </h3>
-                            {enrollment.status === "COMPLETED" && (
-                              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 text-[10px] font-black shrink-0">
-                                COMPLETED
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
-                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{enrollment.course.duration}h</span>
-                            <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3" />{completedCount}/{allTopicIds.length} topics</span>
-                          </div>
-                          <Progress value={liveProgress} className="h-2" />
+                    <CardContent className="py-4 px-5">
+                      <div className="flex items-center gap-4">
+                        {/* Course Thumbnail */}
+                        <div className="h-14 w-14 rounded-xl overflow-hidden shrink-0 bg-slate-200 dark:bg-slate-700">
+                          {enrollment.course.thumbnail ? (
+                            <img src={enrollment.course.thumbnail} alt={enrollment.course.title} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <div className="h-full w-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+                              <BookOpen className="h-6 w-6 text-white/50" />
+                            </div>
+                          )}
                         </div>
-                        <div className="shrink-0 text-right">
-                          <span className="text-2xl font-black text-slate-900 dark:text-white">{liveProgress}<span className="text-sm text-slate-400">%</span></span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-black text-slate-900 dark:text-white truncate group-hover:text-blue-600 transition-colors">
+                                  {enrollment.course.title}
+                                </h3>
+                                {enrollment.status === "COMPLETED" && (
+                                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 text-[10px] font-black shrink-0">
+                                    COMPLETED
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
+                                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{enrollment.course.duration}h</span>
+                                <span className="flex items-center gap-1"><CheckCircle className="h-3 w-3" />{completedCount}/{allTopicIds.length} topics</span>
+                              </div>
+                              <Progress value={liveProgress} className="h-2" />
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <span className="text-2xl font-black text-slate-900 dark:text-white">{liveProgress}<span className="text-sm text-slate-400">%</span></span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>

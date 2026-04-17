@@ -569,12 +569,25 @@ export function CourseDetailsView({
 
   return (
     <div className="space-y-10 animate-fade-in pb-20">
-      {/* Dynamic Header Section */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 border border-slate-800 p-8 lg:p-12 shadow-2xl group transition-all duration-500 hover:shadow-blue-500/10">
+      {/* Dynamic Header Section — thumbnail background with glassmorphism overlay */}
+      <div className="relative overflow-hidden rounded-[2.5rem] border border-slate-800 shadow-2xl group transition-all duration-500 hover:shadow-blue-500/10 min-h-[280px]">
+        {/* Background thumbnail */}
+        {course.thumbnail ? (
+          <img
+            src={course.thumbnail}
+            alt={course.title}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-700 to-indigo-900" />
+        )}
+        {/* Dark overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/30 backdrop-blur-[1px]" />
+        {/* Decorative icon */}
         <div className="absolute top-0 right-0 p-12 opacity-5 pointer-events-none group-hover:opacity-10 transition-opacity">
-          <Sparkles className="h-64 w-64 text-blue-400" />
+          <Sparkles className="h-64 w-64 text-white" />
         </div>
-        <div className="relative z-10">
+        <div className="relative z-10 p-8 lg:p-12">
           <div className="flex flex-wrap items-center gap-3 mb-6">
             {getStatusBadge(course.status)}
             {getDifficultyBadge(course.difficulty)}
@@ -593,7 +606,7 @@ export function CourseDetailsView({
           <h1 className="text-4xl lg:text-6xl font-black text-white tracking-tight leading-tighter mb-4 uppercase max-w-4xl">
             {course.title}
           </h1>
-          <p className="text-slate-400 text-lg lg:text-xl font-medium max-w-3xl leading-relaxed mb-8">
+          <p className="text-slate-300 text-lg lg:text-xl font-medium max-w-3xl leading-relaxed mb-8">
             {course.shortDescription || course.description}
           </p>
 

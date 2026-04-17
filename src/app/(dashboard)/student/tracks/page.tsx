@@ -15,6 +15,7 @@ interface Track {
   title: string;
   description: string;
   slug: string;
+  thumbnail?: string;
   courses: {
     course: {
       id: string;
@@ -91,8 +92,32 @@ export default function StudentTracksPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {tracks.map((track) => (
-              <Card key={track.id} className="border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 group flex flex-col">
-                <div className="h-3 bg-gradient-to-r from-blue-600 to-indigo-600 w-full" />
+          <Card key={track.id} className="border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 group flex flex-col">
+                {/* Thumbnail Hero */}
+                <div className="relative w-full aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                  {(track as any).thumbnail ? (
+                    <img
+                      src={(track as any).thumbnail}
+                      alt={track.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+                      <Layers className="h-14 w-14 text-white/20" />
+                    </div>
+                  )}
+                  {/* Dark overlay for readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                  {/* Badges over image */}
+                  <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
+                    <span className="text-xs font-black text-white/90 uppercase tracking-widest drop-shadow">Career Path</span>
+                    {hasSubscription && Number((track as any).price) > 0 && (
+                      <Badge className="bg-indigo-600/90 text-white border-none font-black text-[9px] uppercase flex items-center gap-1 backdrop-blur-sm">
+                        <Crown className="h-2.5 w-2.5" /> Subscription
+                      </Badge>
+                    )}
+                  </div>
+                </div>
                 <CardHeader className="p-8 pb-4">
                   <div className="flex gap-2 mb-4">
                     <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-none font-black text-[10px] px-2 py-0.5 uppercase">Professional Track</Badge>
