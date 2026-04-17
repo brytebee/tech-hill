@@ -57,7 +57,7 @@ export interface CourseConfig {
 }
 
 export interface TrackConfig {
-  track: { title: string; slug: string };
+  track: { title: string; slug: string; price?: number };
   courses: CourseConfig[];
 }
 
@@ -186,7 +186,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 2: FRONTEND DEVELOPMENT
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "Frontend Development", slug: "frontend-development" },
+    track: { title: "Frontend Development", slug: "frontend-development", price: 180000 },
     courses: [
       // ── HTML BEGINNER ──────────────────────────────────────────────────────
       {
@@ -561,14 +561,13 @@ export const CURRICULUM: TrackConfig[] = [
         ],
       },
 
-      // ── REACT FUNDAMENTALS ─────────────────────────────────────────────────
       {
         title: "React Fundamentals",
         description: "Move from manual DOM updates to modern component-based architecture. Learn React the right way, starting with the mental model.",
         shortDescription: "The industry standard for UIs.",
         difficulty: "INTERMEDIATE",
         duration: 12,
-        price: 0,
+        price: 150000,
         tags: ["react", "components", "hooks", "jsx", "intermediate"],
         learningOutcomes: [
           "Build reusable React components using JSX",
@@ -672,7 +671,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 3: TYPESCRIPT MASTERY
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "TypeScript Mastery", slug: "typescript-mastery" },
+    track: { title: "TypeScript Mastery", slug: "typescript-mastery", price: 250000 },
     courses: [
       {
         title: "TypeScript Foundations",
@@ -680,7 +679,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Add types to JavaScript and write bulletproof code.",
         difficulty: "BEGINNER",
         duration: 8,
-        price: 0,
+        price: 120000,
         tags: ["typescript", "types", "interfaces", "beginner"],
         learningOutcomes: [
           "Migrate a JavaScript file to strict TypeScript with zero type errors",
@@ -737,7 +736,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Generics, utility types, and TypeScript+React.",
         difficulty: "INTERMEDIATE",
         duration: 10,
-        price: 0,
+        price: 150000,
         tags: ["typescript", "generics", "react", "zod", "intermediate"],
         learningOutcomes: [
           "Write advanced generic functions using TypeScript utility types",
@@ -789,7 +788,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Compiler API, monorepos, and TypeScript tooling.",
         difficulty: "ADVANCED",
         duration: 12,
-        price: 0,
+        price: 180000,
         tags: ["typescript", "compiler", "monorepo", "codegen", "advanced"],
         learningOutcomes: [
           "Use conditional types to build a type-level data validator",
@@ -841,7 +840,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 4: PYTHON DEVELOPMENT
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "Python Development", slug: "python-development" },
+    track: { title: "Python Development", slug: "python-development", price: 280000 },
     courses: [
       {
         title: "Python for Problem Solvers",
@@ -902,7 +901,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "OOP, APIs, scraping, and REST services with FastAPI.",
         difficulty: "INTERMEDIATE",
         duration: 12,
-        price: 0,
+        price: 150000,
         tags: ["python", "oop", "fastapi", "scraping", "intermediate"],
         learningOutcomes: [
           "Design Python programs using object-oriented principles",
@@ -959,7 +958,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "OpenAI API, Pandas, and RAG chatbots.",
         difficulty: "ADVANCED",
         duration: 14,
-        price: 0,
+        price: 200000,
         tags: ["python", "openai", "pandas", "langchain", "RAG", "advanced"],
         learningOutcomes: [
           "Call the OpenAI API with custom system prompts and parse structured responses",
@@ -1023,7 +1022,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 5: AI FOR EVERYDAY TASKS
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "AI for Everyday Tasks", slug: "ai-everyday-tasks" },
+    track: { title: "AI for Everyday Tasks", slug: "ai-everyday-tasks", price: 220000 },
     courses: [
       {
         title: "AI as Your Personal Assistant",
@@ -1031,7 +1030,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "ChatGPT, Gemini, Claude — tools that make you 10× faster.",
         difficulty: "BEGINNER",
         duration: 5,
-        price: 0,
+        price: 120000,
         tags: ["AI", "ChatGPT", "productivity", "writing", "beginner"],
         learningOutcomes: [
           "Rewrite a professional CV using AI prompts",
@@ -1079,7 +1078,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Build custom GPTs and automate your workflows.",
         difficulty: "INTERMEDIATE",
         duration: 8,
-        price: 0,
+        price: 150000,
         tags: ["AI", "workflows", "GPTs", "automation", "intermediate"],
         learningOutcomes: [
           "Build a complete content repurposing workflow with AI",
@@ -1127,7 +1126,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Make.com automation, OpenAI API, and local LLMs.",
         difficulty: "ADVANCED",
         duration: 12,
-        price: 0,
+        price: 180000,
         tags: ["AI", "automation", "OpenAI", "Ollama", "API", "advanced"],
         learningOutcomes: [
           "Build a multi-step automation pipeline in Make.com",
@@ -1188,7 +1187,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 6: AI FOR CONTENT CREATION ⭐ STAR COURSE
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "AI for Content Creation", slug: "ai-content-creation" },
+    track: { title: "AI for Content Creation", slug: "ai-content-creation", price: 300000 },
     courses: [
       {
         title: "Create Content 10x Faster with AI",
@@ -1196,7 +1195,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "AI scripts, AI images, AI voiceover — all yours.",
         difficulty: "BEGINNER",
         duration: 6,
-        price: 0,
+        price: 150000,
         tags: ["AI", "content", "YouTube", "podcast", "images", "beginner"],
         learningOutcomes: [
           "Script a 5-video YouTube series using only AI tools",
@@ -1255,7 +1254,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "AI video, repurposing engines, and YouTube SEO.",
         difficulty: "INTERMEDIATE",
         duration: 10,
-        price: 0,
+        price: 180000,
         tags: ["AI", "Runway", "video", "SEO", "repurposing", "intermediate"],
         learningOutcomes: [
           "Generate a 60-second AI product video using Runway or Kling",
@@ -1304,7 +1303,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Build and sell an AI content service business.",
         difficulty: "ADVANCED",
         duration: 12,
-        price: 0,
+        price: 220000,
         tags: ["AI", "agency", "automation", "brand-voice", "monetization", "advanced"],
         learningOutcomes: [
           "Design a fully automated 30-day content calendar system",
@@ -1353,7 +1352,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 7: DEVELOPER PROFESSIONAL TOOLKIT
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "Developer Professional Toolkit", slug: "developer-professional-toolkit" },
+    track: { title: "Developer Professional Toolkit", slug: "developer-professional-toolkit", price: 80000 },
     courses: [
       {
         title: "GitHub: From Zero to Open Source Contributor",
@@ -1586,7 +1585,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 8: MOBILE APP DEVELOPMENT — KOTLIN & ANDROID
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "Kotlin & Android Development", slug: "kotlin-android" },
+    track: { title: "Kotlin & Android Development", slug: "kotlin-android", price: 250000 },
     courses: [
       {
         title: "Kotlin Quick-Start: 3-Week Android Foundation",
@@ -1594,7 +1593,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "3 weeks from zero to your first Android app.",
         difficulty: "BEGINNER",
         duration: 12,
-        price: 0,
+        price: 220000,
         tags: ["kotlin", "android", "jetpack-compose", "beginner", "mobile"],
         learningOutcomes: [
           "Write Kotlin code with null safety, data classes, and extension functions",
@@ -1660,7 +1659,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Gemini API, Firebase, and shipping to the Play Store.",
         difficulty: "INTERMEDIATE",
         duration: 15,
-        price: 0,
+        price: 260000,
         tags: ["kotlin", "android", "gemini", "firebase", "intermediate", "mobile"],
         learningOutcomes: [
           "Integrate the Gemini Vision API into an Android camera app",
@@ -1720,7 +1719,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 9: MOBILE APP DEVELOPMENT — REACT NATIVE
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "React Native Mobile Development", slug: "react-native-mobile" },
+    track: { title: "React Native Mobile Development", slug: "react-native-mobile", price: 250000 },
     courses: [
       {
         title: "React Native Quick-Start: 3-Week Mobile Foundation",
@@ -1728,7 +1727,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "3 weeks from React to iOS + Android apps.",
         difficulty: "BEGINNER",
         duration: 12,
-        price: 0,
+        price: 220000,
         tags: ["react-native", "expo", "mobile", "iOS", "Android", "beginner"],
         learningOutcomes: [
           "Build a cross-platform mobile app using Expo",
@@ -1787,7 +1786,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "OpenAI in mobile + EAS Build for both stores.",
         difficulty: "INTERMEDIATE",
         duration: 14,
-        price: 0,
+        price: 260000,
         tags: ["react-native", "openai", "supabase", "eas", "intermediate", "mobile"],
         learningOutcomes: [
           "Integrate OpenAI into a React Native app for AI features",
@@ -1843,7 +1842,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 10: MOBILE APP DEVELOPMENT — FLUTTER & DART
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "Flutter & Dart Mobile Development", slug: "flutter-dart-mobile" },
+    track: { title: "Flutter & Dart Mobile Development", slug: "flutter-dart-mobile", price: 250000 },
     courses: [
       {
         title: "Flutter Quick-Start: 3-Week Mobile Foundation",
@@ -1851,7 +1850,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "3 weeks: Dart → Flutter → cross-platform apps.",
         difficulty: "BEGINNER",
         duration: 12,
-        price: 0,
+        price: 220000,
         tags: ["flutter", "dart", "mobile", "cross-platform", "beginner"],
         learningOutcomes: [
           "Write Dart code with async/await, classes, and null safety",
@@ -1918,7 +1917,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Gemini API, Firebase, and deploying to both stores.",
         difficulty: "INTERMEDIATE",
         duration: 14,
-        price: 0,
+        price: 260000,
         tags: ["flutter", "gemini", "firebase", "intermediate", "mobile"],
         learningOutcomes: [
           "Integrate Gemini Vision API for image recognition in Flutter",
@@ -1979,7 +1978,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 11: NEXT.JS & AI WEB DEVELOPMENT
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "Next.js & AI Web Development", slug: "nextjs-ai-webdev" },
+    track: { title: "Next.js & AI Web Development", slug: "nextjs-ai-webdev", price: 250000 },
     courses: [
       {
         title: "Next.js Foundations",
@@ -1987,7 +1986,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Full-stack React apps with Next.js 15 App Router.",
         difficulty: "INTERMEDIATE",
         duration: 12,
-        price: 0,
+        price: 260000,
         tags: ["nextjs", "react", "full-stack", "prisma", "vercel", "intermediate"],
         learningOutcomes: [
           "Build a multi-route Next.js app with dynamic segments and layouts",
@@ -2049,7 +2048,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Streaming AI chat, RAG, and a deployed AI SaaS.",
         difficulty: "ADVANCED",
         duration: 15,
-        price: 0,
+        price: 260000,
         tags: ["nextjs", "AI", "RAG", "vercel-ai-sdk", "openai", "advanced"],
         learningOutcomes: [
           "Build a streaming AI chat interface using the Vercel AI SDK",
@@ -2109,7 +2108,7 @@ export const CURRICULUM: TrackConfig[] = [
   // TRACK 12: DESKTOP APP DEVELOPMENT
   // ════════════════════════════════════════════════════════════════════════════
   {
-    track: { title: "Desktop App Development", slug: "desktop-app-development" },
+    track: { title: "Desktop App Development", slug: "desktop-app-development", price: 300000 },
     courses: [
       {
         title: "Electron.js: Build Desktop Apps with JavaScript",
@@ -2117,7 +2116,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Web dev skills → native Windows, Mac, and Linux apps.",
         difficulty: "INTERMEDIATE",
         duration: 10,
-        price: 0,
+        price: 220000,
         tags: ["electron", "desktop", "javascript", "native", "intermediate"],
         learningOutcomes: [
           "Build a desktop app with Electron's Main and Renderer process model",
@@ -2173,7 +2172,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Rust-powered desktop apps — smaller, faster, more secure.",
         difficulty: "ADVANCED",
         duration: 10,
-        price: 0,
+        price: 240000,
         tags: ["tauri", "rust", "desktop", "advanced"],
         learningOutcomes: [
           "Build a Tauri desktop app with a React frontend",
@@ -2224,7 +2223,7 @@ export const CURRICULUM: TrackConfig[] = [
         shortDescription: "Local AI in desktop apps + monetisation with license keys.",
         difficulty: "ADVANCED",
         duration: 8,
-        price: 0,
+        price: 260000,
         tags: ["electron", "AI", "ollama", "openai", "desktop", "advanced"],
         learningOutcomes: [
           "Build a private offline AI writing assistant running entirely locally",

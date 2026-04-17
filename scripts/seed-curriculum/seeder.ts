@@ -197,20 +197,21 @@ async function main() {
     console.log(`${"=".repeat(50)}\n`);
 
     // Ensure Track exists (upsert by slug)
-    let track = await prisma.track.findUnique({ where: { slug: trackData.track.slug } });
-    if (!track) {
-      track = await prisma.track.create({
-        data: {
-          title: trackData.track.title,
-          slug: trackData.track.slug,
-          description: `Comprehensive learning path for ${trackData.track.title}`,
-          isPublished: false,
-        },
-      });
-      console.log(`✅ Created Track: ${track.title}`);
-    } else {
-      console.log(`⏩ Track exists: ${track.title}`);
-    }
+    const track = await (prisma as any).track.upsert({
+      where: { slug: trackData.track.slug },
+      update: {
+        title: trackData.track.title,
+        price: (trackData.track as any).price ?? 0,
+      },
+      create: {
+        title: trackData.track.title,
+        slug: trackData.track.slug,
+        description: `Comprehensive learning path for ${trackData.track.title}`,
+        isPublished: false,
+        price: (trackData.track as any).price ?? 0,
+      },
+    });
+    console.log(`✅ Synced Track: ${track.title} (Price: ₦${(track as any).price})`);
 
     // ── FIX: Reset courseOrder per track ──────────────────────────────────
     let courseOrder = 1;
@@ -242,12 +243,17 @@ async function main() {
         console.log(`  ✅ Course created: "${courseTitle}"`);
       } else {
         console.log(`\n📚 SYNCING EXISTING COURSE: "${courseTitle}"`);
-        if (courseData.earningPotential) {
-          await prisma.course.update({
-            where: { id: course.id },
-            data: { earningPotential: courseData.earningPotential as any },
-          });
-        }
+        await prisma.course.update({
+          where: { id: course.id },
+          data: {
+            price: courseData.price ?? 0,
+            duration: courseData.duration,
+            difficulty: courseData.difficulty as DifficultyLevel,
+            shortDescription: courseData.shortDescription,
+            earningPotential: courseData.earningPotential ? (courseData.earningPotential as any) : undefined,
+          },
+        });
+        console.log(`  ✅ Synced Kurs Metadata & Price: ₦${courseData.price}`);
       }
 
       // ── FIX: Always link course to track and handle unique constraint collisions ─────
