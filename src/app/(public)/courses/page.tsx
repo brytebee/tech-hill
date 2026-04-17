@@ -13,7 +13,12 @@ export default async function CoursesPage() {
   const coursesWithPricing = await Promise.all(
     techHillCourses.map(async (course: any) => {
       const pricing = await PromotionService.getCurrentPrice(course.id);
-      return { ...course, pricing };
+      return { 
+        ...course, 
+        price: course.price ? Number(course.price) : 0,
+        certificatePrice: course.certificatePrice ? Number(course.certificatePrice) : 0,
+        pricing 
+      };
     })
   );
 
