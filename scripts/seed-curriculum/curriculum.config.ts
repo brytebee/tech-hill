@@ -46,6 +46,13 @@ export interface CourseConfig {
   price: number;
   tags?: string[];
   learningOutcomes?: string[];
+  earningPotential?: {
+    freelanceRateUSD: { min: number; max: number; platform: string };
+    localSalaryNGN: { min: number; max: number; context: string };
+    remoteSalaryUSD: { min: number; max: number; context: string };
+    timeToFirstGigWeeks: number;
+    realStory?: { name: string; location: string; quote: string };
+  };
   modules: ModuleConfig[];
 }
 
@@ -404,6 +411,17 @@ export const CURRICULUM: TrackConfig[] = [
           "Build responsive layouts using Flexbox and CSS Grid",
           "Write media queries for mobile-first designs",
         ],
+        earningPotential: {
+          freelanceRateUSD: { min: 15, max: 35, platform: "Upwork" },
+          localSalaryNGN: { min: 120000, max: 280000, context: "Lagos agency, junior role" },
+          remoteSalaryUSD: { min: 800, max: 1800, context: "Remote role, European client" },
+          timeToFirstGigWeeks: 6,
+          realStory: {
+            name: "Chioma A.",
+            location: "Lagos → Remote (Dutch client)",
+            quote: "After CSS + JS, I got my first Upwork job for $180 in my 8th week."
+          }
+        },
         modules: [
           {
             title: "Module 1: Styling Basics",
@@ -481,6 +499,12 @@ export const CURRICULUM: TrackConfig[] = [
           "Handle user interactions with event listeners",
           "Fetch data from APIs using async/await",
         ],
+        earningPotential: {
+          freelanceRateUSD: { min: 20, max: 40, platform: "Fiverr/Upwork" },
+          localSalaryNGN: { min: 150000, max: 350000, context: "Junior frontend developer" },
+          remoteSalaryUSD: { min: 1000, max: 2000, context: "Junior developer" },
+          timeToFirstGigWeeks: 8,
+        },
         modules: [
           {
             title: "Module 1: Core Logic",
@@ -552,6 +576,17 @@ export const CURRICULUM: TrackConfig[] = [
           "Understand React 19's Server Components model",
           "Fetch and display live data in a React app",
         ],
+        earningPotential: {
+          freelanceRateUSD: { min: 30, max: 70, platform: "Upwork" },
+          localSalaryNGN: { min: 250000, max: 600000, context: "Senior Frontend, Nigeria" },
+          remoteSalaryUSD: { min: 1500, max: 4000, context: "Full-time remote React engineer" },
+          timeToFirstGigWeeks: 12,
+          realStory: {
+            name: "Sarah T.",
+            location: "Accra → Turing",
+            quote: "React opened the door to a $3,200/month remote job that changed my life."
+          }
+        },
         modules: [
           {
             title: "Module 1: The React Mental Model",
@@ -601,6 +636,33 @@ export const CURRICULUM: TrackConfig[] = [
               },
             ],
           },
+          {
+            title: "Module 3: Freelancer FastLane — Your First $500",
+            duration: 180,
+            topics: [
+              { title: "How Developers Earn Remotely: Rates, Platforms, and Realities",
+                furtherReading: [
+                  { title: "Upwork Skill Index", url: "https://www.upwork.com/resources/upwork-skills-index", description: "Which skills are paying the most globally right now" },
+                  { title: "Toptal Developer Screening", url: "https://www.toptal.com/developers", description: "The premium remote marketplace — see what separates top earners" },
+                  { title: "Turing Remote Dev Platform", url: "https://www.turing.com/", description: "US-standard remote jobs, hiring from Nigeria and Africa" },
+                ]
+              },
+              { title: "Setting Up Your Upwork Profile (Step-by-Step for Nigerians)",
+                furtherReading: [
+                  { title: "Payoneer for Nigerian Freelancers", url: "https://www.payoneer.com/solutions/freelancers/", description: "Receive international payments from Nigeria without complications" },
+                  { title: "Grey (formerly Aboki Dollar): Nigerian Freelancers", url: "https://grey.co/", description: "Dollar-denominated account for Nigerian freelancers" },
+                ]
+              },
+              { title: "Writing Proposals That Win: Templates and Tactics" },
+              { title: "Project: Deploy Your Portfolio + Write 3 Client Proposals", isProject: true,
+                furtherReading: [
+                  { title: "GitHub Pages", url: "https://pages.github.com/", description: "Free portfolio hosting from your GitHub repo" },
+                  { title: "Vercel", url: "https://vercel.com/", description: "Deploy your portfolio in 30 seconds — generous free tier" },
+                  { title: "LinkedIn Creator Mode", url: "https://www.linkedin.com/help/linkedin/answer/a522537", description: "Attract recruiters and clients with Creator Mode" },
+                ]
+              },
+            ],
+          }
         ],
       },
     ],

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TopicService } from "@/lib/services/topicService";
+import { CourseEvolutionService } from "@/lib/services/courseEvolutionService";
 import { logger } from "@/lib/logger";
 
 // GET /api/topics/[topicId] - Get topic by ID
@@ -70,7 +71,22 @@ export async function PUT(
       );
     }
 
+    // Capture the old isRequired state before updating
+    const wasRequired = existingTopic.isRequired;
+
     const topic = await TopicService.updateTopic(topicId, body);
+
+    // Option 2+4: If isRequired was just promoted from false → true,
+    // re-open completed enrollments and notify those students
+    if ((body.isRequired === true) && (wasRequired === false)) {
+      CourseEvolutionService.handleTopicPromotedToRequired(
+        existingTopic.module.course.id,
+        existingTopic.module.id,
+        existingTopic.title
+      ).catch((err) =>
+        logger.warn("topics:topicId", "Evolution service error (non-fatal)", err)
+      );
+    }
 
     return NextResponse.json(topic);
   } catch (error: any) {

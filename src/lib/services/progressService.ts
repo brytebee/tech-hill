@@ -4,6 +4,7 @@ import { ProgressStatus } from "@prisma/client";
 import { CertificateService } from "./certificateService";
 import { TrackService } from "./trackService";
 import { NotificationService } from "./notificationService";
+import { GamificationService } from "./gamificationService";
 
 export class ProgressService {
   // Get or create topic progress
@@ -78,6 +79,9 @@ export class ProgressService {
     const topicProgress = await this.getOrCreateTopicProgress(userId, topicId);
     const topic = topicProgress.topic;
 
+    // Trigger gamification daily active update passively
+    await GamificationService.updateDailyStreak(userId);
+
     // Check if topic has assessments or is a project
     const hasAssessments = topic.quizzes.length > 0;
     const isProject = topic.topicType === "PRACTICE";
@@ -143,6 +147,14 @@ export class ProgressService {
       },
       data: updateData,
     });
+
+    // Gamification Hook: If transitioning to completed right now
+    if (
+      topicProgress.status !== ProgressStatus.COMPLETED &&
+      updatedProgress.status === ProgressStatus.COMPLETED
+    ) {
+      await GamificationService.awardXP(userId, 50, `Completed Topic: ${topic.title}`);
+    }
 
     // Update module progress after topic completion
     if (completed && (canComplete || (!hasAssessments && !isProject))) {
@@ -304,6 +316,8 @@ export class ProgressService {
       },
     });
 
+    const previousStatus = moduleProgress?.status;
+
     const updateData = {
       progressPercentage,
       currentScore: averageScore,
@@ -332,6 +346,39 @@ export class ProgressService {
         where: { id: moduleProgress.id },
         data: updateData,
       });
+    }
+
+    // Fire "Earn-as-You-Learn" notification on module completion
+    if (allTopicsCompleted && passedModule && previousStatus !== ProgressStatus.COMPLETED) {
+      try {
+        await GamificationService.awardXP(userId, 250, `Completed Module: ${module.title}`);
+
+        const title = `Module Unlocked: ${module.title}`;
+        let message = `You've completed this module! Continue building real-world skills to boost your earning potential.`;
+        
+        let earningPotential = module.course.earningPotential as any;
+        if (typeof earningPotential === "string") {
+          earningPotential = JSON.parse(earningPotential);
+        }
+        
+        if (earningPotential?.freelanceRateUSD) {
+          message = `You've mastered this module! Real builders with this skill charge $${earningPotential.freelanceRateUSD.min}/hr on ${earningPotential.freelanceRateUSD.platform}. Keep going!`;
+        } else if (earningPotential?.localSalaryNGN) {
+          message = `Module unlocked! This pushes you closer to the ₦${earningPotential.localSalaryNGN.min.toLocaleString()}/mo earning bracket in Nigeria.`;
+        }
+
+        await prisma.notification.create({
+          data: {
+            userId,
+            type: "PROMOTIONAL",
+            title,
+            message,
+            linkUrl: `/student/courses/${module.courseId}`,
+          }
+        });
+      } catch (err) {
+        console.error("Failed to fire earning potential notification:", err);
+      }
     }
 
     // Update course progress after module completion
@@ -469,8 +516,8 @@ export class ProgressService {
         console.error("Failed to issue certificate:", err);
       }
 
-      // Send completion notification
       try {
+        await GamificationService.awardXP(userId, 1000, `Completed Course: ${course.title}`);
         await NotificationService.createNotification({
           userId,
           type: "SYSTEM",

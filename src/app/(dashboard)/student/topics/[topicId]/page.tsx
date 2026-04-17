@@ -26,27 +26,48 @@ async function getTopicData(topicId: string, userId: string) {
       return null;
     }
 
-    // Check if user is enrolled in the course
-    const enrollment = await EnrollmentService.getEnrollment(
-      userId,
-      topic.module.course.id,
-    );
+    const courseId = topic.module.course.id;
 
-    // Allow access if user is enrolled OR if it's a preview topic
-    const canAccess =
-      !!(enrollment && enrollment.status === "ACTIVE") || !!topic.isPreview;
+    // Access is granted for any non-dropped/suspended enrollment
+    const ALLOWED_STATUSES = ["ACTIVE", "COMPLETED", "ON_HOLD"];
+
+    // Check direct course enrollment
+    const enrollment = await EnrollmentService.getEnrollment(userId, courseId);
+    const hasDirectEnrollment = !!(enrollment && ALLOWED_STATUSES.includes(enrollment.status));
+
+    // Also check if the student is enrolled via a Track that contains this course
+    let hasTrackEnrollment = false;
+    if (!hasDirectEnrollment) {
+      const trackEnrollment = await prisma.trackEnrollment.findFirst({
+        where: {
+          userId,
+          status: { in: ALLOWED_STATUSES as any[] },
+          track: {
+            courses: {
+              some: { courseId },
+            },
+          },
+        },
+      });
+      hasTrackEnrollment = !!trackEnrollment;
+    }
+
+    // Allow access if user is enrolled (directly or via track) OR if it's a preview topic
+    const canAccess = hasDirectEnrollment || hasTrackEnrollment || !!topic.isPreview;
 
     if (!canAccess) {
       return null;
     }
 
-    // Only track progress if enrolled
-    if (enrollment && enrollment.status === "ACTIVE") {
+    // Only create/initialise progress record if the enrollment is currently ACTIVE
+    // (don't re-open a completed topic's progress record on revisit)
+    const isActiveEnrollment =
+      (enrollment && enrollment.status === "ACTIVE") || hasTrackEnrollment;
+    if (isActiveEnrollment) {
       await ProgressService.getOrCreateTopicProgress(userId, topicId);
     }
 
     // Compute next and previous topics
-    const courseId = topic.module.course.id;
     const course = await prisma.course.findUnique({
       where: { id: courseId },
       include: {
@@ -92,6 +113,7 @@ async function getTopicData(topicId: string, userId: string) {
     return null;
   }
 }
+
 
 export default async function StudentTopicDetailsPage({ params }: PageProps) {
   const session = await getServerSession(authOptions);

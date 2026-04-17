@@ -37,6 +37,7 @@ import {
   ChevronRight,
   SearchCode,
   ArrowRight,
+  ChevronLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { EnrollmentService } from "@/lib/services/enrollmentService";
@@ -376,25 +377,102 @@ function SearchAndFilters({
 function Pagination({
   currentPage,
   totalPages,
+  searchParams,
 }: {
   currentPage: number;
   totalPages: number;
+  searchParams: { search?: string; difficulty?: string; page?: string };
 }) {
   if (totalPages <= 1) return null;
 
+  const buildUrl = (page: number) => {
+    const params = new URLSearchParams();
+    if (searchParams.search) params.set("search", searchParams.search);
+    if (searchParams.difficulty && searchParams.difficulty !== "none") {
+      params.set("difficulty", searchParams.difficulty);
+    }
+    params.set("page", String(page));
+    return `/student/courses?${params.toString()}`;
+  };
+
+  // Build numbered page range (show up to 5 pages around current)
+  const delta = 2;
+  const pages: (number | "...")[] = [];
+  const rangeStart = Math.max(2, currentPage - delta);
+  const rangeEnd = Math.min(totalPages - 1, currentPage + delta);
+
+  pages.push(1);
+  if (rangeStart > 2) pages.push("...");
+  for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+  if (rangeEnd < totalPages - 1) pages.push("...");
+  if (totalPages > 1) pages.push(totalPages);
+
   return (
-    <div className="flex justify-center items-center space-x-3 pt-10">
-      <Button variant="outline" disabled={currentPage <= 1} className="h-10 px-4 border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all disabled:opacity-30">
-        PREVIOUS
-      </Button>
+    <div className="flex justify-center items-center gap-2 pt-10 flex-wrap">
+      {/* Previous */}
+      {currentPage > 1 ? (
+        <Link href={buildUrl(currentPage - 1)}>
+          <Button
+            variant="outline"
+            className="h-10 px-4 border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800 gap-1.5"
+          >
+            <ChevronLeft className="h-4 w-4" /> PREV
+          </Button>
+        </Link>
+      ) : (
+        <Button
+          variant="outline"
+          disabled
+          className="h-10 px-4 border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all opacity-30 gap-1.5"
+        >
+          <ChevronLeft className="h-4 w-4" /> PREV
+        </Button>
+      )}
 
-      <div className="flex items-center gap-2 px-4 h-10 rounded-xl bg-white dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 text-xs font-black uppercase tracking-widest text-slate-500">
-        PAGE <span className="text-slate-900 dark:text-white">{currentPage}</span> / {totalPages}
-      </div>
+      {/* Page numbers */}
+      {pages.map((p, idx) =>
+        p === "..." ? (
+          <span
+            key={`ellipsis-${idx}`}
+            className="h-10 w-10 flex items-center justify-center text-slate-400 text-xs font-bold"
+          >
+            ···
+          </span>
+        ) : (
+          <Link key={p} href={buildUrl(p as number)}>
+            <Button
+              variant={p === currentPage ? "default" : "outline"}
+              className={`h-10 w-10 rounded-xl font-black text-xs transition-all ${
+                p === currentPage
+                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/20 border-transparent"
+                  : "border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400"
+              }`}
+            >
+              {p}
+            </Button>
+          </Link>
+        )
+      )}
 
-      <Button variant="outline" disabled={currentPage >= totalPages} className="h-10 px-4 border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all disabled:opacity-30">
-        NEXT
-      </Button>
+      {/* Next */}
+      {currentPage < totalPages ? (
+        <Link href={buildUrl(currentPage + 1)}>
+          <Button
+            variant="outline"
+            className="h-10 px-4 border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all hover:bg-slate-50 dark:hover:bg-slate-800 gap-1.5"
+          >
+            NEXT <ChevronRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      ) : (
+        <Button
+          variant="outline"
+          disabled
+          className="h-10 px-4 border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all opacity-30 gap-1.5"
+        >
+          NEXT <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 }
@@ -462,7 +540,7 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
               ))}
             </div>
 
-            <Pagination currentPage={currentPage} totalPages={totalPages} />
+            <Pagination currentPage={currentPage} totalPages={totalPages} searchParams={resolvedSearchParams} />
           </div>
         ) : (
           /* Empty Matrix State */

@@ -64,6 +64,7 @@ export interface Topic {
   maxAttempts?: number;
   isRequired: boolean;
   allowSkip: boolean;
+  furtherReadingLinks?: any;
   prerequisiteTopic?: {
     id: string;
     title: string;
@@ -518,6 +519,43 @@ export function StudentTopicViewer({
           >
             <ReactMarkdown rehypePlugins={[rehypeRaw]}>{topic.content}</ReactMarkdown>
           </div>
+
+          {/* Further Research (Gated) */}
+          {quizzesPassed && topic.furtherReadingLinks && (
+            <div className="mt-8 border-t border-emerald-200 dark:border-emerald-800/30 pt-6 animate-in fade-in duration-500 delay-150">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xl leading-none">🔓</span>
+                <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-400">
+                  Further Research — Unlocked
+                </h3>
+              </div>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                You earned these resources by completing the required assessments. Go deeper into this topic.
+              </p>
+              <div className="grid gap-2">
+                {(typeof topic.furtherReadingLinks === "string"
+                  ? JSON.parse(topic.furtherReadingLinks)
+                  : topic.furtherReadingLinks
+                ).map((link: any) => (
+                  <a
+                    key={link.url}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block p-4 rounded-lg border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-slate-900/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/10 hover:border-emerald-300 dark:hover:border-emerald-800/50 transition-all group shadow-sm"
+                  >
+                    <div className="font-semibold text-slate-800 dark:text-slate-200 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 mb-1 flex items-center gap-2">
+                      {link.title}
+                      <ExternalLink className="w-3.5 h-3.5 opacity-0 -ml-1 transition-all group-hover:opacity-100 group-hover:ml-0 text-emerald-500" />
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                      {link.description}
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

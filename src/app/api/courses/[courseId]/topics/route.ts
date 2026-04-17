@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { TopicService } from "@/lib/services/topicService";
 import { CourseService } from "@/lib/services/courseService";
+import { CourseEvolutionService } from "@/lib/services/courseEvolutionService";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
@@ -115,6 +116,19 @@ export async function POST(
     const validatedData = createTopicSchema.parse(body);
 
     const topic = await TopicService.createTopic(validatedData);
+
+    // Option 2+4: If this is a required topic, re-open any COMPLETED enrollments
+    // and notify those students that new content is available
+    if (validatedData.isRequired !== false) {
+      // Default is required (true), so trigger evolution unless explicitly set to false
+      CourseEvolutionService.handleNewRequiredContent(
+        courseId,
+        validatedData.moduleId,
+        validatedData.title
+      ).catch((err) =>
+        logger.warn("courses:courseId:topics", "Evolution service error (non-fatal)", err)
+      );
+    }
 
     return NextResponse.json(topic, { status: 201 });
   } catch (error: any) {

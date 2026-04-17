@@ -31,23 +31,39 @@ import { CourseService } from "@/lib/services/courseService";
 import { EnrollButton } from "@/components/students/EnrollButton";
 import { PaymentSuccessToast } from "@/components/checkout/PaymentSuccessToast";
 import { Suspense } from "react";
+import { prisma } from "@/lib/db";
+import { GamificationWidget } from "@/components/students/GamificationWidget";
+import { IdentityBadgeShowcase } from "@/components/students/IdentityBadgeShowcase";
 
 async function getStudentData(userId: string) {
   try {
-    const [enrollments, availableCourses] = await Promise.all([
+    const [enrollments, availableCourses, user] = await Promise.all([
       EnrollmentService.getUserEnrollments(userId),
       CourseService.getCourses({ status: "PUBLISHED" }, 1, 10),
+      prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          xp: true,
+          streakDays: true,
+          badges: {
+            include: { badge: true },
+            orderBy: { earnedAt: "desc" }
+          }
+        }
+      })
     ]);
 
     return {
       enrollments,
       availableCourses: availableCourses.courses,
+      userData: user || { xp: 0, streakDays: 0, badges: [] }
     };
   } catch (error: any) {
     console.error("Error fetching student data:", error);
     return {
       enrollments: [],
       availableCourses: [],
+      userData: { xp: 0, streakDays: 0, badges: [] }
     };
   }
 }
@@ -59,7 +75,7 @@ export default async function StudentDashboard() {
     redirect("/login");
   }
 
-  const { enrollments, availableCourses } = await getStudentData(
+  const { enrollments, availableCourses, userData } = await getStudentData(
     session.user.id,
   );
 
@@ -131,6 +147,9 @@ export default async function StudentDashboard() {
             </div>
           </div>
         </div>
+
+        {/* NEW: Gamification Top Widget */}
+        <GamificationWidget xp={userData.xp} streakDays={userData.streakDays} />
 
         {/*
          * ─── STAT CARDS ───────────────────────────────────────────────
@@ -335,6 +354,11 @@ export default async function StudentDashboard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Identity Badges */}
+          <div className="lg:col-span-2">
+            <IdentityBadgeShowcase userBadges={userData.badges as any} />
+          </div>
         </div>
       </div>
     </StudentLayout>
