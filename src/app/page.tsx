@@ -10,7 +10,6 @@ import {
 import Link from "next/link";
 import { PublicHeader } from "@/components/layout/PublicHeader";
 import { CourseService } from "@/lib/services/courseService";
-import { PromotionService } from "@/lib/services/promotionService";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +103,46 @@ function CoursePreviewCard({
   );
 }
 
+// ── AI course feature cards (curated, always shown) ──────────────────────
+const AI_FEATURED_COURSES = [
+  {
+    id: "ai-assistant",
+    title: "AI as Your Personal Assistant",
+    shortDescription: "ChatGPT, Gemini, Claude — tools that make you 10× faster at everything.",
+    difficulty: "BEGINNER",
+    thumbnail: "/courses/ai-assistant.png",
+    href: "/courses",
+    pricing: { currentPrice: 120000, originalPrice: 120000, discountPercentage: 0 },
+  },
+  {
+    id: "ai-content-studio",
+    title: "Your AI Content Studio",
+    shortDescription: "AI video, repurposing engines, and YouTube SEO that gets you to 10k views.",
+    difficulty: "INTERMEDIATE",
+    thumbnail: "/courses/ai-content-studio.png",
+    href: "/courses",
+    pricing: { currentPrice: 180000, originalPrice: 180000, discountPercentage: 0 },
+  },
+  {
+    id: "ai-power-user",
+    title: "AI Power User",
+    shortDescription: "Make.com automation, OpenAI API, and running local LLMs with Ollama.",
+    difficulty: "ADVANCED",
+    thumbnail: "/courses/ai-power-user.png",
+    href: "/courses",
+    pricing: { currentPrice: 180000, originalPrice: 180000, discountPercentage: 0 },
+  },
+  {
+    id: "nextjs-ai",
+    title: "Next.js + AI: Build AI-Native Web Apps",
+    shortDescription: "Streaming AI chat, RAG systems, and a deployed AI SaaS — all in Next.js.",
+    difficulty: "ADVANCED",
+    thumbnail: "/courses/ai-nextjs.png",
+    href: "/courses",
+    pricing: { currentPrice: 260000, originalPrice: 260000, discountPercentage: 0 },
+  },
+];
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default async function HomePage() {
   let session = null;
@@ -116,19 +155,13 @@ export default async function HomePage() {
   }
 
   // Fetch live stats
-  const [studentCount, { total: courseCount }, { courses: techHillCourses }] = await Promise.all([
+  const [studentCount, { total: courseCount }] = await Promise.all([
     prisma.user.count({ where: { role: "STUDENT" } }),
     CourseService.getCourseStats(),
-    CourseService.getCourses({ status: "PUBLISHED" }, 1, 4),
   ]);
 
-  // Fetch pricing for courses
-  const coursesWithPricing = await Promise.all(
-    techHillCourses.map(async (course: any) => {
-      const pricing = await PromotionService.getCurrentPrice(course.id);
-      return { ...course, pricing };
-    })
-  );
+  // Always use curated AI courses for homepage showcase
+  const featuredCourses = AI_FEATURED_COURSES;
 
   return (
     <div className="dark min-h-screen bg-[#080e1a] text-white selection:bg-blue-500/30 antialiased">
@@ -247,10 +280,11 @@ export default async function HomePage() {
                     ))}
                   </div>
 
+              {/* Continue learning — AI-themed */}
                   <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Continue learning</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <CoursePreviewCard title="Next.js Full-Stack" tag="Advanced · 4h left" progress={68} color="bg-blue-600" />
-                    <CoursePreviewCard title="UI/UX Foundations" tag="Beginner · 6h left" progress={35} color="bg-violet-600" />
+                    <CoursePreviewCard title="AI as Your Assistant" tag="Beginner · ChatGPT" progress={68} color="bg-blue-600" />
+                    <CoursePreviewCard title="Next.js + AI Streaming" tag="Advanced · OpenAI" progress={35} color="bg-indigo-600" />
                   </div>
                 </div>
               </div>
@@ -407,21 +441,22 @@ export default async function HomePage() {
 
             {/* Copy */}
             <div className="lg:w-2/5 lg:sticky lg:top-28">
-              <p className="text-sm font-semibold text-blue-400 uppercase tracking-widest mb-3">Learning Paths</p>
+              <p className="text-sm font-semibold text-blue-400 uppercase tracking-widest mb-3">AI-First Curriculum</p>
               <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight mb-5">
-                A clear path for every stage.
+                The AI skills that are <span className="gradient-text-blue">printing money.</span>
               </h2>
               <p className="text-slate-400 text-lg leading-relaxed mb-8">
-                Whether you're starting from zero or scaling from mid to senior, we have a structured progression to take you there with confidence.
+                Employers are paying 3× more for AI-skilled engineers. These are Nigeria's most
+                in-demand AI courses — built for people who ship, not just study.
               </p>
               <ul className="space-y-3 mb-8">
                 {[
-                  "Foundational Digital Literacy",
-                  "Frontend Engineering (React & TypeScript)",
-                  "Backend Architecture (Node.js + Prisma)",
-                  "Full-Stack with Next.js App Router",
-                  "UI/UX Design & Figma",
-                  "AI Integrations & Productization",
+                  "AI Prompting & ChatGPT Mastery",
+                  "AI Content & Video Creation",
+                  "AI Automation with Make.com",
+                  "Next.js + AI Web Development",
+                  "Local LLMs with Ollama",
+                  "AI Agency Blueprint",
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-3 text-slate-300 text-sm">
                     <CheckCircle2 className="w-4 h-4 text-blue-400 shrink-0" />
@@ -439,37 +474,39 @@ export default async function HomePage() {
               </Link>
             </div>
 
-            {/* Path cards */}
             <div className="lg:w-3/5 grid sm:grid-cols-2 gap-5 w-full">
-              {coursesWithPricing.map((course: any) => (
-                <Link key={course.id} href={`/courses/${course.id}`}>
-                  <div className={`group relative bg-slate-900/60 rounded-2xl p-6 border border-slate-700/30 transition-all duration-300 hover:bg-slate-800/60 hover:-translate-y-1 cursor-pointer`}>
-                    {course.pricing.discountPercentage > 0 && (
-                      <div className="absolute -top-3 -right-3">
-                        <span className="flex items-center gap-1 bg-orange-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
-                          <Zap className="w-3 h-3" /> {course.pricing.discountPercentage}% OFF
+              {featuredCourses.map((course) => (
+                <Link key={course.id} href={course.href || `/courses/${course.id}`}>
+                  <div className="group relative bg-slate-900/60 rounded-2xl overflow-hidden border border-slate-700/30 transition-all duration-300 hover:bg-slate-800/60 hover:-translate-y-1 cursor-pointer">
+                    {/* Thumbnail */}
+                    {course.thumbnail && (
+                      <div className="aspect-[16/9] relative overflow-hidden">
+                        <img
+                          src={course.thumbnail}
+                          alt={course.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent" />
+                        <span className="absolute bottom-3 left-3 inline-block text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 backdrop-blur-sm border border-blue-500/30">
+                          {course.difficulty}
                         </span>
                       </div>
                     )}
-                    <span className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full mb-4 bg-blue-500/10 text-blue-400`}>
-                      {course.difficulty}
-                    </span>
-                    <h3 className="text-base font-bold text-white mb-2">{course.title}</h3>
-                    <p className="text-slate-400 text-sm leading-relaxed line-clamp-2">{course.shortDescription || course.description}</p>
-                    <div className="mt-5 flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Investment</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-white">
-                            {course.pricing.currentPrice === 0 ? "FREE" : `₦${course.pricing.currentPrice.toLocaleString()}`}
-                          </span>
-                          {course.pricing.discountPercentage > 0 && (
-                            <span className="text-xs text-slate-500 line-through">₦{course.pricing.originalPrice.toLocaleString()}</span>
-                          )}
+                    <div className="p-5">
+                      <h3 className="text-base font-bold text-white mb-1.5 group-hover:text-blue-400 transition-colors">{course.title}</h3>
+                      <p className="text-slate-400 text-sm leading-relaxed line-clamp-2">{course.shortDescription}</p>
+                      <div className="mt-4 flex items-center justify-between">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Investment</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-black text-white">
+                              {course.pricing.currentPrice === 0 ? "FREE" : `₦${course.pricing.currentPrice.toLocaleString()}`}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 group-hover:text-blue-400 transition-colors">
-                        Explore path <ChevronRight className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 group-hover:text-blue-400 transition-colors">
+                          Explore <ChevronRight className="w-3.5 h-3.5" />
+                        </div>
                       </div>
                     </div>
                   </div>
