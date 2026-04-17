@@ -331,30 +331,28 @@ export default async function HomePage() {
                 title: "Nexus Finance App",
                 category: "Fintech Lab",
                 desc: "A high-frequency dashboard with glassmorphic charts and real-time transaction streams.",
-                imageSrc: "/api/placeholder/400/250",
+                imageSrc: "/projects/nexus-finance.png",
                 skills: ["React", "Lucide", "Framer Motion"]
               },
               {
                 title: "Social Content Factory",
                 category: "Automation Path",
                 desc: "AI-powered tool that converts long-form text into cinematic 60-second viral video scripts.",
-                imageSrc: "/api/placeholder/400/250",
+                imageSrc: "/projects/content-factory.png",
                 skills: ["Next.js", "Llama 3.2", "FFmpeg"]
               },
               {
                 title: "Enterprise HR OS",
                 category: "Full-Stack Mastery",
                 desc: "A robust internal system for managing employee lifecycle with biometric security.",
-                imageSrc: "/api/placeholder/400/250",
+                imageSrc: "/projects/hr-os.png",
                 skills: ["Prisma", "NextAuth", "TypeScript"]
               }
             ].map((p, i) => (
               <div key={p.title} className="group relative flex flex-col bg-slate-900/50 border border-slate-800/60 rounded-3xl overflow-hidden hover:border-blue-500/30 transition-all duration-500">
                 <div className="aspect-[16/10] bg-slate-800 relative overflow-hidden">
-                   <div className="absolute inset-0 flex items-center justify-center text-slate-700 font-bold text-xs uppercase tracking-widest">
-                     Project Model Preview
-                   </div>
-                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent" />
+                   <img src={p.imageSrc} alt={p.title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-80" />
                    <div className="absolute bottom-4 left-4 flex gap-1.5">
                      {p.skills.map(s => (
                        <span key={s} className="px-2 py-0.5 rounded-md bg-slate-900/80 text-[10px] text-slate-300 border border-slate-700/50">{s}</span>
