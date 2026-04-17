@@ -1,12 +1,17 @@
 // app/(dashboard)/admin/courses/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { AdminLayout } from "@/components/layout/AdminLayout";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, MoreHorizontal, Eye, BookPlus, Loader2, Users, Clock, DollarSign, Layers, Upload } from "lucide-react";
+import {
+  Plus, Edit, Trash2, MoreHorizontal, Eye, BookPlus, Loader2,
+  Users, Clock, DollarSign, Layers, Upload, Search, X
+} from "lucide-react";
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
 import {
@@ -27,16 +32,18 @@ interface Course {
   price: number;
   createdAt: string;
   publishedAt: string | null;
-  creator: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  };
-  _count: {
-    enrollments: number;
-    modules: number;
-  };
+  creator: { id: string; firstName: string; lastName: string };
+  _count: { enrollments: number; modules: number };
 }
+
+interface Pagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
+const PAGE_SIZE = 15;
 
 const courseColumns: ColumnDef<Course>[] = [
   {
@@ -63,14 +70,14 @@ const courseColumns: ColumnDef<Course>[] = [
       const creator = row.original.creator;
       return (
         <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">
-                    {creator.firstName[0]}{creator.lastName[0]}
-                </span>
-            </div>
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                {creator.firstName} {creator.lastName}
+          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
+            <span className="text-[10px] font-bold text-slate-500 uppercase">
+              {creator.firstName[0]}{creator.lastName[0]}
             </span>
+          </div>
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            {creator.firstName} {creator.lastName}
+          </span>
         </div>
       );
     },
@@ -82,20 +89,20 @@ const courseColumns: ColumnDef<Course>[] = [
       const status = row.getValue("status") as string;
       if (status === "PUBLISHED") {
         return (
-          <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 shadow-none font-bold px-2 py-0.5 uppercase tracking-wider">
+          <Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30 hover:bg-emerald-100 shadow-none font-bold px-2 py-0.5 uppercase tracking-wider">
             PUBLISHED
           </Badge>
         );
       }
       if (status === "DRAFT") {
         return (
-          <Badge className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-500/20 shadow-none font-bold px-2 py-0.5 uppercase tracking-wider">
+          <Badge className="bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-900/30 hover:bg-amber-100 shadow-none font-bold px-2 py-0.5 uppercase tracking-wider">
             DRAFT
           </Badge>
         );
       }
       return (
-        <Badge variant="outline" className="text-slate-400 dark:text-slate-600 border-slate-200 dark:border-slate-800 font-bold px-2 py-0.5 uppercase tracking-wider">
+        <Badge variant="outline" className="text-slate-400 border-slate-200 dark:border-slate-800 font-bold px-2 py-0.5 uppercase tracking-wider">
           {status}
         </Badge>
       );
@@ -106,12 +113,11 @@ const courseColumns: ColumnDef<Course>[] = [
     header: "Difficulty",
     cell: ({ row }) => {
       const difficulty = row.getValue("difficulty") as string;
-      const colors: any = {
+      const colors: Record<string, string> = {
         BEGINNER: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-900/30",
         INTERMEDIATE: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/30",
         ADVANCED: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-900/30",
       };
-      
       return (
         <Badge className={`${colors[difficulty] || "bg-slate-500/10 text-slate-600 border-slate-200"} shadow-none font-bold px-2 py-0.5`}>
           {difficulty}
@@ -123,30 +129,22 @@ const courseColumns: ColumnDef<Course>[] = [
     accessorKey: "metrics",
     header: "Engagement",
     cell: ({ row }) => {
-        const course = row.original;
-        return (
-            <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
-                <span className="flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> {course.duration}h
-                </span>
-                <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3" /> {course._count.enrollments}
-                </span>
-                <span className="flex items-center gap-1">
-                    <Layers className="h-3 w-3" /> {course._count.modules}
-                </span>
-            </div>
-        );
-    }
+      const course = row.original;
+      return (
+        <div className="flex items-center gap-4 text-xs font-bold text-slate-500">
+          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {course.duration}h</span>
+          <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {course._count.enrollments}</span>
+          <span className="flex items-center gap-1"><Layers className="h-3 w-3" /> {course._count.modules}</span>
+        </div>
+      );
+    },
   },
   {
     accessorKey: "price",
     header: "Valuation",
     cell: ({ row }) => {
       const price = Number(row.getValue("price"));
-      if (price === 0) {
-        return <span className="text-sm font-black text-emerald-500 uppercase italic">Free</span>;
-      }
+      if (price === 0) return <span className="text-sm font-black text-emerald-500 uppercase italic">Free</span>;
       return (
         <div className="flex items-center font-black text-slate-900 dark:text-white">
           <DollarSign className="h-3 w-3 text-slate-400" />
@@ -157,10 +155,7 @@ const courseColumns: ColumnDef<Course>[] = [
   },
   {
     id: "actions",
-    cell: ({ row }) => {
-      const course = row.original;
-      return <CourseActions course={course} />;
-    },
+    cell: ({ row }) => <CourseActions course={row.original} />,
   },
 ];
 
@@ -256,26 +251,68 @@ function CourseActions({ course }: { course: Course }) {
 }
 
 export default function CoursesPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const currentPage = Number(searchParams.get("page")) || 1;
+  const searchQuery = searchParams.get("search") || "";
+
   const [courses, setCourses] = useState<Course[]>([]);
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: PAGE_SIZE, total: 0, pages: 0 });
   const [loading, setLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState(searchQuery);
+
+  const updateUrl = useCallback((updates: Record<string, string | number | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([k, v]) => {
+      if (v !== null && v !== "" && v !== 0) params.set(k, String(v));
+      else params.delete(k);
+    });
+    // Always reset to page 1 when search changes (unless page is explicitly set)
+    router.push(`${pathname}?${params.toString()}`, { scroll: false } as any);
+  }, [searchParams, router, pathname]);
+
+  const fetchCourses = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(currentPage),
+        limit: String(PAGE_SIZE),
+        ...(searchQuery ? { search: searchQuery } : {}),
+      });
+      const response = await fetch(`/api/courses?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch courses");
+      const data = await response.json();
+      setCourses(data.courses);
+      setPagination(data.pagination);
+    } catch (error: any) {
+      console.error("Error fetching courses:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, searchQuery]);
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const response = await fetch("/api/courses?limit=50");
-        if (!response.ok) throw new Error("Failed to fetch courses");
-        const data = await response.json();
-        setCourses(data.courses);
-      } catch (error: any) {
-        console.error("Error fetching courses:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchCourses();
-  }, []);
+  }, [fetchCourses]);
 
-  if (loading) {
+  // Sync local search input when URL changes externally
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUrl({ search: searchInput, page: null });
+  };
+
+  const handleSearchClear = () => {
+    setSearchInput("");
+    updateUrl({ search: null, page: null });
+  };
+
+  if (loading && courses.length === 0) {
     return (
       <AdminLayout title="Catalog Manager" description="Orchestrate platform intellectual property and curriculum modules">
         <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
@@ -294,34 +331,67 @@ export default function CoursesPage() {
   return (
     <AdminLayout title="Catalog Manager" description="Orchestrate platform intellectual property and curriculum modules">
       <div className="space-y-8 animate-fade-in">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none dark:backdrop-blur-sm">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm dark:backdrop-blur-sm">
           <div>
             <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">Curriculum Hub</h2>
             <p className="text-base font-medium text-slate-500 dark:text-slate-400 mt-1">
-              {courses.length} educational assets currently in circulation
+              {pagination.total} educational assets currently in circulation
             </p>
           </div>
           <div className="flex gap-3">
             <Link href="/admin/courses/import">
               <Button variant="outline" className="text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 h-11 px-4 font-bold rounded-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center shadow-sm">
-                <Upload className="h-4 w-4 mr-2" />
-                Bulk Import
+                <Upload className="h-4 w-4 mr-2" /> Bulk Import
               </Button>
             </Link>
             <Link href="/admin/courses/create">
               <Button className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 h-11 px-6 font-bold rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center">
-                <BookPlus className="h-5 w-5 mr-2" />
-                New Sequence
+                <BookPlus className="h-5 w-5 mr-2" /> New Sequence
               </Button>
             </Link>
           </div>
         </div>
 
+        {/* Search bar — server-side, URL-persisted */}
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
+          <div className="relative flex-1 max-w-md group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Query course registry..."
+              className="pl-10 pr-10 h-11 bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-blue-500/20 shadow-sm"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={handleSearchClear}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Button type="submit" className="h-11 px-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold">
+            Search
+          </Button>
+          {loading && courses.length > 0 && (
+            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+          )}
+        </form>
+
+        {/* Table with server-side pagination */}
         <DataTable
           columns={courseColumns}
           data={courses}
-          searchKey="title"
-          searchPlaceholder="Query course registry..."
+          serverPagination={{
+            currentPage,
+            totalPages: pagination.pages,
+            totalCount: pagination.total,
+            pageSize: PAGE_SIZE,
+            onPageChange: (page) => updateUrl({ page }),
+          }}
         />
       </div>
     </AdminLayout>
