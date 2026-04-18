@@ -36,6 +36,7 @@ export interface UpdateCourseData {
 export interface CourseFilters {
   status?: CourseStatus;
   difficulty?: DifficultyLevel;
+  valuation?: string; // "free" or "premium"
   creatorId?: string;
   search?: string;
 }
@@ -156,6 +157,12 @@ export class CourseService {
 
     if (filters.creatorId) {
       where.creatorId = filters.creatorId;
+    }
+
+    if (filters.valuation === "free") {
+      where.price = { equals: 0 };
+    } else if (filters.valuation === "premium") {
+      where.price = { gt: 0 };
     }
 
     if (filters.search) {
