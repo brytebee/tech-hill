@@ -42,6 +42,7 @@ export async function GET(
       prisma.trackEnrollment.findUnique({
         where: { userId_trackId: { userId: session.user.id, trackId } },
         select: {
+          id: true,
           completedCourses: true,
           currentCourseId: true,
           status: true,

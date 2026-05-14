@@ -11,12 +11,14 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useModal } from "@/hooks/use-modal";
+import { ResetTrackButton } from "@/components/shared/ResetTrackButton";
 
 interface TrackProgress {
     id: string;
     title: string;
     description: string;
     enrollment: {
+        id: string;
         completedCourses: string[];
         currentCourseId: string;
         status: string;
@@ -104,15 +106,26 @@ export default function StudentTrackLearningPage() {
                                 {progressPercent === 100 && <span className="bg-emerald-500 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Completed</span>}
                             </div>
                             {track.enrollment?.status === "ACTIVE" && progressPercent < 100 && (
-                                <Button
-                                    variant="ghost"
-                                    onClick={handleForfeit}
-                                    disabled={isForfeit}
-                                    className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 rounded-xl"
-                                >
-                                    {isForfeit ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Flag className="h-3 w-3 mr-1" />}
-                                    Forfeit Path
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={handleForfeit}
+                                        disabled={isForfeit}
+                                        className="h-8 px-3 text-[10px] font-black uppercase tracking-widest text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/30 rounded-xl"
+                                    >
+                                        {isForfeit ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Flag className="h-3 w-3 mr-1" />}
+                                        Forfeit Path
+                                    </Button>
+                                    {track.enrollment?.id && (
+                                        <ResetTrackButton
+                                            trackEnrollmentId={track.enrollment.id}
+                                            trackTitle={track.title}
+                                            courseCount={courses.length}
+                                            variant="student"
+                                            onSuccess={() => fetchProgress()}
+                                        />
+                                    )}
+                                </div>
                             )}
                         </div>
                         <h1 className="text-4xl font-black uppercase tracking-tight mb-2">{track.title}</h1>

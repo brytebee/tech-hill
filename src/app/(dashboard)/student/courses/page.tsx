@@ -45,6 +45,7 @@ import { CourseService } from "@/lib/services/courseService";
 import { EnrollButton } from "@/components/students/EnrollButton";
 import { PromotionService } from "@/lib/services/promotionService";
 import { prisma } from "@/lib/db";
+import { ResetProgressButton } from "@/components/shared/ResetProgressButton";
 
 interface PageProps {
   searchParams: Promise<{
@@ -304,14 +305,23 @@ function CourseCard({ course, userId, hasSubscription }: { course: any; userId: 
                       : "START"}
                 </Button>
               </Link>
-              <EnrollButton
-                courseId={course.id}
-                isEnrolled={true}
-                variant="outline"
-                className="w-11 h-11 border-slate-200 dark:border-slate-800 dark:hover:bg-slate-800 rounded-xl"
-              >
-                <X className="h-4 w-4 text-rose-500" />
-              </EnrollButton>
+              {(course.enrollment?.status === "COMPLETED" ||
+                (course.enrollment?.status === "ACTIVE" && course.enrollment?.overallProgress > 0)) ? (
+                <ResetProgressButton
+                  enrollmentId={course.enrollment.id}
+                  courseTitle={course.title}
+                  variant="student"
+                />
+              ) : (
+                <EnrollButton
+                  courseId={course.id}
+                  isEnrolled={true}
+                  variant="outline"
+                  className="w-11 h-11 border-slate-200 dark:border-slate-800 dark:hover:bg-slate-800 rounded-xl"
+                >
+                  <X className="h-4 w-4 text-rose-500" />
+                </EnrollButton>
+              )}
             </>
           ) : (
             <div className="flex w-full gap-3">
@@ -530,6 +540,50 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
             </div>
           </div>
         </div>
+
+        {/* My Learning — enrolled courses strip */}
+        {enrollments.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">My Learning</h2>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase tracking-widest">{enrollments.length} course{enrollments.length !== 1 ? "s" : ""}</span>
+              </div>
+            </div>
+            <div className="flex gap-5 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
+              {enrollments.map((e: any) => {
+                const isCompleted = e.status === "COMPLETED";
+                return (
+                  <div key={e.id} className="snap-start shrink-0 w-72 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm hover:shadow-xl hover:border-blue-500/30 transition-all overflow-hidden flex flex-col">
+                    {/* Thumbnail strip */}
+                    <div className={`h-2 w-full ${isCompleted ? "bg-emerald-500" : "bg-blue-600"}`} style={{ width: `${e.overallProgress}%` }} />
+                    <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 -mt-2" />
+                    <div className="p-5 flex flex-col flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug line-clamp-2 flex-1">{e.course.title}</h3>
+                        <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg ${isCompleted ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-blue-500/10 text-blue-600 dark:text-blue-400"}`}>
+                          {isCompleted ? "Done" : "Active"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${isCompleted ? "bg-emerald-500" : "bg-blue-600"}`} style={{ width: `${e.overallProgress}%` }} />
+                        </div>
+                        <span className={`text-[10px] font-black tabular-nums ${isCompleted ? "text-emerald-600" : "text-slate-500"}`}>{e.overallProgress}%</span>
+                      </div>
+                      <Link href={`/student/courses/${e.course.id}`} className="mt-auto">
+                        <Button size="sm" className={`w-full h-9 font-black uppercase tracking-widest text-[10px] rounded-xl transition-all hover:scale-[1.02] active:scale-95 ${isCompleted ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200" : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md"}`}>
+                          <Play className="h-3 w-3 mr-1.5 fill-current" />
+                          {isCompleted ? "REVIEW" : e.overallProgress > 0 ? "RESUME" : "START"}
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Controls */}
         <form method="GET">

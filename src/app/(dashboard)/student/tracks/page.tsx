@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { StudentLayout } from "@/components/layout/StudentLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Layers, ArrowRight, CheckCircle, Clock, BookOpen, Star, Rocket, ChevronRight, Loader2, Crown } from "lucide-react";
+import { Layers, ArrowRight, CheckCircle, Clock, BookOpen, Star, Rocket, ChevronRight, Loader2, Crown, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { ResetTrackButton } from "@/components/shared/ResetTrackButton";
 
 interface Track {
   id: string;
@@ -35,6 +37,7 @@ export default function StudentTracksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [isEnrolling, setIsEnrolling] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     fetchTracks();
@@ -76,22 +79,119 @@ export default function StudentTracksPage() {
   return (
     <StudentLayout>
       <div className="max-w-7xl mx-auto py-12 px-6">
-        <header className="mb-12">
+        <header className="mb-10">
             <h1 className="text-5xl font-black text-slate-900 dark:text-white uppercase tracking-tighter mb-4">
                Accelerated <span className="text-blue-600">Career Paths</span>
             </h1>
-            <p className="text-xl text-slate-500 max-w-2xl font-medium leading-relaxed">
+            <p className="text-xl text-slate-500 max-w-2xl font-medium leading-relaxed mb-6">
               Master an entire industry domain by following expertly curated course sequences designed for maximum retention.
             </p>
+            {/* Search */}
+            <div className="relative max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search career paths…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-10 h-11 bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 rounded-xl focus-visible:ring-blue-500/20 shadow-sm"
+              />
+            </div>
         </header>
+
+        {/* My Paths — enrolled career paths strip */}
+        {(() => {
+          const enrolledTracks = tracks.filter((t: any) => t.enrollmentStatus);
+          if (enrolledTracks.length === 0) return null;
+          return (
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center gap-3 px-1">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">My Paths</h2>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 uppercase tracking-widest">
+                  {enrolledTracks.length} path{enrolledTracks.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="flex gap-5 overflow-x-auto pb-2 -mx-1 px-1 snap-x snap-mandatory scrollbar-none">
+                {enrolledTracks.map((track: any) => {
+                  const total     = track._count?.courses ?? track.courses?.length ?? 1;
+                  const done      = track.completedCoursesCount ?? 0;
+                  const pct       = total > 0 ? Math.round((done / total) * 100) : 0;
+                  const completed = track.enrollmentStatus === "COMPLETED";
+                  return (
+                    <div key={track.id} className="snap-start shrink-0 w-80 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-sm hover:shadow-xl hover:border-indigo-500/30 transition-all overflow-hidden flex flex-col">
+                      {/* Progress bar accent */}
+                      <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${completed ? "bg-emerald-500" : "bg-indigo-500"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="p-5 flex flex-col flex-1 gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight leading-snug line-clamp-2 flex-1">
+                            {track.title}
+                          </h3>
+                          <span className={`shrink-0 text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg ${completed ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"}`}>
+                            {completed ? "Done" : "Active"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${completed ? "bg-emerald-500" : "bg-indigo-500"}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className={`text-[10px] font-black tabular-nums ${completed ? "text-emerald-600" : "text-slate-500"}`}>
+                            {done}/{total} courses · {pct}%
+                          </span>
+                        </div>
+                        <div className="flex gap-2 mt-auto">
+                          <Button
+                            size="sm"
+                            onClick={() => router.push(`/student/tracks/${track.id}`)}
+                            className={`flex-1 h-9 font-black uppercase tracking-widest text-[10px] rounded-xl transition-all hover:scale-[1.02] active:scale-95 shadow-sm ${completed ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200" : "bg-slate-900 dark:bg-white text-white dark:text-slate-900"}`}
+                          >
+                            <Layers className="h-3 w-3 mr-1.5" />
+                            {completed ? "Review" : "Continue"}
+                          </Button>
+                          {track.trackEnrollmentId && (
+                            <ResetTrackButton
+                              trackEnrollmentId={track.trackEnrollmentId}
+                              trackTitle={track.title}
+                              courseCount={total}
+                              variant="student"
+                              onSuccess={() => fetchTracks()}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {[1,2].map(i => <div key={i} className="h-80 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse" />)}
           </div>
-        ) : (
+        ) : (() => {
+          const filteredTracks = tracks.filter(
+            (t) =>
+              !query ||
+              t.title.toLowerCase().includes(query.toLowerCase()) ||
+              t.description?.toLowerCase().includes(query.toLowerCase())
+          );
+          return filteredTracks.length === 0 ? (
+            <div className="text-center py-24">
+              <div className="h-20 w-20 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-6">
+                <Search className="h-10 w-10 text-slate-300 dark:text-slate-600" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase mb-2">No Paths Found</h3>
+              <p className="text-slate-400 font-medium">Try a different search term.</p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {tracks.map((track) => (
+            {filteredTracks.map((track) => (
           <Card key={track.id} className="border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 group flex flex-col">
                 {/* Thumbnail Hero */}
                 <div className="relative w-full aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
@@ -156,12 +256,23 @@ export default function StudentTracksPage() {
 
                 <CardFooter className="p-8 pt-0 flex flex-col sm:flex-row gap-4">
                    {(track as any).enrollmentStatus ? (
-                     <Button
-                       onClick={() => router.push(`/student/tracks/${track.id}`)}
-                       className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[11px] tracking-widest h-12 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
-                     >
-                       <CheckCircle className="mr-2 h-4 w-4" /> Continue Learning <ArrowRight className="ml-2 h-4 w-4" />
-                     </Button>
+                     <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                       <Button
+                         onClick={() => router.push(`/student/tracks/${track.id}`)}
+                         className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-[11px] tracking-widest h-12 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+                       >
+                         <CheckCircle className="mr-2 h-4 w-4" /> Continue Learning <ArrowRight className="ml-2 h-4 w-4" />
+                       </Button>
+                       {(track as any).trackEnrollmentId && (
+                         <ResetTrackButton
+                           trackEnrollmentId={(track as any).trackEnrollmentId}
+                           trackTitle={track.title}
+                           courseCount={track._count.courses}
+                           variant="student"
+                           onSuccess={() => router.refresh()}
+                         />
+                       )}
+                     </div>
                    ) : (
                      <Button
                         onClick={() => handleEnroll(track.id)}
@@ -176,7 +287,8 @@ export default function StudentTracksPage() {
               </Card>
             ))}
           </div>
-        )}
+          );
+        })()}
       </div>
     </StudentLayout>
   );

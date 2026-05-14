@@ -58,15 +58,20 @@ export async function GET(request: NextRequest) {
         trackId: { in: trackIds },
         status: { in: ["ACTIVE", "COMPLETED"] },
       },
-      select: { trackId: true, status: true },
+      select: { id: true, trackId: true, status: true, completedCourses: true },
     });
     const enrollmentMap = new Map(
-      studentEnrollments.map((e: any) => [e.trackId, e.status])
+      studentEnrollments.map((e: any) => [
+        e.trackId,
+        { status: e.status, id: e.id, completedCoursesCount: e.completedCourses.length },
+      ])
     );
 
     const enriched = tracks.map((track: any) => ({
       ...track,
-      enrollmentStatus: enrollmentMap.get(track.id) ?? null,
+      enrollmentStatus:      enrollmentMap.get(track.id)?.status            ?? null,
+      trackEnrollmentId:     enrollmentMap.get(track.id)?.id                ?? null,
+      completedCoursesCount: enrollmentMap.get(track.id)?.completedCoursesCount ?? 0,
     }));
 
     // Add subscription status to let the client skip any payment UI

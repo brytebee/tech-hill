@@ -45,6 +45,8 @@ import {
   Trophy,
 } from "lucide-react";
 import Link from "next/link";
+import { ResetProgressButton } from "@/components/shared/ResetProgressButton";
+import { PartialResetButton } from "@/components/shared/PartialResetButton";
 
 export interface Topic {
   id: string;
@@ -161,6 +163,9 @@ function ModuleCard({
   courseId,
   moduleProgress,
   topicProgresses,
+  enrollmentId,
+  topicGlobalIndexMap,
+  totalTopicsCount,
 }: {
   module: Module;
   isLocked: boolean;
@@ -169,6 +174,9 @@ function ModuleCard({
   courseId: string;
   moduleProgress?: any;
   topicProgresses: any[];
+  enrollmentId: string;
+  topicGlobalIndexMap: Map<string, number>;
+  totalTopicsCount: number;
 }) {
   const completedTopics = topicProgresses.filter(
     (progress) =>
@@ -288,7 +296,7 @@ function ModuleCard({
                 return (
                   <div
                     key={topic.id}
-                    className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 px-6 rounded-2xl border transition-all duration-300 ${
+                    className={`group/topic flex flex-col sm:flex-row sm:items-center justify-between p-4 px-6 rounded-2xl border transition-all duration-300 ${
                       isTopicCompleted
                         ? "bg-emerald-500/5 border-emerald-500/10 dark:bg-emerald-950/10 dark:border-emerald-900/20"
                         : isTopicInProgress
@@ -336,21 +344,31 @@ function ModuleCard({
                       </div>
                     </div>
 
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex items-center gap-2">
                       {isTopicAccessible ? (
-                        <Button
-                          size="sm"
-                          className={`w-full sm:w-auto h-9 px-6 font-black uppercase tracking-widest text-[10px] rounded-xl transition-all hover:scale-105 active:scale-95 ${
-                              isTopicCompleted ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700" : 
-                              "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg"
-                          }`}
-                          asChild
-                        >
-                          <Link href={`/student/topics/${topic.id}`}>
-                            <Play className={`h-3 w-3 mr-2 ${isTopicCompleted ? '' : 'fill-current'}`} />
-                            {isTopicCompleted ? "REVIEW" : "START"}
-                          </Link>
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            className={`w-full sm:w-auto h-9 px-6 font-black uppercase tracking-widest text-[10px] rounded-xl transition-all hover:scale-105 active:scale-95 ${
+                                isTopicCompleted ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700" :
+                                "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg"
+                            }`}
+                            asChild
+                          >
+                            <Link href={`/student/topics/${topic.id}`}>
+                              <Play className={`h-3 w-3 mr-2 ${isTopicCompleted ? '' : 'fill-current'}`} />
+                              {isTopicCompleted ? "REVIEW" : "START"}
+                            </Link>
+                          </Button>
+                          {isTopicCompleted && (
+                            <PartialResetButton
+                              enrollmentId={enrollmentId}
+                              topicId={topic.id}
+                              topicTitle={topic.title}
+                              topicsAfterCount={totalTopicsCount - (topicGlobalIndexMap.get(topic.id) ?? 0)}
+                            />
+                          )}
+                        </>
                       ) : (
                         <div className="flex items-center justify-center h-9 px-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-[10px] font-black text-slate-300 uppercase tracking-widest">
                           <Lock className="h-3 w-3 mr-2" /> LOCKED
@@ -418,6 +436,13 @@ export function StudentCourseOverview({
 
   const lockedModules = getLockedModules();
   const isCourseCompleted = enrollment.status === "COMPLETED";
+
+  // Global flat topic list for partial reset index calculation
+  const allTopicsFlat = course.modules.flatMap((m) => m.topics);
+  const topicGlobalIndexMap = new Map<string, number>(
+    allTopicsFlat.map((t, i) => [t.id, i])
+  );
+  const totalTopicsCount = allTopicsFlat.length;
 
   // Live completion percentage derived from real topic progress records
   // (more accurate than the stale enrollment.overallProgress field)
@@ -594,6 +619,13 @@ export function StudentCourseOverview({
                     )}
                   </Button>
                 )}
+                {(isCourseCompleted || enrollment.overallProgress > 0) && (
+                  <ResetProgressButton
+                    enrollmentId={enrollment.id}
+                    courseTitle={course.title}
+                    variant="student"
+                  />
+                )}
               </div>
             </div>
         </div>
@@ -621,6 +653,9 @@ export function StudentCourseOverview({
                 courseId={course.id}
                 moduleProgress={moduleProgressMap.get(module.id)}
                 topicProgresses={progressData?.topicProgresses || []}
+                enrollmentId={enrollment.id}
+                topicGlobalIndexMap={topicGlobalIndexMap}
+                totalTopicsCount={totalTopicsCount}
               />
             ))}
           </div>
