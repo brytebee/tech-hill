@@ -43,6 +43,7 @@ import {
   Shield,
   Star,
   Trophy,
+  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import { ResetProgressButton } from "@/components/shared/ResetProgressButton";
@@ -109,6 +110,7 @@ interface StudentCourseOverviewProps {
     moduleProgresses: any[];
     topicProgresses: any[];
   };
+  includedTopicIds?: string[]; // non-empty = track-filtered view
 }
 
 function getDifficultyBadge(difficulty: string) {
@@ -391,6 +393,7 @@ export function StudentCourseOverview({
   enrollment,
   userId,
   progressData,
+  includedTopicIds = [],
 }: StudentCourseOverviewProps) {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
@@ -437,8 +440,16 @@ export function StudentCourseOverview({
   const lockedModules = getLockedModules();
   const isCourseCompleted = enrollment.status === "COMPLETED";
 
+  // Apply track-level topic filter if provided
+  const isFiltered = includedTopicIds.length > 0;
+  const filteredModules = isFiltered
+    ? course.modules
+        .map(m => ({ ...m, topics: m.topics.filter(t => includedTopicIds.includes(t.id)) }))
+        .filter(m => m.topics.length > 0)
+    : course.modules;
+
   // Global flat topic list for partial reset index calculation
-  const allTopicsFlat = course.modules.flatMap((m) => m.topics);
+  const allTopicsFlat = filteredModules.flatMap((m) => m.topics);
   const topicGlobalIndexMap = new Map<string, number>(
     allTopicsFlat.map((t, i) => [t.id, i])
   );
@@ -507,6 +518,16 @@ export function StudentCourseOverview({
   return (
     <div className="space-y-10 animate-fade-in pb-20 max-w-7xl mx-auto">
       
+      {/* Curated Track Banner */}
+      {isFiltered && (
+        <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+          <SlidersHorizontal className="h-4 w-4 shrink-0" />
+          <p className="text-xs font-black uppercase tracking-widest">
+            ⚡ Curated track view — showing {includedTopicIds.length} selected topic{includedTopicIds.length !== 1 ? "s" : ""} from this course
+          </p>
+        </div>
+      )}
+
       {/* Celebration Banner */}
       {isCourseCompleted && (
         <Card className="border-0 bg-gradient-to-r from-emerald-500 to-teal-600 shadow-xl shadow-emerald-500/20 overflow-hidden relative rounded-[2.5rem]">
@@ -643,7 +664,7 @@ export function StudentCourseOverview({
           </div>
 
           <div className="space-y-6">
-            {course.modules.map((module) => (
+            {filteredModules.map((module) => (
               <ModuleCard
                 key={module.id}
                 module={module}

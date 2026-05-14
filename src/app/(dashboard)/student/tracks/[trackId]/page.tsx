@@ -189,7 +189,7 @@ export default function StudentTrackLearningPage() {
                                             <Button disabled className="rounded-xl font-bold uppercase text-[10px] bg-slate-100 text-slate-400">Locked</Button>
                                         ) : (
                                             <Button asChild className={`${isCompleted ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'} text-white font-black uppercase text-[11px] tracking-widest h-11 px-8 rounded-xl shadow-lg transition-all`}>
-                                                <Link href={`/student/courses/${tc.course.id}`}>
+                                                <Link href={`/student/courses/${tc.course.id}?trackId=${trackId}`}>
                                                     {isCompleted ? 'Review Course' : 'Launch Course'} <ArrowRight className="ml-2 h-4 w-4" />
                                                 </Link>
                                             </Button>

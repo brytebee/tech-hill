@@ -17,6 +17,7 @@ import { PromotionService } from "@/lib/services/promotionService";
 
 interface PageProps {
   params: Promise<{ courseId: string }>;
+  searchParams?: Promise<{ trackId?: string }>;
 }
 
 async function getCourseData(courseId: string, userId: string) {
@@ -45,7 +46,7 @@ async function getCourseData(courseId: string, userId: string) {
   }
 }
 
-export default async function StudentCourseDetailsPage({ params }: PageProps) {
+export default async function StudentCourseDetailsPage({ params, searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -53,6 +54,8 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
   }
 
   const { courseId } = await params;
+  const resolvedSearch = await searchParams;
+  const trackId = resolvedSearch?.trackId;
   const data = await getCourseData(courseId, session.user.id);
 
   if (!data) {
@@ -93,6 +96,16 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
       : null,
   };
 
+  // Resolve track-level topic filter if student arrived from a track
+  let includedTopicIds: string[] = [];
+  if (trackId) {
+    const trackCourse = await prisma.trackCourse.findFirst({
+      where: { trackId, courseId },
+      select: { includedTopicIds: true },
+    });
+    includedTopicIds = trackCourse?.includedTopicIds ?? [];
+  }
+
   // If user is enrolled and active or completed, show the interactive overview
   if (enrollment && (enrollment.status === "ACTIVE" || enrollment.status === "COMPLETED")) {
     const serializedEnrollment = {
@@ -112,6 +125,7 @@ export default async function StudentCourseDetailsPage({ params }: PageProps) {
           enrollment={serializedEnrollment}
           userId={session.user.id}
           progressData={progressData}
+          includedTopicIds={includedTopicIds}
         />
       </StudentLayout>
     );

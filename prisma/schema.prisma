@@ -1068,10 +1068,11 @@ model Track {
 }
 
 model TrackCourse {
-  id       String @id @default(cuid())
-  trackId  String
-  courseId String
-  order    Int
+  id               String   @id @default(cuid())
+  trackId          String
+  courseId         String
+  order            Int
+  includedTopicIds String[] // empty = whole course; non-empty = topic-level filter
 
   track  Track  @relation(fields: [trackId], references: [id], onDelete: Cascade)
   course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
