@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "bash ./scripts/init-submodules.sh && next build",
     "start": "next start",
     "lint": "next lint",
     "seed:curriculum": "npx tsx scripts/seed-curriculum/seeder.ts",
