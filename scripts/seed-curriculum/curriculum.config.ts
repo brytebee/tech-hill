@@ -1578,6 +1578,244 @@ export const CURRICULUM: TrackConfig[] = [
           },
         ],
       },
+      // ── VIRTUAL MEETINGS & PROFESSIONAL COLLABORATION ──────────────────────
+      {
+        title: "Virtual Meetings & Professional Collaboration",
+        description:
+          "Master the full stack of professional remote communication tools — Google Meet, Zoom, Microsoft Teams, and WhatsApp for Business. Learn to run structured meetings, leverage AI-powered transcription and summaries, manage asynchronous communication, and present yourself as a polished, remote-ready professional in global tech teams.",
+        shortDescription:
+          "Google Meet, Zoom, Teams, and WhatsApp for Business — run every meeting like a pro.",
+        difficulty: "BEGINNER",
+        duration: 7,
+        price: 0,
+        tags: [
+          "google-meet",
+          "zoom",
+          "microsoft-teams",
+          "whatsapp-business",
+          "remote-work",
+          "collaboration",
+          "professional-skills",
+          "beginner",
+        ],
+        learningOutcomes: [
+          "Set up and run a professional Google Meet session with recordings, captions, and breakout rooms",
+          "Host a Zoom webinar with waiting rooms, polls, and AI-generated meeting summaries",
+          "Navigate Microsoft Teams channels, threads, and integrations used in enterprise engineering teams",
+          "Configure a WhatsApp Business profile and use broadcast lists and quick replies for client communication",
+          "Apply a structured meeting framework (agenda → action items → follow-up) to any tool",
+        ],
+        modules: [
+          // ── Module 1: Google Meet ────────────────────────────────────────
+          {
+            title: "Module 1: Google Meet — The Developer's Default",
+            duration: 150,
+            topics: [
+              {
+                title: "Google Meet Essentials: Setup, Camera, Audio, and Screen Sharing",
+                sourceUrls: [
+                  "https://support.google.com/meet/answer/9302870",
+                  "https://workspace.google.com/products/meet/",
+                ],
+                furtherReading: [
+                  {
+                    title: "Google Meet Help Centre",
+                    url: "https://support.google.com/meet",
+                    description:
+                      "Official Google Meet documentation — keyboard shortcuts, troubleshooting, and advanced features",
+                  },
+                  {
+                    title: "Google Workspace Learning Centre: Meet",
+                    url: "https://workspace.google.com/learning-center/products/meet/get-started/",
+                    description:
+                      "Structured learning path from Google — from joining your first call to hosting webinars",
+                  },
+                ],
+              },
+              {
+                title: "Professional Presence on Camera: Lighting, Background, and Framing",
+                furtherReading: [
+                  {
+                    title: "Logitech: Work From Home Camera Setup Guide",
+                    url: "https://www.logitech.com/en-us/content/webcam-buying-guide.html",
+                    description:
+                      "Practical guide to camera angles, lighting, and background setup for professional video calls",
+                  },
+                ],
+              },
+              {
+                title: "Live Captions, Recordings, and AI Meeting Summaries in Google Meet",
+                sourceUrls: ["https://support.google.com/meet/answer/9308521"],
+                furtherReading: [
+                  {
+                    title: "Gemini for Google Meet",
+                    url: "https://workspace.google.com/products/gemini/",
+                    description:
+                      "How Gemini AI generates real-time transcripts, action items, and meeting notes in Google Meet",
+                  },
+                ],
+              },
+              {
+                title: "Breakout Rooms, Polls, and Q&A for Structured Collaboration",
+                sourceUrls: ["https://support.google.com/meet/answer/10099829"],
+              },
+              {
+                title:
+                  "Project: Host a 30-Minute Mock Client Status Call (Agenda → Notes → Action Items → Follow-up Email)",
+                isProject: true,
+              },
+            ],
+          },
+          // ── Module 2: Zoom & Microsoft Teams ────────────────────────────
+          {
+            title: "Module 2: Zoom & Microsoft Teams — Enterprise Standard",
+            duration: 200,
+            topics: [
+              {
+                title: "Zoom Deep Dive: Waiting Rooms, Breakout Rooms, Polls, and Reactions",
+                sourceUrls: [
+                  "https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0010554",
+                ],
+                furtherReading: [
+                  {
+                    title: "Zoom Learning Centre",
+                    url: "https://learning.zoom.us/",
+                    description:
+                      "Free official Zoom training courses — from host basics to Zoom Webinars and Events",
+                  },
+                  {
+                    title: "Zoom AI Companion",
+                    url: "https://www.zoom.com/en/ai-assistant/",
+                    description:
+                      "Zoom's built-in AI that generates meeting summaries, action items, and next steps automatically",
+                  },
+                ],
+              },
+              {
+                title: "Recording, Transcription, and AI Meeting Notes with Zoom AI Companion",
+                sourceUrls: ["https://support.zoom.com/hc/en/article?id=zm_kb&sysparm_article=KB0060610"],
+                furtherReading: [
+                  {
+                    title: "Otter.ai — AI Meeting Notes for Zoom",
+                    url: "https://otter.ai/",
+                    description:
+                      "Third-party AI transcription tool that integrates with Zoom for automated, searchable meeting notes",
+                  },
+                ],
+              },
+              {
+                title: "Microsoft Teams Fundamentals: Channels, Threads, and Teams Structure",
+                sourceUrls: [
+                  "https://support.microsoft.com/en-us/topic/get-started-with-microsoft-teams-b98d533f-118e-4bae-bf44-3df2470c2b12",
+                ],
+                furtherReading: [
+                  {
+                    title: "Microsoft Teams Help & Learning",
+                    url: "https://support.microsoft.com/en-us/teams",
+                    description:
+                      "Official Microsoft Teams documentation — channels, meetings, apps, and integrations",
+                  },
+                  {
+                    title: "Teams for Developers (Microsoft Learn)",
+                    url: "https://learn.microsoft.com/en-us/microsoftteams/platform/",
+                    description:
+                      "How software developers use and extend Microsoft Teams with custom apps and bots",
+                  },
+                ],
+              },
+              {
+                title: "Teams for Engineering: Files, Planner Integration, and Meeting Recordings",
+                furtherReading: [
+                  {
+                    title: "Microsoft Copilot in Teams",
+                    url: "https://support.microsoft.com/en-us/topic/get-started-with-copilot-in-microsoft-teams-meetings-0bf9dd3c-96f7-44e2-8bb8-790bedf066b1",
+                    description:
+                      "AI-powered meeting recap, task extraction, and follow-up automation inside Microsoft Teams",
+                  },
+                ],
+              },
+              {
+                title: "Choosing the Right Tool: When to Use Meet vs Zoom vs Teams",
+              },
+              {
+                title:
+                  "Project: Run a Full Sprint Review Meeting — Zoom or Teams, with Agenda, Recording, AI Summary, and Sent Action Items",
+                isProject: true,
+              },
+            ],
+          },
+          // ── Module 3: WhatsApp for Business & Async Communication ───────
+          {
+            title: "Module 3: WhatsApp for Business & Async-First Communication",
+            duration: 150,
+            topics: [
+              {
+                title: "WhatsApp Business App vs WhatsApp Business API: Which Do You Need?",
+                sourceUrls: [
+                  "https://business.whatsapp.com/products/business-app",
+                  "https://business.whatsapp.com/products/business-platform",
+                ],
+                furtherReading: [
+                  {
+                    title: "WhatsApp Business Help Centre",
+                    url: "https://faq.whatsapp.com/1311793686214187",
+                    description:
+                      "Official WhatsApp documentation for setting up a Business profile, catalog, and messaging tools",
+                  },
+                  {
+                    title: "Meta Business Suite: Managing WhatsApp at Scale",
+                    url: "https://business.facebook.com/",
+                    description:
+                      "How to manage WhatsApp Business messaging, analytics, and ad campaigns from one dashboard",
+                  },
+                ],
+              },
+              {
+                title:
+                  "Setting Up Your Professional Profile: Business Name, Description, Hours, and Catalog",
+                sourceUrls: ["https://faq.whatsapp.com/539178204879077"],
+              },
+              {
+                title: "Quick Replies, Labels, and Broadcast Lists for Client Communication",
+                furtherReading: [
+                  {
+                    title: "WhatsApp Business Broadcast Lists Guide",
+                    url: "https://faq.whatsapp.com/3239140626140120",
+                    description:
+                      "How to send one-to-many messages professionally without creating groups",
+                  },
+                ],
+              },
+              {
+                title: "Async-First Communication: Voice Notes, Status Updates, and Reducing Meeting Overload",
+                furtherReading: [
+                  {
+                    title: "Loom — Async Video Messaging for Teams",
+                    url: "https://www.loom.com/",
+                    description:
+                      "Record and share short screen + camera videos instead of scheduling a meeting — loved by remote dev teams",
+                  },
+                  {
+                    title: "GitLab's Guide to Async Work",
+                    url: "https://handbook.gitlab.com/handbook/company/culture/all-remote/asynchronous/",
+                    description:
+                      "The most complete public playbook on async-first communication from the world's largest all-remote company",
+                  },
+                ],
+              },
+              {
+                title:
+                  "Meeting Etiquette, Agendas, and the 5 Rules of Professional Remote Communication",
+              },
+              {
+                title:
+                  "Project: Build a Client Communication SOP — WhatsApp Quick Replies, Loom Video Update, and a Follow-up Email Template",
+                isProject: true,
+              },
+            ],
+          },
+        ],
+      },
     ],
   },
 

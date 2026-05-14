@@ -803,4 +803,165 @@ export class ProgressService {
       return null;
     }
   }
+
+  /**
+   * Fully resets a student's progress for a given course.
+   *
+   * Cascades in this order (all inside a single transaction):
+   *   1. Delete all TopicProgress records for the student in this course.
+   *   2. Delete all QuizAttempts for the student on quizzes in this course.
+   *   3. Delete all ModuleProgress records for the student in this course.
+   *   4. Reset the Enrollment to ACTIVE, 0%, no completedAt.
+   *
+   * Intentionally does NOT delete the Enrollment record itself so the
+   * student keeps their enrolled status without having to re-pay.
+   *
+   * @param userId   - The student whose progress will be wiped.
+   * @param courseId - The course to reset.
+   * @returns The updated Enrollment record.
+   */
+  static async resetCourseProgress(userId: string, courseId: string) {
+    // Gather module and topic IDs in a single query before the transaction.
+    const course = await prisma.course.findUniqueOrThrow({
+      where: { id: courseId },
+      select: {
+        title: true,
+        modules: {
+          select: {
+            id: true,
+            topics: { select: { id: true, quizzes: { select: { id: true } } } },
+          },
+        },
+      },
+    });
+
+    const moduleIds = course.modules.map((m) => m.id);
+    const topicIds  = course.modules.flatMap((m) => m.topics.map((t) => t.id));
+    const quizIds   = course.modules
+      .flatMap((m) => m.topics)
+      .flatMap((t) => t.quizzes.map((q) => q.id));
+
+    const updatedEnrollment = await prisma.$transaction(async (tx) => {
+      // 1. Wipe granular topic-level progress.
+      if (topicIds.length > 0) {
+        await tx.topicProgress.deleteMany({
+          where: { userId, topicId: { in: topicIds } },
+        });
+      }
+
+      // 2. Wipe quiz attempts (keeps attempt count honest for retakes).
+      if (quizIds.length > 0) {
+        await tx.quizAttempt.deleteMany({
+          where: { userId, quizId: { in: quizIds } },
+        });
+      }
+
+      // 3. Wipe module-level progress.
+      if (moduleIds.length > 0) {
+        await tx.moduleProgress.deleteMany({
+          where: { userId, moduleId: { in: moduleIds } },
+        });
+      }
+
+      // 4. Reset the enrollment itself.
+      return tx.enrollment.update({
+        where: { userId_courseId: { userId, courseId } },
+        data: {
+          status: "ACTIVE",
+          overallProgress: 0,
+          finalGrade: null,
+          completedAt: null,
+          certificateIssued: false,
+          lastAccessAt: new Date(),
+        },
+      });
+    });
+
+    // Fire a notification so the student knows the reset completed.
+    try {
+      await prisma.notification.create({
+        data: {
+          userId,
+          type: "SYSTEM",
+          title: `Course Reset: "${course.title}"`,
+          message: `Your progress for "${course.title}" has been reset. You can now retake it from the beginning.`,
+          linkUrl: `/student/courses/${courseId}`,
+        },
+      });
+    } catch (_) {
+      // Non-fatal — don't block the reset if the notification fails.
+    }
+
+    return updatedEnrollment;
+  }
+
+  /**
+   * Reopens completed TrackEnrollments for a specific track when new courses
+   * have been added to that track after some students already hit 100%.
+   *
+   * Recalculates progress as:
+   *   completedCourses.length / total courses in the track
+   *
+   * Sends each affected student a notification.
+   *
+   * @param trackId - The track that has had courses added to it.
+   * @returns The number of TrackEnrollments reopened.
+   */
+  static async reopenTrackEnrollmentForNewCourse(trackId: string): Promise<number> {
+    const track = await (prisma as any).track.findUniqueOrThrow({
+      where: { id: trackId },
+      select: {
+        title: true,
+        courses: { select: { courseId: true } },
+      },
+    });
+
+    const totalCourses = track.courses.length;
+
+    const completedEnrollments = await (prisma as any).trackEnrollment.findMany({
+      where: { trackId, status: "COMPLETED" },
+      select: { id: true, userId: true, completedCourses: true },
+    });
+
+    if (completedEnrollments.length === 0) return 0;
+
+    let reopened = 0;
+
+    for (const te of completedEnrollments) {
+      const completedCount   = te.completedCourses.length;
+      const progressPercent  = Math.round((completedCount / totalCourses) * 100);
+
+      // Find the next course the student hasn't completed yet.
+      const nextCourseId = track.courses.find(
+        (tc: { courseId: string }) => !te.completedCourses.includes(tc.courseId)
+      )?.courseId ?? null;
+
+      await (prisma as any).trackEnrollment.update({
+        where: { id: te.id },
+        data: {
+          status: "ACTIVE",
+          completedAt: null,
+          currentCourseId: nextCourseId,
+          // progressPercentage is not a stored field on TrackEnrollment in this
+          // schema (it is derived), so we only update the state fields.
+        },
+      });
+
+      try {
+        await prisma.notification.create({
+          data: {
+            userId: te.userId,
+            type: "COURSE_UPDATE",
+            title: `New content in "${track.title}"!`,
+            message: `We've added new courses to the "${track.title}" Career Path. ${progressPercent}% complete — keep going!`,
+            linkUrl: `/student/tracks`,
+          },
+        });
+      } catch (_) {}
+
+      reopened++;
+    }
+
+    return reopened;
+  }
 }
