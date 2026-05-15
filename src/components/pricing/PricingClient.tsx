@@ -101,7 +101,7 @@ export function PricingClient({ plans }: { plans: Plan[] }) {
               <h3 className="text-slate-400 text-sm font-black uppercase tracking-widest mb-2">Standalone Mastery</h3>
               <div className="text-3xl font-black text-white mb-2">Pay-As-You-Go</div>
               <p className="text-slate-500 text-sm leading-relaxed">
-                Purchase specific courses or career paths individually for lifetime access.
+                Purchase specific courses or career paths individually. Prices start from <span className="text-white font-bold">₦50,000</span> per course.
               </p>
             </div>
             
@@ -165,7 +165,8 @@ export function PricingClient({ plans }: { plans: Plan[] }) {
                 "Weekly Live Coding Sessions",
                 "Access to Class Archives",
                 "Priority Mentor Support",
-                "Exclusive Discord Server"
+                "Exclusive Discord Server",
+                "Flash Sale & Coupon Discounts"
               ]).map((feat, i) => (
                 <li key={i} className="flex items-start gap-3 text-sm text-white">
                   <Check className="w-5 h-5 mt-0.5 text-blue-400 shrink-0 bg-blue-500/10 rounded-full p-1" />
@@ -224,8 +225,24 @@ export function PricingClient({ plans }: { plans: Plan[] }) {
 
         {/* ── Trust Indicators / FAQ Strip ── */}
         <div className="mt-24 space-y-16">
-          <div className="flex flex-wrap justify-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
-             {/* Add payment logos here if available in assets */}
+          {/* Payment trust badges */}
+          <div className="flex flex-wrap justify-center items-center gap-6 py-8 px-4 rounded-2xl bg-slate-900/30 border border-slate-800/40">
+            <span className="text-xs font-black text-slate-500 uppercase tracking-widest">Payments secured by</span>
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800/60 border border-slate-700/40">
+              <div className="w-5 h-5 rounded-full bg-[#00C3F7] flex items-center justify-center">
+                <span className="text-[8px] font-black text-slate-900">P</span>
+              </div>
+              <span className="text-sm font-black text-white">Paystack</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/40 text-xs font-bold text-slate-400">
+              🔒 256-bit SSL Encrypted
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/40 text-xs font-bold text-slate-400">
+              ₦ NGN Pricing
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-700/40 text-xs font-bold text-slate-400">
+              🔄 Cancel Anytime
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12 border-t border-slate-800/50 pt-16 px-4">

@@ -228,7 +228,7 @@ export default async function HomePage() {
           {/* Announcement badge */}
           <div className="inline-flex items-center gap-2 announcement-badge rounded-full px-4 py-1.5 text-sm font-medium mb-10 animate-fade-in opacity-0">
             <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-ping" />
-            Introducing Tech Hill 2.0 — Now with AI Mentoring
+            Introducing Tech Hill Pro — Unlock Every Career Path & Course
             <ChevronRight className="w-3.5 h-3.5 opacity-60" />
           </div>
 
@@ -257,14 +257,14 @@ export default async function HomePage() {
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Button>
             </Link>
-            <Link href="/courses">
+            <Link href="/career-paths">
               <Button
                 variant="outline"
                 size="lg"
                 className="h-13 px-8 text-base font-semibold rounded-xl border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-700/60 hover:text-white hover:border-slate-600 backdrop-blur-sm transition-all duration-200"
               >
                 <Play className="mr-2 w-4 h-4" />
-                Explore Courses
+                Explore Career Paths
               </Button>
             </Link>
           </div>
@@ -549,8 +549,8 @@ export default async function HomePage() {
             />
             <FeatureCard
               icon={Shield}
-              title="Lifetime Access"
-              description="Pay once, keep forever. Course material, community, and updates — all yours for life. No surprise renewals."
+              title="Flexible Access"
+              description="Subscribe monthly or yearly for all-access, or buy individual courses for lifetime ownership. No forced upgrades — you choose your commitment."
               gradient="bg-gradient-to-br from-slate-600 to-slate-800"
             />
           </div>
@@ -647,6 +647,7 @@ export default async function HomePage() {
                                 : `₦${course.pricing.currentPrice.toLocaleString()}`}
                             </span>
                           </div>
+                          <span className="text-[9px] text-blue-400/70 mt-0.5">Free with Pro subscription</span>
                         </div>
                         <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 group-hover:text-blue-400 transition-colors">
                           Explore <ChevronRight className="w-3.5 h-3.5" />
@@ -764,7 +765,8 @@ export default async function HomePage() {
               {
                 title: "Platform",
                 links: [
-                  { label: "Courses", href: "/student/courses" },
+                  { label: "Courses", href: "/courses" },
+                  { label: "Career Paths", href: "/career-paths" },
                   { label: "Pricing", href: "/pricing" },
                   { label: "Certificates", href: "/verify" },
                 ],
