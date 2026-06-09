@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { EmailService } from "@/engine/lib/services/emailService";
 
 async function getSession(req: NextRequest) {
   return getServerSession(authOptions);
@@ -127,6 +128,36 @@ export async function POST(
         submittedAt: new Date(),
       },
     });
+  }
+
+  // Trigger submission review notification email
+  try {
+    const [student, settingsRecord] = await Promise.all([
+      prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { firstName: true, lastName: true },
+      }),
+      prisma.systemSetting.findUnique({
+        where: { key: "promptReviewEmail" },
+      }),
+    ]);
+
+    const reviewerEmail = settingsRecord?.value || "brytebee@gmail.com";
+    const studentName = `${student?.firstName || ""} ${student?.lastName || ""}`.trim() || "A Student";
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const reviewUrl = `${baseUrl}/admin/submissions`;
+
+    // Dispatch notification (do not block client response)
+    EmailService.sendSubmissionReviewNotification({
+      to: reviewerEmail,
+      studentName,
+      topicTitle: topic.title,
+      reviewUrl,
+    }).catch((err) => {
+      console.error("Failed to send submission review notification email:", err);
+    });
+  } catch (error) {
+    console.error("Error triggering submission review notification logic:", error);
   }
 
   return NextResponse.json({ submission }, { status: 201 });

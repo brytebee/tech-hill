@@ -99,4 +99,44 @@ export class EmailService {
       console.error("Error sending reset password email:", error);
     }
   }
+
+  /**
+   * Sends a notification email to the configured administrator/reviewer for prompt review of student submissions.
+   */
+  static async sendSubmissionReviewNotification({
+    to,
+    studentName,
+    topicTitle,
+    reviewUrl,
+  }: {
+    to: string;
+    studentName: string;
+    topicTitle: string;
+    reviewUrl: string;
+  }) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
+      
+      const payload = {
+        from: FROM_EMAIL,
+        to,
+        subject: `[Tech Hill] New Project Submission: ${studentName} - ${topicTitle}`,
+        firstName: "Reviewer",
+        product: "Tech Hill",
+        logoUrl: `${baseUrl}/favicon.ico`,
+        template: "tech",
+        url: reviewUrl,
+        // Using body/description text in the verification/alert template style
+        message: `Student ${studentName} has submitted their project for review on the topic: "${topicTitle}". Please click the link below to evaluate and grade their submission.`,
+      };
+
+      await fetch(EMAIL_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      console.error("Error sending submission review notification email:", error);
+    }
+  }
 }

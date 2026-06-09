@@ -1096,3 +1096,19 @@ model TrackEnrollment {
 
   @@unique([userId, trackId])
 }
+
+// --------------------------------------
+// PLATFORM CONFIGURATION
+// --------------------------------------
+
+// A simple key-value store for admin-configurable platform settings.
+// e.g. key="promptReviewEmail" value="brytebee@gmail.com"
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
