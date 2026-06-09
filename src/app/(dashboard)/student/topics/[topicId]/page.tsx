@@ -100,9 +100,18 @@ async function getTopicData(topicId: string, userId: string) {
       }
     }
 
+    // For track-enrolled students, `enrollment` (direct) will be null.
+    // We synthesise a minimal ACTIVE enrollment so StudentTopicViewer
+    // does not treat them as preview-only and skips submission logic.
+    const effectiveEnrollment =
+      enrollment ??
+      (hasTrackEnrollment
+        ? { id: "track-enrollment", status: "ACTIVE" as const, overallProgress: 0 }
+        : null);
+
     return {
       topic,
-      enrollment,
+      enrollment: effectiveEnrollment,
       canAccess: true,
       nextTopicId,
       previousTopicId,

@@ -144,7 +144,7 @@ export function StudentTopicViewer({
   isLastTopicOfCourse,
 }: StudentTopicViewerProps) {
   const router = useRouter();
-  const isPreviewOnly = !enrollment || enrollment.status !== "ACTIVE";
+  const isPreviewOnly = !enrollment || !["ACTIVE", "ON_HOLD", "COMPLETED"].includes(enrollment.status);
   const [progressData, setProgressData] = useState<TopicProgressData | null>(
     isPreviewOnly
       ? { progress: null, remainingAttempts: {}, canAccess: true }
@@ -677,7 +677,9 @@ export function StudentTopicViewer({
                   <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-xl">
                     <h4 className="text-sm font-semibold text-yellow-900 dark:text-yellow-400 mb-2 flex items-center gap-2">
                       <AlertTriangle className="w-4 h-4" />
-                      Tutor Feedback (Changes Required)
+                      {submission.status === "REJECTED"
+                        ? "Project Rejected — Please Resubmit"
+                        : "Tutor Feedback (Changes Required)"}
                     </h4>
                     <p className="text-sm text-yellow-800 dark:text-yellow-300 whitespace-pre-wrap">
                       {submission.reviewNotes}
