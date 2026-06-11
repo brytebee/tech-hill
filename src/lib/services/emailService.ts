@@ -130,11 +130,17 @@ export class EmailService {
         message: `Student ${studentName} has submitted their project for review on the topic: "${topicTitle}". Please click the link below to evaluate and grade their submission.`,
       };
 
-      await fetch(EMAIL_ENDPOINT, {
+      const response = await fetch(EMAIL_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Email API failed:", response.status, errorText);
+        throw new Error("Failed to send submission review notification email");
+      }
     } catch (error) {
       console.error("Error sending submission review notification email:", error);
     }

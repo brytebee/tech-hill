@@ -147,15 +147,17 @@ export async function POST(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_AUTH_URL || process.env.NEXTAUTH_URL || "http://localhost:3000";
     const reviewUrl = `${baseUrl}/admin/submissions`;
 
-    // Dispatch notification (do not block client response)
-    EmailService.sendSubmissionReviewNotification({
-      to: reviewerEmail,
-      studentName,
-      topicTitle: topic.title,
-      reviewUrl,
-    }).catch((err) => {
+    // Dispatch notification (awaited to prevent serverless execution freeze)
+    try {
+      await EmailService.sendSubmissionReviewNotification({
+        to: reviewerEmail,
+        studentName,
+        topicTitle: topic.title,
+        reviewUrl,
+      });
+    } catch (err) {
       console.error("Failed to send submission review notification email:", err);
-    });
+    }
   } catch (error) {
     console.error("Error triggering submission review notification logic:", error);
   }
