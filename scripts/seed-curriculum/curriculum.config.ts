@@ -2510,4 +2510,172 @@ export const CURRICULUM: TrackConfig[] = [
       },
     ],
   },
+  {
+    track: { title: "Java Backend for Fintech (European Market)", slug: "java-fintech-backend", price: 350000 },
+    courses: [
+      {
+        title: "Java Backend Transition for JS/TS Engineers",
+        description: "An intensive 12-week transition course for JavaScript/TypeScript developers migrating to Java/Spring Boot enterprise ecosystem, tailored for European fintech job-readiness.",
+        shortDescription: "Transition from JS/TS to Java and Spring Boot for European fintech junior roles.",
+        difficulty: "INTERMEDIATE",
+        duration: 80,
+        price: 350000,
+        tags: ["java", "spring-boot", "fintech", "backend", "kotlin"],
+        learningOutcomes: [
+          "Translate JavaScript/TypeScript mental models directly to Java static typing & OOP patterns",
+          "Build scalable Spring Boot REST APIs with comprehensive validation and global exception handling",
+          "Implement transaction-safe database layers with JPA, Hibernate, and database migrations",
+          "Write clean unit and integration tests using JUnit, Mockito, and Testcontainers",
+          "Architect double-entry ledgers and payment APIs with robust concurrency and idempotency",
+          "Confidently tackle junior Java/Kotlin backend system design and coding interviews for European fintech companies"
+        ],
+        modules: [
+          {
+            title: "Week 1: Java Syntax & OOP Fundamentals",
+            duration: 300,
+            topics: [
+              { title: "Java Class Structure, JVM Execution & Hello World" },
+              { title: "Primitive Types, Reference Types, and Decimal Precision with BigDecimal" },
+              { title: "Classes, Objects & Constructors vs JS/TS class constructors" },
+              { title: "Interfaces & Abstract Classes: Java Interfaces vs TS Interfaces" },
+              { title: "Encapsulation, Access Modifiers, and Inheritance" },
+              { title: "Weekend Project: Build a Core Banking Account Model", isProject: true }
+            ]
+          },
+          {
+            title: "Week 2: Collections, Generics, and Exception Handling",
+            duration: 300,
+            topics: [
+              { title: "Java Collections Framework: List, Set, Map vs JS Arrays & Objects" },
+              { title: "Generics in Java: Type Safety vs TS Generics" },
+              { title: "Checked vs Unchecked Exceptions: Throwing and Catching Exceptions" },
+              { title: "Java Streams API & Lambdas vs JS Array Array Methods" },
+              { title: "File I/O and JSON Handling in Java" },
+              { title: "Weekend Project: Build an In-Memory Transactions Ledger", isProject: true }
+            ]
+          },
+          {
+            title: "Week 3: Getting Started with Spring Boot & REST APIs",
+            duration: 300,
+            topics: [
+              { title: "Spring Boot Architecture, Project Setup & Maven/Gradle vs npm" },
+              { title: "Dependency Injection & IoC Container: Beans vs TS manual DI" },
+              { title: "Designing REST Controllers & Request Routing (@RestController)" },
+              { title: "Path Variables, Query Parameters, and Request Body Mapping" },
+              { title: "Data Transfer Objects (DTOs) & Jakarta Bean Validation vs Zod" },
+              { title: "Weekend Project: Build a Simple Loan Application API", isProject: true }
+            ]
+          },
+          {
+            title: "Week 4: Spring Boot Architecture & Core Services",
+            duration: 300,
+            topics: [
+              { title: "Layered Architecture: Controller, Service, and Repository Layers" },
+              { title: "Spring Configuration: Application Properties, Profiles, and Env Vars" },
+              { title: "Global Exception Handling using @ControllerAdvice" },
+              { title: "Handling CORS and Basic Spring Security Concepts" },
+              { title: "Actuator, Logging & Application Health Monitoring" },
+              { title: "Weekend Project: Build a Fully Validated Underwriting Service", isProject: true }
+            ]
+          },
+          {
+            title: "Week 5: Database Layer & SQL Integration",
+            duration: 300,
+            topics: [
+              { title: "Relational Database Design & SQL for Enterprise Systems" },
+              { title: "JDBC & Spring JDBC Template: Executing Raw SQL Queries" },
+              { title: "Database Migrations using Flyway vs Prisma Migrate" },
+              { title: "Transactions: Spring @Transactional & ACID in Fintech" },
+              { title: "HikariCP: Database Connection Pooling Configuration" },
+              { title: "Weekend Project: Database Ledger Tables with Flyway Migrations", isProject: true }
+            ]
+          },
+          {
+            title: "Week 6: Object-Relational Mapping (JPA & Hibernate)",
+            duration: 300,
+            topics: [
+              { title: "JPA & Hibernate Core Concepts: Entities and ID Generation" },
+              { title: "JPA Repositories: Derived Query Methods & @Query Annotation" },
+              { title: "Entity Relationships: One-to-Many and Many-to-One Mapping" },
+              { title: "Lazy vs Eager Loading & Solving the N+1 Query Problem" },
+              { title: "Spring Data JPA Auditing: Automatically Tracking Timestamps" },
+              { title: "Weekend Project: Build an Account & Transactions Entity Model", isProject: true }
+            ]
+          },
+          {
+            title: "Week 7: Testing Enterprise Java Applications",
+            duration: 300,
+            topics: [
+              { title: "JUnit 5 & AssertJ: Writing Effective Unit Tests" },
+              { title: "Mocking Repository Dependencies using Mockito" },
+              { title: "Integration Testing with Spring Boot (@SpringBootTest)" },
+              { title: "Testing REST API Endpoints using MockMvc" },
+              { title: "Database Testing using H2 or Testcontainers" },
+              { title: "Weekend Project: Write a Full Test Suite for the Ledger Service", isProject: true }
+            ]
+          },
+          {
+            title: "Week 8: JVM Memory Model & Concurrency Basics",
+            duration: 300,
+            topics: [
+              { title: "JVM Architecture: Heap vs Stack & JDK vs JRE" },
+              { title: "JVM Garbage Collection Mechanics and Tuning" },
+              { title: "Multithreading Basics: Lifecycle & Synchronization" },
+              { title: "ExecutorService & Thread Pools: Concurrent Tasks Management" },
+              { title: "Thread-Safe Collections & Atomic Variables in Java" },
+              { title: "Weekend Project: Build a Concurrent Transaction Processor", isProject: true }
+            ]
+          },
+          {
+            title: "Week 9: Fintech Domain Project - Ledger Service (Part 1)",
+            duration: 300,
+            topics: [
+              { title: "Fintech Ledgers: Eventual Consistency, Idempotency & Audits" },
+              { title: "Double-Entry Bookkeeping System: Debit and Credit Entities" },
+              { title: "Real-time Account Balance Queries & Calculations" },
+              { title: "Idempotency Keys: Ensuring Safe Retries of Payments" },
+              { title: "Implementing Audit Logs for Transaction Integrity" },
+              { title: "Weekend Project: Implement Ledger Engine with Idempotency", isProject: true }
+            ]
+          },
+          {
+            title: "Week 10: Fintech Domain Project - Underwriting & Repayments (Part 2)",
+            duration: 300,
+            topics: [
+              { title: "Designing Loan Products: Principal, Interest, Repayments" },
+              { title: "Generating Amortization & Repayment Schedules" },
+              { title: "Processing Repayment Transactions & Partial Payments" },
+              { title: "Handling Delinquency, Overdues, and Late Fees" },
+              { title: "Designing API Endpoints for Admin Underwriters" },
+              { title: "Weekend Project: Complete the Loan Lifecycle Engine", isProject: true }
+            ]
+          },
+          {
+            title: "Week 11: Production Polishing & Deployment",
+            duration: 300,
+            topics: [
+              { title: "Dockerizing Spring Boot: Optimized Multi-stage Dockerfiles" },
+              { title: "Deploying Spring Boot to AWS or Render Cloud" },
+              { title: "CI/CD Pipeline with GitHub Actions" },
+              { title: "API Security: JWT/OAuth2 Authentication for Fintech" },
+              { title: "Auto-Generating API Documentation with Swagger/OpenAPI" },
+              { title: "Weekend Project: Dockerize and Deploy the Ledger Service", isProject: true }
+            ]
+          },
+          {
+            title: "Week 12: Transition to Kotlin & Job Prep",
+            duration: 300,
+            topics: [
+              { title: "Kotlin Syntax Sugar, Null Safety & Java Interoperability" },
+              { title: "Kotlin Coroutines vs Java Threads/Async Frameworks" },
+              { title: "Spring Boot with Kotlin: Building a REST Service" },
+              { title: "Fintech System Design Patterns for Junior Engineers" },
+              { title: "Mock Interview Prep: Coding Challenges & Behavioral Prep" },
+              { title: "Weekend Project: Rewrite the Loan Application Module in Kotlin", isProject: true }
+            ]
+          }
+        ]
+      }
+    ]
+  }
 ];

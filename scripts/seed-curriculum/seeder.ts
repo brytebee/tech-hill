@@ -2,6 +2,17 @@ import { PrismaClient, DifficultyLevel, QuestionDifficulty } from "@prisma/clien
 import { CURRICULUM, TrackConfig, CourseConfig, ModuleConfig, TopicConfig } from "./curriculum.config";
 import { generateTopicContent, GeneratedTopicData, generateQuizOnly } from "./ollama.client";
 import { IngestionService } from "./ingestion.service";
+import { setGlobalDispatcher, Agent } from "undici";
+
+// Configure undici global dispatcher to increase timeouts to 15 minutes (900,000 ms)
+// to prevent HeadersTimeoutError when running slow CPU-based Ollama generation
+setGlobalDispatcher(
+  new Agent({
+    headersTimeout: 900000,
+    bodyTimeout: 900000,
+    connectTimeout: 900000,
+  })
+);
 
 const prisma = new PrismaClient();
 

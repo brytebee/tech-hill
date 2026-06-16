@@ -83,21 +83,58 @@ export async function generateTopicContent(
 
   console.log(`[Ollama] 🔄 CALL 1: Generating Lesson for "${topicTitle}"...`);
 
-  const systemLesson =
+  const isJavaFintech = courseTitle.toLowerCase().includes("java") || courseTitle.toLowerCase().includes("fintech") || courseTitle.toLowerCase().includes("kotlin");
+
+  let systemLesson =
     `You are a distinguished senior tech educator and award-winning curriculum developer ` +
     `who has dedicated your career to crafting curricula recognized globally for clarity, ` +
-    `pedagogical excellence, and measurable student outcomes.\n` +
-    `You write for secondary school graduates who have ZERO prior tech experience.\n` +
-    `Your tone is warm, confident, and uses vivid, Nigeria-relevant real-world analogies.` +
-    (liveContext
-      ? `\n\nCRITICAL DIRECTIVE: Ignore any contradictory internal knowledge. ` +
-        `Using ONLY the real-time documentation context attached below, formulate the requested lesson. ` +
-        `Rely entirely on this fresh context instead of your internal training weights.\n\n` +
-        `--- INGESTED LIVE CONTEXT ---\n${liveContext}\n------------------------------`
-      : "");
+    `pedagogical excellence, and measurable student outcomes.\n`;
 
-  const promptLesson = isProject
-    ? `Write a structured hands-on Project Brief on "${topicTitle}" for the course "${courseTitle}".
+  if (isJavaFintech) {
+    systemLesson +=
+      `You are an expert backend engineering instructor and curriculum designer specializing in Java/Kotlin for fintech and enterprise systems.\n` +
+      `You write for experienced JavaScript/TypeScript full-stack engineers transitioning to Java backend development, ` +
+      `with the explicit goal of becoming job-ready for junior backend roles at European fintech companies (e.g. N26, Adyen, Mollie) within 3-4 months.\n` +
+      `Assume the learner has strong JS/TS skills, async programming, REST API design, databases, git, and testing experience, but is new to Java syntax, JVM internals, static typing, Spring Boot, and enterprise patterns.\n` +
+      `Your tone is professional, technical, direct, and pragmatic. Use direct JS/TS comparisons where useful (e.g. comparing Java interfaces to TS interfaces).`;
+  } else {
+    systemLesson +=
+      `You write for secondary school graduates who have ZERO prior tech experience.\n` +
+      `Your tone is warm, confident, and uses vivid, Nigeria-relevant real-world analogies.`;
+  }
+
+  if (liveContext) {
+    systemLesson +=
+      `\n\nCRITICAL DIRECTIVE: Ignore any contradictory internal knowledge. ` +
+      `Using ONLY the real-time documentation context attached below, formulate the requested lesson. ` +
+      `Rely entirely on this fresh context instead of your internal training weights.\n\n` +
+      `--- INGESTED LIVE CONTEXT ---\n${liveContext}\n------------------------------`;
+  }
+
+  let promptLesson = "";
+  if (isJavaFintech) {
+    promptLesson = isProject
+      ? `Write a structured hands-on Project Brief on "${topicTitle}" for the course "${courseTitle}".
+The brief must:
+1. Open with a "Project Overview" showing why this matters for fintech specifically (e.g., transactions, decimal precision (BigDecimal vs float), and data validation) in the European market.
+2. Cover 3-4 numbered sections including "Technical Requirements", "Starter Context", and "Acceptance Criteria" with a bold heading each.
+3. End with a locked "🔒 Deep Dive Resource" placeholder: 
+   "Complete the quiz below to unlock your guided external practice on [EXTERNAL_URL]"
+4. Skip traditional theory and focus entirely on practical application.
+5. Flag any content that may be outdated or AI-specific with: [VERIFY THIS: ...]
+6. Target length: 350-500 words. Return cleanly formatted text (markdown allowed).`
+      : `Write a structured lesson on "${topicTitle}" for the course "${courseTitle}".
+The lesson must follow this structure:
+1. **Concept (30-40 min)**: Explain the concept, bridging from a JS/TS analogy the learner already knows (e.g. TS interfaces or promises), and then going deep into the Java-specific way of thinking. Include a short "Why this matters for fintech specifically" note for topics like transactions, decimal precision (BigDecimal vs float), or data validation if applicable.
+2. **Hands-on Exercise (30-40 min)**: Provide a hands-on coding exercise that builds toward a cumulative project. Include clear code instructions.
+3. **Interview Drill (5-10 min)**: Provide one "interview drill" question and answer typical of junior Java/Kotlin backend interviews (OOP, collections, JVM, concurrency) mapping directly to European fintech junior roles (like N26).
+4. End with a locked "🔒 Deep Dive Resource" placeholder: 
+   "Complete the quiz below to unlock your guided external practice on [EXTERNAL_URL]"
+5. Flag any content that may be outdated or AI-specific with: [VERIFY THIS: ...]
+6. Target length: 450-600 words. Return cleanly formatted text (markdown allowed).`;
+  } else {
+    promptLesson = isProject
+      ? `Write a structured hands-on Project Brief on "${topicTitle}" for the course "${courseTitle}".
 The brief must:
 1. Open with a "Project Overview" using a real-world Nigerian tech analogy (e.g., building a system for a Lagos business).
 2. Cover 3-4 numbered sections including "Technical Requirements", "Starter Context", and "Acceptance Criteria" with a bold heading each.
@@ -106,7 +143,7 @@ The brief must:
 4. Skip traditional theory and focus entirely on practical application.
 5. Flag any content that may be outdated or AI-specific with: [VERIFY THIS: ...]
 6. Target length: 300-450 words. Return cleanly formatted text (markdown allowed).`
-    : `Write a structured lesson on "${topicTitle}" for the course "${courseTitle}".
+      : `Write a structured lesson on "${topicTitle}" for the course "${courseTitle}".
 The lesson must:
 1. Open with a 1-paragraph "What & Why" hook using a real-world Nigerian analogy.
 2. Cover 3-4 numbered sections with a bold heading each.
@@ -115,6 +152,7 @@ The lesson must:
    "Complete the quiz below to unlock your guided external practice on [EXTERNAL_URL]"
 5. Flag any content that may be outdated or AI-specific with: [VERIFY THIS: ...]
 6. Target length: 300-450 words. Return cleanly formatted text (markdown allowed).`;
+  }
 
   let lessonContent = await callOllama(systemLesson, promptLesson, {
     temperature: 0.7, // Creative writing: higher temp is appropriate
