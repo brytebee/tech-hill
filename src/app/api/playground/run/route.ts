@@ -37,6 +37,10 @@ export async function POST(req: NextRequest) {
       fileName = "index.js";
       fs.writeFileSync(path.join(tempDir, fileName), code);
       command = `node ${fileName}`;
+    } else if (language === "python") {
+      fileName = "script.py";
+      fs.writeFileSync(path.join(tempDir, fileName), code);
+      command = `python3 ${fileName} || python ${fileName}`;
     } else {
       return NextResponse.json({ error: "Unsupported language" }, { status: 400 });
     }

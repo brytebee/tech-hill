@@ -147,10 +147,23 @@ public class Main {
             System.out.printf("  [%d] %s%n", i + 1, modules.get(i));
         }
     }
-}`
+}`,
+
+  python: `# Python Coding Snippet
+# Let's implement a recursive Fibonacci generator
+
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+print("--- Starting Fibonacci Sequence ---")
+for i in range(8):
+    print(f"Fibonacci({i}) = {fibonacci(i)}")
+print("--- Execution Completed ---")`
 };
 
-type Language = "html" | "javascript" | "typescript" | "java";
+type Language = "html" | "javascript" | "typescript" | "java" | "python";
 
 export function PlaygroundSidebar({ isOpen, onToggle }: PlaygroundSidebarProps) {
   const [activeLang, setActiveLang] = useState<Language>("html");
@@ -251,6 +264,16 @@ export function PlaygroundSidebar({ isOpen, onToggle }: PlaygroundSidebarProps) 
           `1. macOS: run 'brew install openjdk@17'\n` +
           `2. Windows: run 'winget install EclipseAdoptium.Temurin.17.JDK'\n` +
           `3. Linux: run 'sudo apt install default-jdk'\n\n` +
+          `Error detail: ${err.message}`
+        );
+      } else if (activeLang === "python") {
+        setStderr(
+          `Python execution failed on host server.\n\n` +
+          `--- PYTHON LOCAL SETUP GUIDE ---\n` +
+          `Ensure Python 3 is configured locally:\n` +
+          `1. macOS: run 'brew install python'\n` +
+          `2. Windows: run 'winget install Python.Python.3'\n` +
+          `3. Linux: run 'sudo apt install python3'\n\n` +
           `Error detail: ${err.message}`
         );
       }
@@ -360,7 +383,7 @@ export function PlaygroundSidebar({ isOpen, onToggle }: PlaygroundSidebarProps) 
       {/* Editor Controls Bar */}
       <div className="flex flex-wrap items-center justify-between p-2 gap-2 border-b border-slate-800 bg-slate-950/30 shrink-0 text-xs">
         <div className="flex bg-slate-950 rounded-lg p-0.5 border border-slate-800 shrink-0">
-          {(["html", "javascript", "typescript", "java"] as Language[]).map((lang) => (
+          {(["html", "javascript", "typescript", "java", "python"] as Language[]).map((lang) => (
             <button
               key={lang}
               onClick={() => {
