@@ -39,6 +39,9 @@ export interface CourseFilters {
   valuation?: string; // "free" or "premium"
   creatorId?: string;
   search?: string;
+  sort?: "newest" | "oldest" | "cheapest";
+  priceOp?: "above" | "below";
+  priceVal?: number;
 }
 
 export class CourseService {
@@ -165,12 +168,31 @@ export class CourseService {
       where.price = { gt: 0 };
     }
 
+    // Add price threshold filters
+    if (filters.priceOp && filters.priceVal !== undefined) {
+      if (filters.priceOp === "above") {
+        where.price = { gt: filters.priceVal };
+      } else if (filters.priceOp === "below") {
+        where.price = { lt: filters.priceVal };
+      }
+    }
+
     if (filters.search) {
       where.OR = [
         { title: { contains: filters.search, mode: "insensitive" } },
         { description: { contains: filters.search, mode: "insensitive" } },
         { tags: { hasSome: [filters.search] } },
       ];
+    }
+
+    // Handle sort order mappings
+    let orderBy: Prisma.CourseOrderByWithRelationInput = { createdAt: "desc" };
+    if (filters.sort === "oldest") {
+      orderBy = { createdAt: "asc" };
+    } else if (filters.sort === "cheapest") {
+      orderBy = { price: "asc" };
+    } else if (filters.sort === "newest") {
+      orderBy = { createdAt: "desc" };
     }
 
     const [courses, total] = await Promise.all([
@@ -193,7 +215,7 @@ export class CourseService {
         },
         skip,
         take: limit,
-        orderBy: { createdAt: "desc" },
+        orderBy,
       }),
       prisma.course.count({ where }),
     ]);

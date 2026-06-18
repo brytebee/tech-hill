@@ -11,6 +11,8 @@ import { useParams, useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ResetTrackButton } from "@/components/shared/ResetTrackButton";
+import { SubscriptionCheckoutModal } from "@/components/checkout/SubscriptionCheckoutModal";
+import { useModal } from "@/hooks/use-modal";
 
 interface Track {
   id: string;
@@ -33,11 +35,15 @@ interface Track {
 
 export default function StudentTracksPage() {
   const router = useRouter();
+  const { showAlert } = useModal();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasSubscription, setHasSubscription] = useState(false);
+  const [allAccessPlans, setAllAccessPlans] = useState<any[]>([]);
+  const [checkoutTrack, setCheckoutTrack] = useState<any | null>(null);
   const [isEnrolling, setIsEnrolling] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [activeJourneyMessage, setActiveJourneyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTracks();
@@ -48,9 +54,10 @@ export default function StudentTracksPage() {
       const response = await fetch("/api/student/tracks");
       if (!response.ok) throw new Error("Failed to load");
       const data = await response.json();
-      // API now returns { tracks, hasSubscription }
       setTracks(data.tracks ?? data);
       setHasSubscription(data.hasSubscription ?? false);
+      setAllAccessPlans(data.allAccessPlans ?? []);
+      setActiveJourneyMessage(data.activeJourneyMessage ?? null);
     } catch (error) {
       toast.error("Failed to load learning paths");
     } finally {
@@ -59,6 +66,14 @@ export default function StudentTracksPage() {
   };
 
   const handleEnroll = async (trackId: string) => {
+    if (activeJourneyMessage) {
+      showAlert({
+        title: "Focus Check",
+        description: activeJourneyMessage,
+        variant: "warning",
+      });
+      return;
+    }
     setIsEnrolling(trackId);
     try {
       const resp = await fetch(`/api/student/tracks/${trackId}/enroll`, { method: "POST" });
@@ -73,6 +88,23 @@ export default function StudentTracksPage() {
       toast.error("Network error during enrollment");
     } finally {
       setIsEnrolling(null);
+    }
+  };
+
+  const handleEnrollClick = (track: any) => {
+    if (activeJourneyMessage) {
+      showAlert({
+        title: "Focus Check",
+        description: activeJourneyMessage,
+        variant: "warning",
+      });
+      return;
+    }
+    const isPremium = Number(track.price) > 0;
+    if (isPremium && !hasSubscription) {
+      setCheckoutTrack(track);
+    } else {
+      handleEnroll(track.id);
     }
   };
 
@@ -192,67 +224,69 @@ export default function StudentTracksPage() {
           ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {filteredTracks.map((track) => (
-          <Card key={track.id} className="border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 group flex flex-col">
-                {/* Thumbnail Hero */}
-                <div className="relative w-full aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
-                  {(track as any).thumbnail ? (
-                    <img
-                      src={(track as any).thumbnail}
-                      alt={track.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
-                      <Layers className="h-14 w-14 text-white/20" />
-                    </div>
-                  )}
-                  {/* Dark overlay for readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-                  {/* Badges over image */}
-                  <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
-                    <span className="text-xs font-black text-white/90 uppercase tracking-widest drop-shadow">Career Path</span>
-                    {hasSubscription && Number((track as any).price) > 0 && (
-                      <Badge className="bg-indigo-600/90 text-white border-none font-black text-[9px] uppercase flex items-center gap-1 backdrop-blur-sm">
-                        <Crown className="h-2.5 w-2.5" /> Subscription
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                <CardHeader className="p-8 pb-4">
-                  <div className="flex gap-2 mb-4">
-                    <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-none font-black text-[10px] px-2 py-0.5 uppercase">Professional Track</Badge>
-                    <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-500 border-none font-black text-[10px] px-2 py-0.5 uppercase">Certification Included</Badge>
-                    {hasSubscription && Number((track as any).price) > 0 && (
-                      <Badge className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-none font-black text-[10px] px-2 py-0.5 uppercase flex items-center gap-1">
-                        <Crown className="h-2.5 w-2.5" /> Subscription Access
-                      </Badge>
-                    )}
-                  </div>
-                  <CardTitle className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors">
-                    {track.title}
-                  </CardTitle>
-                </CardHeader>
-                
-                <CardContent className="p-8 pt-0 flex-1">
-                  <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">
-                    {track.description || "Master the core principles and advanced strategies of this specialized career path."}
-                  </p>
-                  
-                  <h4 className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
-                    <Layers className="h-4 w-4" /> Curriculum Breakdown
-                  </h4>
-                  <div className="space-y-3">
-                    {track.courses.map((tc, idx) => (
-                      <div key={tc.course.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5 group/item hover:bg-white dark:hover:bg-slate-800 transition-all">
-                        <div className="flex items-center gap-3">
-                           <span className="text-xs font-black text-slate-300 dark:text-slate-700 w-4">{idx + 1}</span>
-                           <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover/item:text-blue-500">{tc.course.title}</span>
-                        </div>
-                        <ChevronRight className="h-4 w-4 text-slate-300 group-hover/item:text-blue-500 group-hover/item:translate-x-1 transition-all" />
+              <Card key={track.id} className="border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 group flex flex-col">
+                <div onClick={() => router.push(`/student/tracks/${track.id}`)} className="cursor-pointer flex-1 flex flex-col">
+                  {/* Thumbnail Hero */}
+                  <div className="relative w-full aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                    {(track as any).thumbnail ? (
+                      <img
+                        src={(track as any).thumbnail}
+                        alt={track.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+                        <Layers className="h-14 w-14 text-white/20" />
                       </div>
-                    ))}
+                    )}
+                    {/* Dark overlay for readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                    {/* Badges over image */}
+                    <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between gap-2">
+                      <span className="text-xs font-black text-white/90 uppercase tracking-widest drop-shadow">Career Path</span>
+                      {hasSubscription && Number((track as any).price) > 0 && (
+                        <Badge className="bg-indigo-600/90 text-white border-none font-black text-[9px] uppercase flex items-center gap-1 backdrop-blur-sm">
+                          <Crown className="h-2.5 w-2.5" /> Subscription
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </CardContent>
+                  <CardHeader className="p-8 pb-4">
+                    <div className="flex gap-2 mb-4">
+                      <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border-none font-black text-[10px] px-2 py-0.5 uppercase">Professional Track</Badge>
+                      <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-500 border-none font-black text-[10px] px-2 py-0.5 uppercase">Certification Included</Badge>
+                      {hasSubscription && Number((track as any).price) > 0 && (
+                        <Badge className="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 border-none font-black text-[10px] px-2 py-0.5 uppercase flex items-center gap-1">
+                          <Crown className="h-2.5 w-2.5" /> Subscription Access
+                        </Badge>
+                      )}
+                    </div>
+                    <CardTitle className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                      {track.title}
+                    </CardTitle>
+                  </CardHeader>
+                  
+                  <CardContent className="p-8 pt-0 flex-1">
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mb-8 leading-relaxed">
+                      {track.description || "Master the core principles and advanced strategies of this specialized career path."}
+                    </p>
+                    
+                    <h4 className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">
+                      <Layers className="h-4 w-4" /> Curriculum Breakdown
+                    </h4>
+                    <div className="space-y-3">
+                      {track.courses.map((tc, idx) => (
+                        <div key={tc.course.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-white/5 group/item hover:bg-white dark:hover:bg-slate-800 transition-all">
+                          <div className="flex items-center gap-3">
+                             <span className="text-xs font-black text-slate-300 dark:text-slate-700 w-4">{idx + 1}</span>
+                             <span className="text-sm font-bold text-slate-700 dark:text-slate-300 group-hover/item:text-blue-500">{tc.course.title}</span>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-slate-300 group-hover/item:text-blue-500 group-hover/item:translate-x-1 transition-all" />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </div>
 
                 <CardFooter className="p-8 pt-0 flex flex-col sm:flex-row gap-4">
                    {(track as any).enrollmentStatus ? (
@@ -269,13 +303,13 @@ export default function StudentTracksPage() {
                            trackTitle={track.title}
                            courseCount={track._count.courses}
                            variant="student"
-                           onSuccess={() => router.refresh()}
+                           onSuccess={() => fetchTracks()}
                          />
                        )}
                      </div>
                    ) : (
                      <Button
-                        onClick={() => handleEnroll(track.id)}
+                        onClick={() => handleEnrollClick(track)}
                         disabled={isEnrolling === track.id}
                         className="flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase text-[11px] tracking-widest h-12 rounded-2xl shadow-xl shadow-slate-900/20 dark:shadow-none hover:scale-[1.02] active:scale-95 transition-all"
                      >
@@ -289,6 +323,15 @@ export default function StudentTracksPage() {
           </div>
           );
         })()}
+
+        {checkoutTrack && (
+          <SubscriptionCheckoutModal
+            isOpen={!!checkoutTrack}
+            onClose={() => setCheckoutTrack(null)}
+            track={checkoutTrack}
+            allAccessPlans={allAccessPlans}
+          />
+        )}
       </div>
     </StudentLayout>
   );

@@ -67,7 +67,7 @@ async function getCoursesData(
     const page = parseInt(searchParams.page || "1");
     const limit = 12;
 
-    const [coursesResult, enrollments, subscription] = await Promise.all([
+    const [coursesResult, enrollments, subscription, activeTrack] = await Promise.all([
       CourseService.getCourses(
         {
           status: "PUBLISHED",
@@ -116,7 +116,19 @@ async function getCoursesData(
           ],
         },
       }),
+      prisma.trackEnrollment.findFirst({
+        where: { userId, status: "ACTIVE" },
+        select: { track: { select: { title: true } } },
+      }),
     ]);
+
+    const activeCourse = enrollments.find((e: any) => e.status === "ACTIVE");
+    let activeJourneyMessage: string | null = null;
+    if (activeCourse) {
+      activeJourneyMessage = `Focus Check: You are currently active in the course "${activeCourse.course.title}". To commit fully, you must either complete it or forfeit/drop it from your dashboard before starting a new journey.`;
+    } else if (activeTrack) {
+      activeJourneyMessage = `Focus Check: You are currently committed to the "${activeTrack.track.title}" Career Path. You must either complete it or forfeit your progress by dropping it before starting this course.`;
+    }
 
     const enrollmentMap = new Map();
     enrollments.forEach((enrollment: any) => {
@@ -144,6 +156,7 @@ async function getCoursesData(
       currentPage: page,
       enrollments,
       hasSubscription: !!subscription,
+      activeJourneyMessage,
     };
   } catch (error: any) {
     console.error("Error fetching courses data:", error);
@@ -187,7 +200,7 @@ function getDifficultyBadge(difficulty: string) {
   }
 }
 
-function CourseCard({ course, userId, hasSubscription }: { course: any; userId: string; hasSubscription: boolean }) {
+function CourseCard({ course, userId, hasSubscription, activeJourneyMessage }: { course: any; userId: string; hasSubscription: boolean; activeJourneyMessage?: string | null }) {
   return (
     <Card className="group relative flex flex-col bg-white dark:bg-slate-900/50 dark:backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-sm dark:shadow-none hover:shadow-2xl hover:border-blue-500/30 transition-all duration-500 rounded-3xl overflow-hidden">
       {/* Premium Thumbnail Hero */}
@@ -336,6 +349,7 @@ function CourseCard({ course, userId, hasSubscription }: { course: any; userId: 
                 price={course.currentPrice}
                 isEnrolled={false}
                 hasSubscription={hasSubscription}
+                activeJourneyMessage={activeJourneyMessage}
                 className="flex-1 h-11 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-lg shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] uppercase tracking-widest"
               >
                 ENROLL
@@ -506,7 +520,7 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
 
   const resolvedSearchParams = await searchParams;
 
-  const { courses, totalPages, totalCourses, currentPage, enrollments, hasSubscription } =
+  const { courses, totalPages, totalCourses, currentPage, enrollments, hasSubscription, activeJourneyMessage } =
     await getCoursesData(session.user.id, resolvedSearchParams);
 
   const enrolledCount = enrollments.filter(
@@ -600,6 +614,7 @@ export default async function StudentCoursesPage({ searchParams }: PageProps) {
                   course={course}
                   userId={session.user.id}
                   hasSubscription={hasSubscription}
+                  activeJourneyMessage={activeJourneyMessage}
                 />
               ))}
             </div>

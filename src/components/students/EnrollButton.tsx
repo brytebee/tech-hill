@@ -24,6 +24,7 @@ interface EnrollButtonProps {
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
   hasSubscription?: boolean;
+  activeJourneyMessage?: string | null;
 }
 
 export function EnrollButton({
@@ -36,6 +37,7 @@ export function EnrollButton({
   size = "default",
   className,
   hasSubscription = false,
+  activeJourneyMessage = null,
 }: EnrollButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [showCheckout, setShowCheckout] = useState(false);
@@ -56,6 +58,16 @@ export function EnrollButton({
         },
       });
     } else {
+      // Intercept with Focus Check warning before presenting payment checkout modal
+      if (activeJourneyMessage) {
+        showAlert({
+          title: "Focus Check",
+          description: activeJourneyMessage,
+          variant: "warning",
+        });
+        return;
+      }
+
       // If course is paid, not enrolled, AND user has no active subscription, show checkout
       if (price > 0 && !hasSubscription) {
         setShowCheckout(true);

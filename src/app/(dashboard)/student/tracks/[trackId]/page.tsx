@@ -12,11 +12,14 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useModal } from "@/hooks/use-modal";
 import { ResetTrackButton } from "@/components/shared/ResetTrackButton";
+import { SubscriptionCheckoutModal } from "@/components/checkout/SubscriptionCheckoutModal";
 
 interface TrackProgress {
     id: string;
     title: string;
     description: string;
+    price: string | number;
+    plans: any[];
     enrollment: {
         id: string;
         completedCourses: string[];
@@ -39,7 +42,12 @@ export default function StudentTrackLearningPage() {
     const [track, setTrack] = useState<TrackProgress | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isForfeit, setIsForfeit] = useState(false);
-    const { showConfirm } = useModal();
+    const [hasSubscription, setHasSubscription] = useState(false);
+    const [allAccessPlans, setAllAccessPlans] = useState<any[]>([]);
+    const [checkoutTrack, setCheckoutTrack] = useState<any | null>(null);
+    const [isEnrolling, setIsEnrolling] = useState(false);
+    const [activeJourneyMessage, setActiveJourneyMessage] = useState<string | null>(null);
+    const { showConfirm, showAlert } = useModal();
 
     useEffect(() => {
         fetchProgress();
@@ -48,17 +56,53 @@ export default function StudentTrackLearningPage() {
     const fetchProgress = async () => {
         try {
             const resp = await fetch(`/api/student/tracks/${trackId}`);
-            if (resp.status === 403 || resp.status === 404) {
+            if (resp.status === 404) {
                 router.replace("/student/tracks");
                 return;
             }
             if (!resp.ok) throw new Error("Failed to load");
             const data = await resp.json();
             setTrack(data);
+            setHasSubscription(data.hasSubscription ?? false);
+            setAllAccessPlans(data.allAccessPlans ?? []);
+            setActiveJourneyMessage(data.activeJourneyMessage ?? null);
         } catch (err) {
             toast.error("Failed to load path progress");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleEnroll = async () => {
+        if (!track) return;
+        if (activeJourneyMessage) {
+            showAlert({
+                title: "Focus Check",
+                description: activeJourneyMessage,
+                variant: "warning",
+            });
+            return;
+        }
+        const isPremium = Number(track.price) > 0;
+        if (isPremium && !hasSubscription) {
+            setCheckoutTrack(track);
+            return;
+        }
+
+        setIsEnrolling(true);
+        try {
+            const resp = await fetch(`/api/student/tracks/${trackId}/enroll`, { method: "POST" });
+            const data = await resp.json();
+            if (data.success) {
+                toast.success("Enrolled in career path!");
+                fetchProgress();
+            } else {
+                toast.error(data.error || "Enrollment failed");
+            }
+        } catch (err) {
+            toast.error("Network error during enrollment");
+        } finally {
+            setIsEnrolling(false);
         }
     };
 
@@ -103,7 +147,7 @@ export default function StudentTrackLearningPage() {
                         <div className="flex items-center justify-between gap-3 mb-4">
                             <div className="flex items-center gap-3">
                                 <span className="bg-blue-600 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Mastery Journey</span>
-                                {progressPercent === 100 && <span className="bg-emerald-500 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Completed</span>}
+                                {track.enrollment && progressPercent === 100 && <span className="bg-emerald-500 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Completed</span>}
                             </div>
                             {track.enrollment?.status === "ACTIVE" && progressPercent < 100 && (
                                 <div className="flex items-center gap-2">
@@ -131,13 +175,26 @@ export default function StudentTrackLearningPage() {
                         <h1 className="text-4xl font-black uppercase tracking-tight mb-2">{track.title}</h1>
                         <p className="text-slate-400 font-medium max-w-xl mb-8">{track.description}</p>
                         
-                        <div className="space-y-2">
-                             <div className="flex justify-between text-sm font-black uppercase tracking-widest text-slate-400">
-                                <span>Path Completion</span>
-                                <span>{progressPercent}%</span>
-                             </div>
-                             <Progress value={progressPercent} className="h-3 bg-slate-800" />
-                        </div>
+                        {track.enrollment ? (
+                            <div className="space-y-2">
+                                 <div className="flex justify-between text-sm font-black uppercase tracking-widest text-slate-400">
+                                    <span>Path Completion</span>
+                                    <span>{progressPercent}%</span>
+                                 </div>
+                                 <Progress value={progressPercent} className="h-3 bg-slate-800" />
+                            </div>
+                        ) : (
+                            <div className="flex flex-col sm:flex-row gap-4 items-center mt-6">
+                                <Button
+                                    onClick={handleEnroll}
+                                    disabled={isEnrolling}
+                                    className="bg-blue-600 hover:bg-blue-550 text-white font-black uppercase text-[11px] tracking-widest h-12 px-8 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+                                >
+                                    {isEnrolling ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                                    Enroll In Mastery Path <ArrowRight className="ml-2 h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -145,7 +202,7 @@ export default function StudentTrackLearningPage() {
                     {courses.map((tc, idx) => {
                         const isCompleted = completedCourses.includes(tc.course.id);
                         const isCurrent = track.enrollment?.currentCourseId === tc.course.id || (!track.enrollment?.currentCourseId && !isCompleted && idx === 0);
-                        const isLocked = !isCompleted && !isCurrent && idx > completedCount;
+                        const isLocked = !track.enrollment || (!isCompleted && !isCurrent && idx > completedCount);
 
                         return (
                             <Card key={tc.course.id} className={`border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden transition-all duration-300 ${isLocked ? 'opacity-60 grayscale' : 'hover:shadow-xl hover:translate-x-2'}`}>
@@ -179,13 +236,17 @@ export default function StudentTrackLearningPage() {
                                     <div className="p-8 flex-1">
                                         <div className="flex items-center gap-3 mb-1">
                                             <span className="text-xs font-black text-slate-400 uppercase tracking-widest">Phase 0{idx + 1}</span>
-                                            {isCurrent && <Badge className="bg-blue-600 font-black text-[9px] uppercase h-5">Up Next</Badge>}
+                                            {track.enrollment && isCurrent && <Badge className="bg-blue-600 font-black text-[9px] uppercase h-5">Up Next</Badge>}
                                         </div>
                                         <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-2">{tc.course.title}</h3>
                                         <p className="text-sm text-slate-500 dark:text-slate-400 font-medium line-clamp-1">{tc.course.description}</p>
                                     </div>
                                     <div className="p-8 border-t md:border-t-0 md:border-l border-slate-100 dark:border-white/5">
-                                        {isLocked ? (
+                                        {!track.enrollment ? (
+                                            <Button onClick={handleEnroll} className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase text-[11px] tracking-widest h-11 px-8 rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95">
+                                                Enroll To Unlock
+                                            </Button>
+                                        ) : isLocked ? (
                                             <Button disabled className="rounded-xl font-bold uppercase text-[10px] bg-slate-100 text-slate-400">Locked</Button>
                                         ) : (
                                             <Button asChild className={`${isCompleted ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-blue-600 hover:bg-blue-700'} text-white font-black uppercase text-[11px] tracking-widest h-11 px-8 rounded-xl shadow-lg transition-all`}>
@@ -201,7 +262,7 @@ export default function StudentTrackLearningPage() {
                     })}
                 </div>
 
-                {progressPercent === 100 && (
+                {track.enrollment && progressPercent === 100 && (
                     <Card className="mt-12 bg-gradient-to-br from-blue-600 to-indigo-700 border-none rounded-3xl p-10 text-center text-white shadow-2xl">
                          <div className="h-20 w-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 backdrop-blur-md">
                             <Award className="h-10 w-10 text-white" />
@@ -212,6 +273,15 @@ export default function StudentTrackLearningPage() {
                              Claim Tracking Certificate
                          </Button>
                     </Card>
+                )}
+
+                {checkoutTrack && (
+                  <SubscriptionCheckoutModal
+                    isOpen={!!checkoutTrack}
+                    onClose={() => setCheckoutTrack(null)}
+                    track={checkoutTrack}
+                    allAccessPlans={allAccessPlans}
+                  />
                 )}
             </div>
         </StudentLayout>

@@ -36,7 +36,7 @@ export default async function EditQuizPage({ params }: EditQuizProps) {
   return (
     <AdminLayout
       title={`Update ${quiz.title}`}
-      description={`${quiz.description}`}
+      description={quiz.description ?? undefined}
     >
       <QuizForm
         topicId={quiz.topic.id}

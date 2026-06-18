@@ -26,6 +26,16 @@ export async function GET(request: NextRequest) {
         price: true,
         isPublished: true,
         createdAt: true,
+        plans: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            interval: true,
+            features: true,
+          },
+        },
         courses: {
           include: {
             course: {
@@ -74,20 +84,52 @@ export async function GET(request: NextRequest) {
       completedCoursesCount: enrollmentMap.get(track.id)?.completedCoursesCount ?? 0,
     }));
 
-    // Add subscription status to let the client skip any payment UI
-    const activeSubscription = await prisma.subscription.findFirst({
-      where: {
-        userId: session.user.id,
-        status: "ACTIVE",
-        OR: [
-          { endDate: null },
-          { endDate: { gte: new Date() } },
-        ],
-      },
-      select: { id: true },
-    });
+    // Fetch subscription, all-access plans, and active enrollments concurrently to avoid waterfall
+    const [activeSubscription, allAccessPlans, activeCourse, activeTrack] = await Promise.all([
+      prisma.subscription.findFirst({
+        where: {
+          userId: session.user.id,
+          status: "ACTIVE",
+          OR: [
+            { endDate: null },
+            { endDate: { gte: new Date() } },
+          ],
+        },
+        select: { id: true },
+      }),
+      prisma.plan.findMany({
+        where: { isActive: true, trackId: null },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          interval: true,
+          features: true,
+        },
+      }),
+      prisma.enrollment.findFirst({
+        where: { userId: session.user.id, status: "ACTIVE" },
+        select: { course: { select: { title: true } } },
+      }),
+      prisma.trackEnrollment.findFirst({
+        where: { userId: session.user.id, status: "ACTIVE" },
+        select: { track: { select: { title: true } } },
+      }),
+    ]);
 
-    return NextResponse.json({ tracks: enriched, hasSubscription: !!activeSubscription });
+    let activeJourneyMessage: string | null = null;
+    if (activeCourse) {
+      activeJourneyMessage = `Focus Check: You are currently active in the course "${activeCourse.course.title}". To commit to a Career Path, you must either complete it or forfeit/drop it from your dashboard.`;
+    } else if (activeTrack) {
+      activeJourneyMessage = `Focus Check: You are already committed to the "${activeTrack.track.title}" Career Path. You must either complete it or forfeit your progress by dropping it before starting a new one.`;
+    }
+
+    return NextResponse.json({
+      tracks: enriched,
+      hasSubscription: !!activeSubscription,
+      allAccessPlans,
+      activeJourneyMessage,
+    });
   } catch (error: any) {
     logger.error("student:tracks", "GET /api/student/tracks error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

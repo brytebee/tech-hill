@@ -25,6 +25,7 @@ const PLANS = [
     description: "Perfect for beginners. Computer basics, internet skills, and productivity tools — with weekly live sessions.",
     price: 6500,
     interval: "MONTHLY" as const,
+    trackSlug: "digital-foundation",
     features: [
       "All Digital Literacy courses",
       "Weekly live coding session",
@@ -39,6 +40,7 @@ const PLANS = [
     description: "Same as monthly, billed annually. Save ~20% vs paying month-by-month.",
     price: 62400,  // ₦6,500 × 12 × 0.8 = ₦62,400
     interval: "YEARLY" as const,
+    trackSlug: "digital-foundation",
     features: [
       "All Digital Literacy courses",
       "Weekly live coding session",
@@ -56,6 +58,7 @@ const PLANS = [
     description: "HTML, CSS, JavaScript, React, TypeScript, and Next.js. Live sessions every week covering real-world problems.",
     price: 9999,
     interval: "MONTHLY" as const,
+    trackSlug: "frontend-development",
     features: [
       "All Frontend Engineering courses",
       "Weekly live coding session",
@@ -70,6 +73,7 @@ const PLANS = [
     description: "Full frontend track, billed annually. Save ~20% and lock in today's rate.",
     price: 95990,  // ₦9,999 × 12 × 0.8 ≈ ₦95,990
     interval: "YEARLY" as const,
+    trackSlug: "frontend-development",
     features: [
       "All Frontend Engineering courses",
       "Weekly live coding session",
@@ -87,6 +91,7 @@ const PLANS = [
     description: "Career development, workplace digital skills, presentations, and professional communication — ideal for corporate learners.",
     price: 9999,
     interval: "MONTHLY" as const,
+    trackSlug: "developer-professional-toolkit",
     features: [
       "All Professional Training courses",
       "Weekly live session",
@@ -101,6 +106,7 @@ const PLANS = [
     description: "Full professional track, billed annually. Save ~20% and invest in your career.",
     price: 95990,
     interval: "YEARLY" as const,
+    trackSlug: "developer-professional-toolkit",
     features: [
       "All Professional Training courses",
       "Weekly live session",
@@ -118,6 +124,7 @@ const PLANS = [
     description: "Access every track, every live session, and the full recording archive. The complete Tech Hill experience.",
     price: 15000,
     interval: "MONTHLY" as const,
+    trackSlug: null,
     features: [
       "All 3 tracks (+ future tracks)",
       "All weekly live sessions",
@@ -134,6 +141,7 @@ const PLANS = [
     description: "The full platform, billed annually. Save ~20% and get everything Tech Hill offers.",
     price: 144000,  // ₦15,000 × 12 × 0.8 = ₦144,000
     interval: "YEARLY" as const,
+    trackSlug: null,
     features: [
       "All 3 tracks (+ future tracks)",
       "All weekly live sessions",
@@ -152,6 +160,18 @@ async function main() {
   console.log("🌱  Seeding subscription plans...\n");
 
   for (const plan of PLANS) {
+    let trackId: string | null = null;
+    if (plan.trackSlug) {
+      const track = await prisma.track.findUnique({
+        where: { slug: plan.trackSlug },
+      });
+      if (track) {
+        trackId = track.id;
+      } else {
+        console.warn(`⚠️ Warning: Track with slug "${plan.trackSlug}" not found for plan "${plan.name}".`);
+      }
+    }
+
     const existingPlan = await prisma.plan.findFirst({
       where: { name: plan.name },
     });
@@ -166,6 +186,7 @@ async function main() {
           interval: plan.interval,
           features: plan.features,
           isActive: true,
+          trackId: trackId,
         },
       });
     } else {
@@ -178,10 +199,11 @@ async function main() {
           interval: plan.interval,
           features: plan.features,
           isActive: true,
+          trackId: trackId,
         },
       });
     }
-    console.log(`  ✅  ${upserted.name}  —  ₦${Number(upserted.price).toLocaleString()}/${upserted.interval.toLowerCase()}`);
+    console.log(`  ✅  ${upserted.name}  —  ₦${Number(upserted.price).toLocaleString()}/${upserted.interval.toLowerCase()} (trackId: ${upserted.trackId || "ALL_ACCESS"})`);
   }
 
   console.log(`\n🎉  ${PLANS.length} plans seeded successfully.`);

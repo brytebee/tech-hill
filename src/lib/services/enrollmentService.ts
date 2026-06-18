@@ -74,7 +74,7 @@ export class EnrollmentService {
       });
 
       // Check for active subscription (includes both date-bound and lifetime subs)
-      const hasSubscription = await prisma.subscription.findFirst({
+      const activeSubscription = await prisma.subscription.findFirst({
         where: {
           userId: data.userId,
           status: "ACTIVE",
@@ -83,9 +83,29 @@ export class EnrollmentService {
             { endDate: { gte: new Date() } },     // Date-bound — not yet expired
           ],
         },
+        include: {
+          plan: true,
+        },
       });
 
-      if (!hasPaid && !hasSubscription) {
+      let isUnlockedBySubscription = false;
+      if (activeSubscription) {
+        const { plan } = activeSubscription;
+        if (!plan.trackId) {
+          isUnlockedBySubscription = true; // All-Access unlocks everything
+        } else {
+          // Check if this course belongs to the subscribed track
+          const belongsToTrack = await prisma.trackCourse.findFirst({
+            where: {
+              trackId: plan.trackId,
+              courseId: data.courseId,
+            },
+          });
+          isUnlockedBySubscription = !!belongsToTrack;
+        }
+      }
+
+      if (!hasPaid && !isUnlockedBySubscription) {
         throw new BadRequestError("Payment required to enroll in this course.");
       }
     }

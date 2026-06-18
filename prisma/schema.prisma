@@ -396,6 +396,8 @@ model Enrollment {
   course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
+  @@index([userId])
+  @@index([courseId])
   @@map("enrollments")
 }
 
@@ -477,6 +479,8 @@ model TopicProgress {
   topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
   @@unique([userId, topicId])
+  @@index([userId])
+  @@index([topicId])
   @@map("topic_progress")
 }
 
@@ -528,6 +532,8 @@ model QuizAttempt {
   quiz    Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   answers Answer[]
 
+  @@index([userId])
+  @@index([quizId])
   @@map("quiz_attempts")
 }
 
@@ -708,6 +714,9 @@ model Plan {
   // Coupon restrictions
   coupons PlansOnCoupons[]
 
+  trackId          String?
+  track            Track?          @relation(fields: [trackId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -741,6 +750,8 @@ model Subscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
+  @@index([planId])
   @@map("subscriptions")
 }
 
@@ -1065,6 +1076,7 @@ model Track {
   enrollments  TrackEnrollment[]
   certificates Certificate[]
   template     CertificateTemplate? @relation(fields: [templateId], references: [id])
+  plans        Plan[]
 }
 
 model TrackCourse {
@@ -1095,6 +1107,8 @@ model TrackEnrollment {
   track Track @relation(fields: [trackId], references: [id])
 
   @@unique([userId, trackId])
+  @@index([userId])
+  @@index([trackId])
 }
 
 // --------------------------------------

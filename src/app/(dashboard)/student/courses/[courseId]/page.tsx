@@ -56,7 +56,30 @@ export default async function StudentCourseDetailsPage({ params, searchParams }:
   const { courseId } = await params;
   const resolvedSearch = await searchParams;
   const trackId = resolvedSearch?.trackId;
-  const data = await getCourseData(courseId, session.user.id);
+  // Parallelize independent queries to avoid database waterfalls and optimize page speed
+  const [data, subscription, pricing, activeCourse, activeTrack] = await Promise.all([
+    getCourseData(courseId, session.user.id),
+    prisma.subscription.findFirst({
+      where: {
+        userId: session.user.id,
+        status: "ACTIVE",
+        OR: [
+          { endDate: null },
+          { endDate: { gt: new Date() } },
+        ],
+      },
+      select: { id: true },
+    }),
+    PromotionService.getCurrentPrice(courseId),
+    prisma.enrollment.findFirst({
+      where: { userId: session.user.id, status: "ACTIVE", NOT: { courseId } },
+      select: { course: { select: { title: true } } },
+    }),
+    prisma.trackEnrollment.findFirst({
+      where: { userId: session.user.id, status: "ACTIVE" },
+      select: { track: { select: { title: true } } },
+    }),
+  ]);
 
   if (!data) {
     notFound();
@@ -67,20 +90,14 @@ export default async function StudentCourseDetailsPage({ params, searchParams }:
     (enrol: any) => enrol.userId === session.user.id,
   );
 
-  // Check if the user has an active subscription (used to bypass checkout modal)
-  const hasSubscription = !!(await prisma.subscription.findFirst({
-    where: {
-      userId: session.user.id,
-      status: "ACTIVE",
-      OR: [
-        { endDate: null },
-        { endDate: { gt: new Date() } },
-      ],
-    },
-  }));
+  const hasSubscription = !!subscription;
 
-  // Fetch dynamic pricing (sales/discounts)
-  const pricing = await PromotionService.getCurrentPrice(courseId);
+  let activeJourneyMessage: string | null = null;
+  if (activeCourse) {
+    activeJourneyMessage = `Focus Check: You are currently active in the course "${activeCourse.course.title}". To commit fully, you must either complete it or forfeit/drop it from your dashboard before starting a new journey.`;
+  } else if (activeTrack) {
+    activeJourneyMessage = `Focus Check: You are currently committed to the "${activeTrack.track.title}" Career Path. You must either complete it or forfeit your progress by dropping it before starting this course.`;
+  }
 
   // Serialize the course data
   const serializedCourse = {
@@ -158,6 +175,7 @@ export default async function StudentCourseDetailsPage({ params, searchParams }:
             : null
         }
         hasSubscription={hasSubscription}
+        activeJourneyMessage={activeJourneyMessage}
         basePath="/student"
       />
     </StudentLayout>

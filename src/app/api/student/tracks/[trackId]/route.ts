@@ -18,10 +18,20 @@ export async function GET(
 
     const { trackId } = await params;
 
-    const [track, enrollment] = await Promise.all([
+    const [track, enrollment, allAccessPlans, activeCourse, activeTrack] = await Promise.all([
       prisma.track.findUnique({
         where: { id: trackId, isPublished: true },
         include: {
+          plans: {
+            where: { isActive: true },
+            select: {
+              id: true,
+              name: true,
+              price: true,
+              interval: true,
+              features: true,
+            },
+          },
           courses: {
             orderBy: { order: "asc" },
             include: {
@@ -48,17 +58,45 @@ export async function GET(
           status: true,
         },
       }),
+      prisma.plan.findMany({
+        where: { isActive: true, trackId: null },
+        select: {
+          id: true,
+          name: true,
+          price: true,
+          interval: true,
+          features: true,
+        },
+      }),
+      prisma.enrollment.findFirst({
+        where: { userId: session.user.id, status: "ACTIVE" },
+        select: { course: { select: { title: true } } },
+      }),
+      prisma.trackEnrollment.findFirst({
+        where: { userId: session.user.id, status: "ACTIVE", NOT: { trackId } },
+        select: { track: { select: { title: true } } },
+      }),
     ]);
 
     if (!track) {
       return NextResponse.json({ error: "Track not found" }, { status: 404 });
     }
 
-    if (!enrollment || !["ACTIVE", "COMPLETED"].includes(enrollment.status)) {
-      return NextResponse.json({ error: "You must be actively enrolled to access this career path" }, { status: 403 });
+    const isActiveEnrollment = enrollment && ["ACTIVE", "COMPLETED"].includes(enrollment.status);
+
+    let activeJourneyMessage: string | null = null;
+    if (activeCourse) {
+      activeJourneyMessage = `Focus Check: You are currently active in the course "${activeCourse.course.title}". To commit to this Career Path, you must either complete it or forfeit/drop it from your dashboard.`;
+    } else if (activeTrack) {
+      activeJourneyMessage = `Focus Check: You are already committed to the "${activeTrack.track.title}" Career Path. You must either complete it or forfeit your progress by dropping it before starting a new one.`;
     }
 
-    return NextResponse.json({ ...track, enrollment });
+    return NextResponse.json({
+      ...track,
+      enrollment: isActiveEnrollment ? enrollment : null,
+      allAccessPlans,
+      activeJourneyMessage,
+    });
   } catch (error: any) {
     logger.error("student:tracks:trackId", "GET error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

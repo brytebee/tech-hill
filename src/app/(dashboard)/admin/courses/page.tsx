@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus, Edit, Trash2, MoreHorizontal, Eye, BookPlus, Loader2,
-  Users, Clock, DollarSign, Layers, Upload, Search, X
+  Users, Clock, DollarSign, Layers, Upload, Search, X, Filter
 } from "lucide-react";
 import Link from "next/link";
 import { ColumnDef } from "@tanstack/react-table";
@@ -21,6 +21,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Course {
   id: string;
@@ -147,7 +154,7 @@ const courseColumns: ColumnDef<Course>[] = [
       if (price === 0) return <span className="text-sm font-black text-emerald-500 uppercase italic">Free</span>;
       return (
         <div className="flex items-center font-black text-slate-900 dark:text-white">
-          <DollarSign className="h-3 w-3 text-slate-400" />
+          <DollarSign className="h-3.5 w-3.5 text-slate-400 mr-0.5" />
           <span>{price.toLocaleString()}</span>
         </div>
       );
@@ -257,11 +264,17 @@ export default function CoursesPage() {
 
   const currentPage = Number(searchParams.get("page")) || 1;
   const searchQuery = searchParams.get("search") || "";
+  const sortParam = searchParams.get("sort") || "newest";
+  const statusParam = searchParams.get("status") || "all";
+  const valuationParam = searchParams.get("valuation") || "all";
+  const priceOpParam = searchParams.get("priceOp") || "none";
+  const priceValParam = searchParams.get("priceVal") || "";
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: PAGE_SIZE, total: 0, pages: 0 });
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState(searchQuery);
+  const [priceInput, setPriceInput] = useState(priceValParam);
 
   const updateUrl = useCallback((updates: Record<string, string | number | null>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -269,7 +282,6 @@ export default function CoursesPage() {
       if (v !== null && v !== "" && v !== 0) params.set(k, String(v));
       else params.delete(k);
     });
-    // Always reset to page 1 when search changes (unless page is explicitly set)
     router.push(`${pathname}?${params.toString()}`, { scroll: false } as any);
   }, [searchParams, router, pathname]);
 
@@ -280,6 +292,11 @@ export default function CoursesPage() {
         page: String(currentPage),
         limit: String(PAGE_SIZE),
         ...(searchQuery ? { search: searchQuery } : {}),
+        ...(sortParam !== "newest" ? { sort: sortParam } : {}),
+        ...(statusParam !== "all" ? { status: statusParam.toUpperCase() } : {}),
+        ...(valuationParam !== "all" ? { valuation: valuationParam } : {}),
+        ...(priceOpParam !== "none" ? { priceOp: priceOpParam } : {}),
+        ...(priceValParam && priceOpParam !== "none" ? { priceVal: priceValParam } : {}),
       });
       const response = await fetch(`/api/courses?${params}`);
       if (!response.ok) throw new Error("Failed to fetch courses");
@@ -291,16 +308,19 @@ export default function CoursesPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, searchQuery]);
+  }, [currentPage, searchQuery, sortParam, statusParam, valuationParam, priceOpParam, priceValParam]);
 
   useEffect(() => {
     fetchCourses();
   }, [fetchCourses]);
 
-  // Sync local search input when URL changes externally
   useEffect(() => {
     setSearchInput(searchQuery);
   }, [searchQuery]);
+
+  useEffect(() => {
+    setPriceInput(priceValParam);
+  }, [priceValParam]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,6 +330,11 @@ export default function CoursesPage() {
   const handleSearchClear = () => {
     setSearchInput("");
     updateUrl({ search: null, page: null });
+  };
+
+  const handlePriceFilterSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateUrl({ priceVal: priceInput || null, page: null });
   };
 
   if (loading && courses.length === 0) {
@@ -353,33 +378,166 @@ export default function CoursesPage() {
           </div>
         </div>
 
-        {/* Search bar — server-side, URL-persisted */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Query course registry..."
-              className="pl-10 pr-10 h-11 bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-blue-500/20 shadow-sm"
-            />
-            {searchInput && (
-              <button
-                type="button"
-                onClick={handleSearchClear}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+        {/* Search bar and filters — server-side, URL-persisted */}
+        <div className="bg-white dark:bg-slate-900/50 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-md group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Query course registry..."
+                className="pl-10 pr-10 h-11 bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 rounded-xl focus-visible:ring-blue-500/20 shadow-sm"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={handleSearchClear}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <Button type="submit" className="h-11 px-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold">
+              Search
+            </Button>
+            {loading && courses.length > 0 && (
+              <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
+            )}
+          </form>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <div className="flex flex-col gap-1.5 min-w-[140px]">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Sort Order</span>
+              <Select
+                value={sortParam}
+                onValueChange={(val) => updateUrl({ sort: val, page: null })}
               >
-                <X className="h-4 w-4" />
-              </button>
+                <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 rounded-lg">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="newest">Newest</SelectItem>
+                  <SelectItem value="oldest">Oldest</SelectItem>
+                  <SelectItem value="cheapest">Cheapest</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5 min-w-[140px]">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Publish State</span>
+              <Select
+                value={statusParam}
+                onValueChange={(val) => updateUrl({ status: val, page: null })}
+              >
+                <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 rounded-lg">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5 min-w-[140px]">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Valuation</span>
+              <Select
+                value={valuationParam}
+                onValueChange={(val) => {
+                  const updates: Record<string, string | null> = { valuation: val, page: null };
+                  if (val === "free") {
+                    updates.priceOp = "none";
+                    updates.priceVal = null;
+                    setPriceInput("");
+                  }
+                  updateUrl(updates);
+                }}
+              >
+                <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 rounded-lg">
+                  <SelectValue placeholder="Valuation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {valuationParam !== "free" && (
+              <>
+                <div className="flex flex-col gap-1.5 min-w-[140px]">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Price Threshold</span>
+                  <Select
+                    value={priceOpParam}
+                    onValueChange={(val) => {
+                      const updates: Record<string, string | null> = { priceOp: val, page: null };
+                      if (val === "none") {
+                        updates.priceVal = null;
+                        setPriceInput("");
+                      }
+                      updateUrl(updates);
+                    }}
+                  >
+                    <SelectTrigger className="h-10 bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 rounded-lg">
+                      <SelectValue placeholder="Price Filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Price Filter</SelectItem>
+                      <SelectItem value="above">Price Above</SelectItem>
+                      <SelectItem value="below">Price Below</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {priceOpParam !== "none" && (
+                  <form onSubmit={handlePriceFilterSubmit} className="flex flex-col gap-1.5 min-w-[140px]">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Price (₦)</span>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        placeholder="Amount"
+                        value={priceInput}
+                        onChange={(e) => setPriceInput(e.target.value)}
+                        className="h-10 bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 rounded-lg w-28"
+                      />
+                      <Button type="submit" size="sm" className="h-10 bg-slate-900 text-white rounded-lg">
+                        Apply
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+
+            {/* Clear filters trigger if any filter is active */}
+            {(sortParam !== "newest" || statusParam !== "all" || valuationParam !== "all" || priceOpParam !== "none" || searchQuery !== "") && (
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSearchInput("");
+                  setPriceInput("");
+                  updateUrl({
+                    search: null,
+                    sort: null,
+                    status: null,
+                    valuation: null,
+                    priceOp: null,
+                    priceVal: null,
+                    page: null
+                  });
+                }}
+                className="h-10 text-slate-500 hover:text-slate-900 dark:hover:text-white font-semibold mt-5 rounded-lg flex items-center gap-1.5"
+              >
+                <X className="h-4 w-4" /> Reset Filters
+              </Button>
             )}
           </div>
-          <Button type="submit" className="h-11 px-5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold">
-            Search
-          </Button>
-          {loading && courses.length > 0 && (
-            <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-          )}
-        </form>
+        </div>
 
         {/* Table with server-side pagination */}
         <DataTable

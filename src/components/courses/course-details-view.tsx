@@ -62,6 +62,7 @@ interface CourseDetailsViewProps {
   } | null;
   basePath: string; // "/admin", "/manager", or "/student"
   hasSubscription?: boolean;
+  activeJourneyMessage?: string | null;
   onEnroll?: () => void;
   onUnenroll?: () => void;
   onDeleteCourse?: () => void;
@@ -74,6 +75,7 @@ export function CourseDetailsView({
   userEnrollment,
   basePath,
   hasSubscription = false,
+  activeJourneyMessage = null,
   onEnroll,
   onUnenroll,
   onDeleteCourse,
@@ -196,6 +198,7 @@ export function CourseDetailsView({
         price={Number(course.price)}
         isEnrolled={false}
         hasSubscription={hasSubscription}
+        activeJourneyMessage={activeJourneyMessage}
         className="h-12 px-10 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-2xl shadow-xl shadow-blue-500/20 text-lg transition-all hover:scale-105 active:scale-95 uppercase tracking-widest"
       >
         <Zap className="h-5 w-5 mr-2 fill-current" />

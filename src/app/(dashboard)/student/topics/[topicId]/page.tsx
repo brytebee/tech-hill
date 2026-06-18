@@ -140,7 +140,7 @@ export default async function StudentTopicDetailsPage({ params }: PageProps) {
   return (
     <StudentLayout
       title={data.topic.title}
-      description={`${data.topic.description}`}
+      description={data.topic.description ?? undefined}
     >
       <StudentTopicViewer
         topic={data.topic as unknown as Topic}

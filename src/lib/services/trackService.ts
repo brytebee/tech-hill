@@ -102,7 +102,7 @@ export class TrackService {
 
     // Payment Check
     if (Number(track.price) > 0) {
-      const hasSubscription = await prisma.subscription.findFirst({
+      const activeSubscription = await prisma.subscription.findFirst({
         where: {
           userId,
           status: "ACTIVE",
@@ -111,11 +111,20 @@ export class TrackService {
             { endDate: { gte: new Date() } },
           ],
         },
+        include: {
+          plan: true,
+        },
       });
 
-      // Implement specific track transaction check in the future if needed, 
-      // but for now Subscriptions unlock Career Paths.
-      if (!hasSubscription) {
+      let isUnlocked = false;
+      if (activeSubscription) {
+        const { plan } = activeSubscription;
+        if (!plan.trackId || plan.trackId === trackId) {
+          isUnlocked = true;
+        }
+      }
+
+      if (!isUnlocked) {
         throw new BadRequestError("An active subscription or payment is required to unlock this Career Path.");
       }
     }

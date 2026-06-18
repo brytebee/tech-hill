@@ -20,7 +20,7 @@ const createCourseSchema = z.object({
   learningOutcomes: z.array(z.string()).optional(),
 });
 
-// Updated schema to handle null values properly
+// Updated schema to handle null values and filters properly
 const getCoursesSchema = z.object({
   page: z.string().nullable().optional(),
   limit: z.string().nullable().optional(),
@@ -31,6 +31,9 @@ const getCoursesSchema = z.object({
     .optional(),
   creatorId: z.string().nullable().optional(),
   search: z.string().nullable().optional(),
+  sort: z.enum(["newest", "oldest", "cheapest"]).nullable().optional(),
+  priceOp: z.enum(["above", "below"]).nullable().optional(),
+  priceVal: z.string().nullable().optional(),
 });
 
 // GET /api/courses - Get courses with filters and pagination
@@ -50,17 +53,24 @@ export async function GET(request: NextRequest) {
       difficulty: searchParams.get("difficulty"),
       creatorId: searchParams.get("creatorId"),
       search: searchParams.get("search"),
+      sort: searchParams.get("sort"),
+      priceOp: searchParams.get("priceOp"),
+      priceVal: searchParams.get("priceVal"),
     });
 
     // Convert strings to numbers with defaults, handle null values
     const page = params.page ? parseInt(params.page) : 1;
     const limit = params.limit ? parseInt(params.limit) : 10;
+    const priceVal = params.priceVal ? parseFloat(params.priceVal) : undefined;
 
     const filters = {
       status: params.status || undefined,
       difficulty: params.difficulty || undefined,
       creatorId: params.creatorId || undefined,
       search: params.search || undefined,
+      sort: params.sort || undefined,
+      priceOp: params.priceOp || undefined,
+      priceVal: isNaN(priceVal as number) ? undefined : priceVal,
     };
 
     // Students can only see published courses
