@@ -160,10 +160,61 @@ def fibonacci(n):
 print("--- Starting Fibonacci Sequence ---")
 for i in range(8):
     print(f"Fibonacci({i}) = {fibonacci(i)}")
-print("--- Execution Completed ---")`
+print("--- Execution Completed ---")`,
+
+  rust: `// Rust Coding Snippet
+// Structs, impl blocks, and print formatting
+
+struct Course {
+    title: String,
+    duration: u32,
+}
+
+impl Course {
+    fn info(&self) {
+        println!("Course: {}, Duration: {} hours", self.title, self.duration);
+    }
+}
+
+fn main() {
+    println!("--- Running Rust Playground ---");
+    let c = Course {
+        title: String::from("Systems Architecture in Rust"),
+        duration: 45,
+    };
+    c.info();
+}`,
+
+  kotlin: `// Kotlin Coding Snippet
+// Object-oriented collections and lambdas
+
+data class Student(val name: String, val score: Int)
+
+fun main() {
+    println("--- Kotlin Program Output ---")
+    val students = listOf(
+        Student("Alice", 92),
+        Student("Bob", 88),
+        Student("Charlie", 95)
+    )
+    
+    val topStudents = students.filter { it.score >= 90 }
+    println("Top Performers:")
+    topStudents.forEach { (name, score) ->
+        println("  * $name: score $score")
+    }
+}`,
+
+  sql: `-- SQL Playground Query
+-- Seeded tables available: 'students' and 'courses'
+-- Feel free to query them using standard SQLite SQL statements
+
+SELECT * FROM students 
+WHERE track = 'Frontend Engineering'
+ORDER BY joined_at DESC;`
 };
 
-type Language = "html" | "javascript" | "typescript" | "java" | "python";
+type Language = "html" | "javascript" | "typescript" | "java" | "python" | "rust" | "kotlin" | "sql";
 
 export function PlaygroundSidebar({ isOpen, onToggle }: PlaygroundSidebarProps) {
   const [activeLang, setActiveLang] = useState<Language>("html");
@@ -276,6 +327,36 @@ export function PlaygroundSidebar({ isOpen, onToggle }: PlaygroundSidebarProps) 
           `3. Linux: run 'sudo apt install python3'\n\n` +
           `Error detail: ${err.message}`
         );
+      } else if (activeLang === "rust") {
+        setStderr(
+          `Rust execution failed on host server.\n\n` +
+          `--- RUST LOCAL SETUP GUIDE ---\n` +
+          `Ensure Rust compiler (rustc/cargo) is configured locally:\n` +
+          `1. macOS: run 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh'\n` +
+          `2. Windows: Download and run rustup-init.exe from https://rustup.rs/\n` +
+          `3. Linux: run 'curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh'\n\n` +
+          `Error detail: ${err.message}`
+        );
+      } else if (activeLang === "kotlin") {
+        setStderr(
+          `Kotlin execution failed on host server.\n\n` +
+          `--- KOTLIN LOCAL SETUP GUIDE ---\n` +
+          `Ensure Kotlin JVM compiler (kotlinc) is configured locally:\n` +
+          `1. macOS: run 'brew install kotlin'\n` +
+          `2. Windows: run 'winget install Kotlin.SDK'\n` +
+          `3. Linux: run 'sudo apt install kotlin'\n\n` +
+          `Error detail: ${err.message}`
+        );
+      } else if (activeLang === "sql") {
+        setStderr(
+          `SQL execution failed on host server.\n\n` +
+          `--- SQLITE LOCAL SETUP GUIDE ---\n` +
+          `Ensure SQLite 3 binary is configured locally:\n` +
+          `1. macOS: SQLite is pre-installed (/usr/bin/sqlite3)\n` +
+          `2. Windows: Download precompiled binaries from https://www.sqlite.org/download.html\n` +
+          `3. Linux: run 'sudo apt install sqlite3'\n\n` +
+          `Error detail: ${err.message}`
+        );
       }
       setConsoleOpen(true);
     } finally {
@@ -383,7 +464,7 @@ export function PlaygroundSidebar({ isOpen, onToggle }: PlaygroundSidebarProps) 
       {/* Editor Controls Bar */}
       <div className="flex flex-wrap items-center justify-between p-2 gap-2 border-b border-slate-800 bg-slate-950/30 shrink-0 text-xs">
         <div className="flex bg-slate-950 rounded-lg p-0.5 border border-slate-800 shrink-0">
-          {(["html", "javascript", "typescript", "java", "python"] as Language[]).map((lang) => (
+          {(["html", "javascript", "typescript", "java", "python", "rust", "kotlin", "sql"] as Language[]).map((lang) => (
             <button
               key={lang}
               onClick={() => {

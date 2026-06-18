@@ -41,6 +41,34 @@ export async function POST(req: NextRequest) {
       fileName = "script.py";
       fs.writeFileSync(path.join(tempDir, fileName), code);
       command = `python3 ${fileName} || python ${fileName}`;
+    } else if (language === "rust") {
+      fileName = "main.rs";
+      fs.writeFileSync(path.join(tempDir, fileName), code);
+      command = `rustc ${fileName} -o main && ./main`;
+    } else if (language === "kotlin") {
+      fileName = "Main.kt";
+      fs.writeFileSync(path.join(tempDir, fileName), code);
+      command = `kotlinc ${fileName} -include-runtime -d Main.jar && java -jar Main.jar`;
+    } else if (language === "sql") {
+      fileName = "query.sql";
+      fs.writeFileSync(path.join(tempDir, fileName), code);
+      const seedSql = `
+        CREATE TABLE students (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, track TEXT, joined_at TEXT);
+        INSERT INTO students (name, track, joined_at) VALUES 
+          ('Alice', 'Frontend Engineering', '2026-01-15'),
+          ('Bob', 'Java Backend for Fintech', '2026-02-10'),
+          ('Charlie', 'Next.js & AI Web Development', '2026-03-01'),
+          ('Diana', 'Frontend Engineering', '2026-03-15');
+        
+        CREATE TABLE courses (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, price INTEGER);
+        INSERT INTO courses (title, price) VALUES
+          ('HTML Foundations', 0),
+          ('Vanilla JS Mastery', 0),
+          ('React Fundamentals', 120000),
+          ('Advanced Next.js & AI', 180000);
+      `;
+      fs.writeFileSync(path.join(tempDir, "seed.sql"), seedSql);
+      command = `sqlite3 db.sqlite < seed.sql && sqlite3 -header -box db.sqlite < ${fileName}`;
     } else {
       return NextResponse.json({ error: "Unsupported language" }, { status: 400 });
     }
